@@ -1,0 +1,3453 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>상큼 과일 아케이드 존 V.2.0</title>
+    <style>
+        :root {
+            --primary-color: #ff7f2a;
+            --primary-glow: #ff9a55;
+            --primary-dark: #e05a0a;
+            --background-color: #080c18;
+            --surface-1: #0f1420;
+            --surface-2: #141929;
+            --surface-3: #1a2035;
+            --border-subtle: rgba(255,127,42,0.15);
+            --border-normal: rgba(255,127,42,0.28);
+            --card-back: #2563eb;
+            --card-front: #fff7ed;
+            --match-color: #d1fae5;
+            --penalty-color: #ff6b6b;
+            --success-color: #10b981;
+            --text-primary: #e8edf5;
+            --text-secondary: #94a3b8;
+            --text-muted: #475569;
+            --font-family: 'Noto Sans KR', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --card-anim-speed: 0.3s;
+            --card-scale: 1;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            background-image:
+                radial-gradient(ellipse at 15% 10%, rgba(255,127,42,0.12) 0%, transparent 55%),
+                radial-gradient(ellipse at 85% 85%, rgba(37,99,235,0.10) 0%, transparent 55%),
+                radial-gradient(ellipse at 50% 100%, rgba(16,185,129,0.06) 0%, transparent 45%),
+                radial-gradient(ellipse at 50% 50%, rgba(255,127,42,0.03) 0%, transparent 80%);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+            height: 100vh;
+        }
+
+        #app-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100vh;
+            padding: 12px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin: 0 0 8px 0;
+            font-size: 1.6rem;
+            text-shadow: 0 0 18px rgba(255,127,42,0.6), 1px 1px 3px rgba(0,0,0,0.5);
+            text-align: center;
+            flex-shrink: 0;
+            letter-spacing: -0.5px;
+        }
+
+        /* ── 다크 메뉴 패널 ── */
+        .menu-panel {
+            background: linear-gradient(145deg, var(--surface-1), var(--surface-2));
+            padding: 30px 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,127,42,0.2), inset 0 1px 0 rgba(255,255,255,0.04);
+            text-align: center;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-normal);
+            width: 100%;
+            max-width: 480px;
+            box-sizing: border-box;
+        }
+
+        #intro-screen       { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #game-select-screen { display: none; }
+        #setup-screen       { display: none; }
+
+        .intro-desc {
+            font-size: 1.0rem;
+            color: #8892b0;
+            margin-bottom: 24px;
+            line-height: 1.7;
+        }
+
+        .btn-group-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        /* 게임 선택 카드 */
+        .game-select-card {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.25s ease-in-out;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+        .game-select-card::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+            background: var(--primary-color);
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+        .game-select-card:hover::before { opacity: 1; }
+        .game-select-card:hover {
+            border-color: rgba(255,127,42,0.5);
+            background: rgba(255,127,42,0.06);
+            transform: translateY(-3px) translateX(2px);
+            box-shadow: 0 8px 28px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,127,42,0.2);
+        }
+        .game-select-card h3 { margin: 0 0 5px 0; color: #e2e8f0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+        .game-select-card p  { margin: 0; color: #64748b; font-size: 0.86rem; line-height: 1.5; }
+        /* 카드별 색상 악센트 */
+        #select-memory-game::before { background: #ff7f2a; }
+        #select-pang-game::before   { background: #10b981; }
+        #select-extra-game::before  { background: #3b82f6; }
+        #select-memory-game:hover   { border-color: rgba(255,127,42,0.5); background: rgba(255,127,42,0.06); }
+        #select-pang-game:hover     { border-color: rgba(16,185,129,0.5); background: rgba(16,185,129,0.06); }
+        #select-extra-game:hover    { border-color: rgba(59,130,246,0.5); background: rgba(59,130,246,0.06); }
+        .game-select-card.disabled {
+            opacity: 0.35; cursor: not-allowed;
+        }
+        .game-select-card.disabled:hover {
+            border-color: rgba(255,255,255,0.07); background: rgba(255,255,255,0.025); transform: none; box-shadow: none;
+        }
+        .game-select-card.disabled::before { display: none; }
+        .coming-soon-badge {
+            position: absolute; top: 13px; right: 13px;
+            background: rgba(255,127,42,0.12); color: #ff7f2a;
+            font-size: 0.72rem; padding: 3px 8px; border-radius: 10px; font-weight: bold;
+            border: 1px solid rgba(255,127,42,0.25);
+        }
+
+        .setting-group {
+            text-align: left;
+            margin-bottom: 14px;
+            background: rgba(255,255,255,0.03);
+            padding: 10px 13px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.07);
+        }
+        .setting-group label b { font-size: 1rem; color: #cbd5e1; display: block; margin-bottom: 7px; }
+
+        select, button {
+            font-size: 1.05rem;
+            padding: 10px 20px;
+            margin: 4px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        select {
+            width: 100%; box-sizing: border-box; text-align: center;
+            background-color: #1e2538; color: #e2e8f0;
+            border: 1px solid rgba(245,158,11,0.2);
+        }
+        select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 8px rgba(255,127,42,0.35); }
+        select option { background-color: #1e2538; }
+        button {
+            background-color: var(--primary-color); color: #fff;
+            border: none; font-weight: bold; box-shadow: 0 4px 16px rgba(255,127,42,0.3);
+        }
+        button:hover { background-color: var(--primary-glow); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,127,42,0.45); }
+        button:active { transform: translateY(1px); }
+
+        .large-play-btn {
+            font-size: 1.2rem; padding: 14px 28px;
+            background: linear-gradient(135deg, #ff7f2a, #e05a0a);
+            color: #fff; border-radius: 50px; margin: 0;
+            box-shadow: 0 0 30px rgba(255,127,42,0.4), 0 4px 16px rgba(0,0,0,0.3);
+            font-weight: 900; letter-spacing: 0.02em;
+        }
+        .large-play-btn:hover { background: linear-gradient(135deg, #ff9a55, #ff7f2a); box-shadow: 0 0 40px rgba(255,127,42,0.6), 0 6px 20px rgba(0,0,0,0.3); }
+        .menu-sub-btn {
+            font-size: 0.95rem; padding: 10px 20px;
+            background: rgba(255,255,255,0.04); color: #94a3b8;
+            border: 1px solid rgba(255,255,255,0.08); margin: 0;
+            border-radius: 30px;
+        }
+        .menu-sub-btn:hover { background: rgba(255,255,255,0.09); color: #e2e8f0; border-color: rgba(255,127,42,0.35); }
+        .exit-btn { background: rgba(239,68,68,0.08); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+        .exit-btn:hover { background: rgba(239,68,68,0.18); color: #fca5a5; box-shadow: 0 4px 16px rgba(239,68,68,0.15); }
+        .secondary-btn { background: rgba(255,255,255,0.06); color: #8892b0; border: 1px solid rgba(255,255,255,0.1); }
+        .secondary-btn:hover { background: rgba(255,255,255,0.1); color: #cbd5e1; }
+
+        .hint-btn {
+            font-size: 0.88rem; padding: 5px 11px; margin: 0;
+            background-color: #059669; color: white;
+            border-radius: 15px; box-shadow: 0 2px 8px rgba(5,150,105,0.3);
+            white-space: nowrap;
+        }
+        .hint-btn:hover:not(:disabled) { background-color: #10b981; }
+        .hint-btn:disabled { background-color: #374151; color: #6b7280; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* 인포 패널 */
+        .info-panel {
+            display: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            gap: 8px;
+            background: linear-gradient(135deg, var(--surface-1), var(--surface-2));
+            padding: 10px 14px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,127,42,0.15);
+            border: 1px solid var(--border-subtle);
+            align-items: center;
+            width: 100%;
+            max-width: 650px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            flex-wrap: nowrap;
+        }
+
+        .timer { color: #333; white-space: nowrap; transition: all 0.3s; }
+        .timer.danger {
+            color: var(--penalty-color);
+            animation: pulse-danger 0.5s infinite alternate;
+            font-weight: bold;
+        }
+        @keyframes pulse-danger {
+            0%   { transform: scale(1);   filter: drop-shadow(0 0 0px red); }
+            100% { transform: scale(1.1); filter: drop-shadow(0 0 4px red); }
+        }
+
+        .score {
+            color: #ff7f2a; background: rgba(255,127,42,0.15);
+            padding: 4px 12px; border-radius: 20px;
+            font-size: 1rem; letter-spacing: 0.5px; white-space: nowrap;
+            border: 1px solid rgba(255,127,42,0.35);
+        }
+        .status {
+            display: none;
+            color: var(--success-color);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            width: 100%;
+            max-width: 650px;
+            height: 22px;           /* 고정 높이 — 레이아웃 절대 밀리지 않음 */
+            line-height: 22px;
+            flex-shrink: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-sizing: border-box;
+        }
+
+        /* 게임 보드 */
+        .game-board {
+            display: none;
+            gap: 5px;
+            background: linear-gradient(145deg, var(--surface-1), var(--surface-2));
+            padding: 10px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,127,42,0.12);
+            border: 1px solid var(--border-subtle);
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .card {
+            background: var(--card-back-gradient, var(--card-back));
+            color: transparent;
+            font-size: 2.2rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color var(--card-anim-speed), transform 0.2s, box-shadow 0.2s;
+            aspect-ratio: 1 / 1;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.18) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .game-board.size-6 .card { font-size: 1.6rem; }
+        .game-board.size-8 .card { font-size: 1.2rem; border-radius: 8px; }
+
+        .card:hover:not(.flipped):not(.matched) {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.2);
+        }
+
+        /* 기본 뒤집기 */
+        .card.flipped { background: var(--card-front); background-image: none; color: #333; border: 2px solid var(--primary-color); box-shadow: 0 2px 8px rgba(255,127,42,0.2); }
+
+        /* 과일별 고유 배경색 - 선명한 파스텔 팔레트 */
+        .card.flipped[data-color="c0"]  { background-color: #ff8a80; color: #5d0000; }
+        .card.flipped[data-color="c1"]  { background-color: #ffab40; color: #3e1c00; }
+        .card.flipped[data-color="c2"]  { background-color: #ffd740; color: #3e2000; }
+        .card.flipped[data-color="c3"]  { background-color: #69f0ae; color: #00251a; }
+        .card.flipped[data-color="c4"]  { background-color: #40c4ff; color: #00131f; }
+        .card.flipped[data-color="c5"]  { background-color: #ea80fc; color: #2a003f; }
+        .card.flipped[data-color="c6"]  { background-color: #ff80ab; color: #4a0019; }
+        .card.flipped[data-color="c7"]  { background-color: #84ffff; color: #002020; }
+        .card.flipped[data-color="c8"]  { background-color: #ccff90; color: #1b3300; }
+        .card.flipped[data-color="c9"]  { background-color: #ffd180; color: #3e1f00; }
+        .card.flipped[data-color="c10"] { background-color: #b388ff; color: #1a0050; }
+        .card.flipped[data-color="c11"] { background-color: #82b1ff; color: #001b60; }
+        .card.flipped[data-color="c12"] { background-color: #a5f3a5; color: #002200; }
+        .card.flipped[data-color="c13"] { background-color: #ffe57f; color: #3e2a00; }
+        .card.flipped[data-color="c14"] { background-color: #ff9e80; color: #3e0c00; }
+        .card.flipped[data-color="c15"] { background-color: #cfd8dc; color: #1a2327; }
+        .card.joker-revealed[data-color] { background-color: #fff176; }
+
+        .card.joker-revealed { background-color: #fff9c4; color: #333; border: 2px dashed #9c27b0; }
+
+        /* 특수 카드 — 8x8 일반 모드 */
+        .card.special-card {
+            color: #333 !important;
+            font-size: 1.4rem !important;
+            border: 2px dashed #bbb;
+            background-color: #e8e8e8;
+            position: relative;
+        }
+        .card.special-card::after {
+            content: attr(data-label);
+            position: absolute;
+            bottom: 3px;
+            font-size: 0.45rem;
+            font-weight: 700;
+            color: #555;
+            letter-spacing: -0.3px;
+            white-space: nowrap;
+        }
+        /* 카드힌트 특수 카드 */
+        .card.special-card[data-special="card-hint"] {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-color: #64b5f6;
+        }
+        .card.special-card[data-special="card-hint"]::after { color: #1565c0; }
+        /* 플래시(전구) 특수 카드 */
+        .card.special-card[data-special="flash"] {
+            background: linear-gradient(135deg, #fffde7, #fff9c4);
+            border-color: #ffd54f;
+        }
+        .card.special-card[data-special="flash"]::after { color: #f57f17; }
+        /* 특수 카드 사용 후 (used) */
+        .card.special-card.used {
+            background: #f0f0f0 !important;
+            border-color: #ccc !important;
+            opacity: 0.45;
+            pointer-events: none;
+            cursor: default;
+        }
+        
+        .card.special-card:not(.flipped):not(.used) {
+            background-color: var(--card-back) !important;
+            background-image: none !important;
+            border: none !important;
+            color: transparent !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        }
+        .card.special-card:not(.flipped):not(.used)::after {
+            display: none !important;
+        }
+        .card.matched {
+            background: linear-gradient(135deg, #065f46, #047857) !important;
+            background-image: none !important;
+            border: 2px solid #10b981 !important;
+            color: rgba(167,243,208,0.4) !important;
+            pointer-events: none; box-shadow: 0 0 12px rgba(16,185,129,0.3); transform: scale(0.97);
+        }
+        .card.matched-pop { animation: pop-effect 0.4s ease-out; }
+        @keyframes pop-effect {
+            0%   { transform: scale(0.97); }
+            50%  { transform: scale(1.12); background: linear-gradient(135deg,#059669,#10b981) !important; box-shadow: 0 0 20px rgba(16,185,129,0.5); }
+            100% { transform: scale(0.97); }
+        }
+        .card.flash { animation: single-flash 0.8s ease-in-out 2; }
+        @keyframes single-flash {
+            0%   { transform: scale(1); }
+            50%  { transform: scale(1.08); background-color: #ff8f00; box-shadow: 0 0 20px #ffca28; }
+            100% { transform: scale(1); }
+        }
+
+        /* 모달 */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.75);
+            backdrop-filter: blur(6px);
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .custom-modal {
+            background: linear-gradient(145deg, #161b27, #1a2033);
+            color: #e2e8f0;
+            width: 95%; max-width: 480px;
+            border-radius: 20px; padding: 22px; box-sizing: border-box;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.6); border: 1px solid rgba(245,158,11,0.3); text-align: center;
+        }
+        .modal-scroll-area { max-height: 340px; overflow-y: auto; margin: 13px 0; padding-right: 5px; text-align: left; scrollbar-color: rgba(245,158,11,0.3) transparent; }
+
+        .achievement-item {
+            display: flex; align-items: center;
+            background: #f9f9f9; padding: 11px; margin-bottom: 9px;
+            border-radius: 12px; border: 1px solid #eee; transition: all 0.3s;
+        }
+        .achievement-item.locked { opacity: 0.5; filter: grayscale(100%); background: #f1f1f1; }
+        .achievement-icon  { font-size: 2rem; margin-right: 13px; min-width: 40px; text-align: center; }
+        .achievement-info  { flex-grow: 1; }
+        .achievement-title { font-weight: bold; font-size: 0.97rem; color: #333; margin-bottom: 2px; }
+        .achievement-desc  { font-size: 0.82rem; color: #666; }
+        .achievement-date  { font-size: 0.73rem; color: #aaa; margin-top: 3px; }
+        .achievement-badge { font-size: 0.78rem; background: #e0f2f1; color: #00796b; padding: 2px 7px; border-radius: 10px; font-weight: bold; white-space: nowrap; }
+        .achievement-item.locked .achievement-badge { background: #e0e0e0; color: #757575; }
+
+        .patch-version {
+            background-color: #fff8e1; border-left: 4px solid #ffb300;
+            padding: 9px 13px; margin-bottom: 13px; border-radius: 0 8px 8px 0;
+        }
+        .patch-version h3  { margin: 0 0 5px 0; color: #b76e00; font-size: 1.05rem; }
+        .patch-version ul  { margin: 0; padding-left: 18px; font-size: 0.88rem; color: #444; line-height: 1.5; }
+
+        /* ── 결과 화면 ── */
+        #result-screen {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        #result-screen.win  { background: linear-gradient(135deg, #e8f5e9 0%, #b2dfdb 100%); }
+        #result-screen.lose { background: linear-gradient(135deg, #fce4ec 0%, #ffcdd2 100%); }
+
+        .result-box {
+            background: linear-gradient(145deg, #111827, #1a2235);
+            border-radius: 28px;
+            padding: 40px 50px;
+            text-align: center;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,127,42,0.18);
+            border: 1px solid rgba(255,127,42,0.22);
+            max-width: 420px;
+            width: 90%;
+            animation: result-pop 0.45s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes result-pop {
+            from { transform: scale(0.6); opacity: 0; }
+            to   { transform: scale(1);   opacity: 1; }
+        }
+        .result-icon { font-size: 5rem; margin-bottom: 10px; line-height: 1; }
+        .result-title {
+            font-size: 2.6rem;
+            font-weight: 900;
+            margin: 0 0 6px 0;
+            letter-spacing: -1px;
+        }
+        .result-title.win  { color: #2e7d32; }
+        .result-title.lose { color: #c62828; }
+        .result-subtitle {
+            font-size: 1rem;
+            color: #888;
+            margin-bottom: 22px;
+        }
+        .result-stats {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+        }
+        .result-stat {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 10px 18px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #8892b0;
+        }
+        .result-stat span { display: block; font-size: 1.4rem; color: #e2e8f0; }
+        .result-btn-group { display: flex; flex-direction: column; gap: 10px; }
+        .result-btn-retry {
+            font-size: 1.1rem; padding: 13px 0;
+            background: linear-gradient(135deg, #ff7f2a, #e05a0a);
+            color: #fff; border: none; border-radius: 50px;
+            font-weight: bold; cursor: pointer; width: 100%;
+            box-shadow: 0 4px 12px rgba(255,127,42,0.4);
+            transition: all 0.2s;
+        }
+        .result-btn-retry:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(255,127,42,0.55); }
+        .result-btn-menu {
+            font-size: 1rem; padding: 11px 0;
+            background: rgba(255,255,255,0.06); color: #94a3b8;
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 50px;
+            font-weight: bold; cursor: pointer; width: 100%;
+            transition: all 0.2s;
+        }
+        .result-btn-menu:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+
+        /* ── 일시정지 오버레이 ── */
+        #pause-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            animation: pauseFadeIn 0.18s ease;
+        }
+        #pause-overlay.active { display: flex; }
+        @keyframes pauseFadeIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        .pause-box {
+            background: linear-gradient(145deg, #111827, #1a2235);
+            border-radius: 28px;
+            padding: 38px 48px;
+            text-align: center;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,127,42,0.22);
+            border: 1px solid rgba(255,127,42,0.28);
+            min-width: 280px;
+            max-width: 360px;
+            width: 88%;
+        }
+        .pause-icon { font-size: 4rem; line-height: 1; margin-bottom: 10px; }
+        .pause-title {
+            font-size: 2rem; font-weight: 900; color: #e2e8f0;
+            margin: 0 0 6px 0; letter-spacing: -1px;
+        }
+        .pause-subtitle {
+            font-size: 0.9rem; color: #64748b; margin-bottom: 28px;
+        }
+        .pause-btn-group { display: flex; flex-direction: column; gap: 10px; }
+        .pause-resume-btn {
+            font-size: 1.1rem; padding: 13px 0;
+            background: linear-gradient(135deg, #ff7f2a, #e05a0a);
+            color: #fff; border: none; border-radius: 50px;
+            font-weight: bold; cursor: pointer; width: 100%;
+            box-shadow: 0 4px 12px rgba(255,127,42,0.38);
+            transition: all 0.2s;
+        }
+        .pause-resume-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(255,127,42,0.55); }
+        .pause-menu-btn {
+            font-size: 1rem; padding: 11px 0;
+            background: #f5f5f5; color: #555;
+            border: none; border-radius: 50px;
+            font-weight: bold; cursor: pointer; width: 100%;
+            transition: all 0.2s;
+        }
+        .pause-menu-btn:hover { background: #e8e8e8; }
+        .pause-esc-tip {
+            font-size: 0.75rem; color: #bbb; margin-top: 16px;
+            letter-spacing: 0.02em;
+        }
+        .pause-esc-tip kbd {
+            background: #eee; border: 1px solid #ccc;
+            border-radius: 5px; padding: 1px 6px;
+            font-size: 0.73rem; color: #666;
+        }
+
+        /* ── 설정 모달 ── */
+        #settings-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.78);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 4000;
+            justify-content: center;
+            align-items: center;
+            animation: settingsFadeIn 0.2s ease;
+        }
+        #settings-overlay.active { display: flex; }
+        @keyframes settingsFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        .settings-box {
+            background: linear-gradient(145deg, #111827, #1a2235);
+            border-radius: 28px;
+            padding: 36px 44px;
+            text-align: center;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,127,42,0.25);
+            border: 1px solid rgba(255,127,42,0.30);
+            min-width: 300px;
+            max-width: 400px;
+            width: 90%;
+        }
+        .settings-title {
+            font-size: 1.5rem; font-weight: 900; color: #e2e8f0;
+            margin: 0 0 4px 0; letter-spacing: -0.5px;
+        }
+        .settings-subtitle {
+            font-size: 0.82rem; color: #64748b; margin-bottom: 24px;
+        }
+        .settings-group {
+            text-align: left;
+            margin-bottom: 14px;
+            background: rgba(255,255,255,0.04);
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.07);
+        }
+        .settings-group-label {
+            font-size: 0.82rem; font-weight: 700; color: #94a3b8;
+            text-transform: uppercase; letter-spacing: 0.08em;
+            margin-bottom: 10px; display: block;
+        }
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .settings-row:last-child { border-bottom: none; }
+        .settings-row-label {
+            font-size: 0.9rem; color: #cbd5e1; font-weight: 500;
+        }
+        .settings-row-desc {
+            font-size: 0.72rem; color: #475569; margin-top: 1px;
+        }
+        /* 토글 스위치 */
+        .toggle-switch {
+            position: relative; width: 46px; height: 26px; flex-shrink: 0;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; cursor: pointer; inset: 0;
+            background: #374151; border-radius: 26px;
+            transition: 0.25s;
+        }
+        .toggle-slider:before {
+            content: '';
+            position: absolute; height: 20px; width: 20px;
+            left: 3px; bottom: 3px;
+            background: white; border-radius: 50%;
+            transition: 0.25s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        input:checked + .toggle-slider { background: #ff7f2a; }
+        input:checked + .toggle-slider:before { transform: translateX(20px); }
+        /* 슬라이더 */
+        .settings-slider {
+            -webkit-appearance: none; appearance: none;
+            width: 120px; height: 5px; border-radius: 5px;
+            background: #374151; outline: none; flex-shrink: 0;
+        }
+        .settings-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: #ff7f2a; cursor: pointer;
+            box-shadow: 0 0 6px rgba(255,127,42,0.5);
+        }
+        .settings-slider::-moz-range-thumb {
+            width: 18px; height: 18px; border-radius: 50%;
+            background: #ff7f2a; cursor: pointer; border: none;
+        }
+        .settings-value-badge {
+            font-size: 0.8rem; font-weight: 700; color: #ff7f2a;
+            background: rgba(255,127,42,0.12); border: 1px solid rgba(255,127,42,0.25);
+            padding: 2px 8px; border-radius: 10px; min-width: 36px; text-align: center;
+        }
+        .settings-btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .settings-close-btn {
+            font-size: 1rem; padding: 12px 0;
+            background: linear-gradient(135deg, #ff7f2a, #e05a0a);
+            color: #fff; border: none; border-radius: 50px;
+            font-weight: bold; cursor: pointer; width: 100%;
+            box-shadow: 0 4px 12px rgba(255,127,42,0.38);
+            transition: all 0.2s;
+        }
+        .settings-close-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(255,127,42,0.55); }
+        /* 인포 패널 내 설정 버튼 */
+        .settings-icon-btn {
+            font-size: 0.88rem; padding: 5px 11px; margin: 0;
+            background: rgba(255,255,255,0.07); color: #94a3b8;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px; cursor: pointer; transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .settings-icon-btn:hover { background: rgba(255,127,42,0.15); color: #ff7f2a; border-color: rgba(255,127,42,0.35); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+
+<div id="app-wrapper">
+    <h1 style="display:none;">🍓 상큼 과일 아케이드 존 🍉</h1>
+
+    <!-- ① 인트로 -->
+    <div class="menu-panel" id="intro-screen">
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;">
+            <span style="font-size:2.2rem;filter:drop-shadow(0 0 10px rgba(255,127,42,0.7));">🍓</span>
+            <div>
+                <div style="font-size:1.35rem;font-weight:900;color:#ff7f2a;letter-spacing:-0.5px;text-shadow:0 0 20px rgba(255,127,42,0.5);">FRUIT ARCADE</div>
+                <div style="font-size:0.65rem;color:#475569;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;">상큼 과일 아케이드 존</div>
+            </div>
+            <span style="font-size:2.2rem;filter:drop-shadow(0 0 10px rgba(16,185,129,0.6));">🍉</span>
+        </div>
+        <div style="width:60px;height:2px;background:linear-gradient(90deg,transparent,#ff7f2a,transparent);margin:10px auto 18px;border-radius:2px;"></div>
+        <p class="intro-desc">게임을 선택하고 업적 16종에 도전하세요!</p>
+        <div class="btn-group-vertical">
+            <button class="large-play-btn" id="play-nav-btn">▶ 게임 시작하기</button>
+            <button class="menu-sub-btn" id="open-achieve-btn">🏆 명예의 전당 (업적 16종)</button>
+            <button class="menu-sub-btn" id="open-patch-btn">📋 패치노트</button>
+            <button class="menu-sub-btn" id="open-settings-intro-btn">⚙️ 설정</button>
+            <button class="menu-sub-btn" id="credit-btn">👤 크레딧 (Credit)</button>
+            <button class="menu-sub-btn exit-btn" id="exit-btn">✕ 게임 종료하기</button>
+        </div>
+        <div style="margin-top:18px;font-size:0.62rem;color:#334155;letter-spacing:0.05em;">v1.1.16 · 과일 아케이드 존</div>
+    </div>
+
+    <!-- ② 게임 선택 -->
+    <div class="menu-panel" id="game-select-screen">
+        <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#475569;margin-bottom:6px;">SELECT GAME</div>
+        <p class="intro-desc" style="margin-bottom:14px;">플레이할 게임 장르를 선택하세요.</p>
+
+        <!-- 스크롤 영역 -->
+        <div id="game-select-scroll" style="max-height:340px; overflow-y:auto; padding-right:4px; margin-bottom:8px;">
+            <!-- 메모리 게임 -->
+            <div class="game-select-card" id="select-memory-game">
+                <h3>🍓과일 메모리 게임</h3>
+                <p>똑같은 과일 카드 한 쌍을 직관적으로 맞춰 나가는 클래식 기억력 훈련 게임입니다. (16종 업적 완벽 연동)</p>
+            </div>
+
+            <!-- 수박 게임 -->
+            <div class="game-select-card" id="select-pang-game">
+                <h3>🍉수박 게임 (Suika)</h3>
+                <p>같은 과일끼리 합쳐서 더 큰 과일로 진화시키세요! 공간이 가득 차면 게임 오버. 수박을 완성해 보세요!</p>
+            </div>
+
+            <!-- 세 번째 슬롯: 주식 뉴스 트레이딩 -->
+            <div class="game-select-card" id="select-extra-game">
+                <h3>📊주식 뉴스 트레이딩</h3>
+                <p>실시간 뉴스를 분석해 주식을 매수·매도하세요! 10라운드 안에 목표 자산 2천만원을 달성하면 승리!</p>
+            </div>
+
+            <!-- 네 번째 슬롯 (SOON) -->
+            <div class="game-select-card disabled" id="select-extra-game2">
+                <span class="coming-soon-badge">SOON 곧 출시</span>
+                <h3>SOON</h3>
+                <p>SOON</p>
+            </div>
+        </div>
+
+        <!-- 스크롤 힌트 -->
+        <div id="scroll-hint" style="text-align:center; font-size:0.72rem; color:#334155; margin-bottom:6px; letter-spacing:0.05em;">▼ 스크롤해서 더 보기</div>
+
+        <button class="secondary-btn" id="back-to-intro-from-select" style="width:100%; margin-top:2px;">뒤로가기</button>
+    </div>
+
+    <!-- ③ 설정 -->
+    <div class="menu-panel" id="setup-screen">
+        <div class="setting-group">
+            <label for="board-size"><b>📦 게임 모드 선택</b></label>
+            <select id="board-size">
+                <option value="4">4 x 4 (쉬움 - 16장)</option>
+                <option value="6">6 x 6 (어려움 - 36장)</option>
+                <option value="8">8 x 8 (일반 타임어택 - 64장)</option>
+                <option value="8-joker">8 x 8 (스페셜 조커 모드 - 조커 8장)</option>
+            </select>
+        </div>
+        <div class="setting-group">
+            <label for="preview-time"><b>👀 첫 카드 기억 시간</b></label>
+            <select id="preview-time">
+                <option value="2000" selected>2초 (기본값 · 4x4/6x6)</option>
+                <option value="3000">3초 (여유롭게 · 4x4/6x6)</option>
+                <option value="5000">5초 (초보자 추천 / 8x8 최소)</option>
+                <option value="7000">7초 (8x8 추천)</option>
+                <option value="10000">10초 (8x8 여유롭게)</option>
+            </select>
+            <p id="preview-time-warning" style="display:none; color:#ff2824; font-size:0.85rem; margin:6px 0 0 0;">
+                ⚠️ 8x8 모드는 기억 시간을 5초 이상으로 설정하는 것을 강력 추천합니다!
+            </p>
+        </div>
+        <div class="setting-group">
+            <label for="life-limit"><b>오답 제한 (라이프)</b></label>
+            <select id="life-limit">
+                <option value="infinite" selected>무제한 (자유롭게 플레이)</option>
+                <option value="10">10번 기회 (보통)</option>
+                <option value="5">5번 기회 (⚠️하드코어)</option>
+            </select>
+        </div>
+        <div class="setting-group">
+            <label for="sound-toggle"><b>🔊 효과음 설정</b></label>
+            <select id="sound-toggle">
+                <option value="on" selected>효과음 켜기</option>
+                <option value="off">효과음 끄기</option>
+            </select>
+        </div>
+        <div style="margin-top:18px;">
+            <button class="secondary-btn" id="back-to-select-btn">뒤로가기</button>
+            <button id="start-btn">상큼하게 시작! 🚀</button>
+        </div>
+    </div>
+
+
+    <!-- 🍉 수박 게임 화면 -->
+    <div id="suika-screen" style="display:none; flex-direction:column; align-items:center; width:100%; max-width:460px; padding:0 8px; box-sizing:border-box;">
+        <!-- 헤더 -->
+        <div style="width:100%; display:flex; align-items:center; justify-content:space-between; background:linear-gradient(135deg,#0f1420,#141929); border-radius:16px; padding:10px 14px; box-sizing:border-box; margin-bottom:8px; border:1px solid rgba(255,127,42,0.28); box-shadow:0 4px 16px rgba(0,0,0,0.4);">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div style="background:linear-gradient(135deg,#ff7f2a,#e05a0a); padding:7px; border-radius:10px; box-shadow:0 2px 8px rgba(255,127,42,0.4);">⚡</div>
+                <div>
+                    <div style="font-size:0.65rem; color:#ff9a55; font-weight:900; text-transform:uppercase; letter-spacing:0.08em;">SCORE</div>
+                    <div id="suika-score" style="font-size:1.4rem; font-weight:900; color:#ff7f2a; font-family:monospace; line-height:1; text-shadow:0 0 12px rgba(255,127,42,0.4);">0</div>
+                </div>
+            </div>
+            <div id="suika-next-wrap" style="display:none; align-items:center; gap:8px; padding:6px 10px; background:rgba(255,127,42,0.1); border-radius:10px; border:1px solid rgba(255,127,42,0.25);">
+                <span style="font-size:0.6rem; color:#ff9a55; font-weight:800; text-transform:uppercase;">NEXT</span>
+                <span id="suika-next-emoji" style="font-size:1.4rem;"></span>
+            </div>
+            <div style="display:flex; gap:6px;">
+                <button id="suika-mute-btn" onclick="suikaMuteToggle()" style="padding:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,127,42,0.3); border-radius:10px; font-size:0.9rem; cursor:pointer; color:#e2e8f0; transition:all 0.2s;">🔊</button>
+                <button onclick="suikaRestart()" style="padding:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,127,42,0.3); border-radius:10px; font-size:0.9rem; cursor:pointer; color:#e2e8f0; transition:all 0.2s;">🔄</button>
+                <button onclick="suikaBackToMenu()" style="padding:8px 12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:10px; font-size:0.75rem; font-weight:700; cursor:pointer; color:#94a3b8; transition:all 0.2s;">메뉴</button>
+            </div>
+        </div>
+        <!-- 캔버스 -->
+        <div style="position:relative; border-radius:16px; overflow:hidden; border:1px solid rgba(255,127,42,0.3); box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+            <canvas id="suika-canvas" width="420" height="560" style="display:block; cursor:crosshair; touch-action:none; user-select:none; background:#0f1420;"></canvas>
+            <!-- 위험 경고 -->
+            <div id="suika-danger-msg" style="display:none; position:absolute; top:108px; left:50%; transform:translateX(-50%); background:rgba(220,38,38,0.9); color:white; font-weight:800; padding:4px 14px; border-radius:20px; font-size:0.78rem; white-space:nowrap; pointer-events:none;">⚠️ 경고! 과일이 넘칩니다: <span id="suika-danger-time">3.0</span>초</div>
+            <!-- 오버레이 -->
+            <div id="suika-overlay" style="position:absolute; inset:0; background:rgba(8,12,24,0.95); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; z-index:10;">
+                <div style="font-size:5rem; margin-bottom:8px; filter:drop-shadow(0 0 20px rgba(16,185,129,0.6));">🍉</div>
+                <div style="font-size:1.8rem; font-weight:900; color:#ff7f2a; text-transform:uppercase; letter-spacing:-0.5px; text-shadow:0 0 20px rgba(255,127,42,0.5);">SUIKA LITE</div>
+                <div style="font-size:0.82rem; color:#94a3b8; max-width:260px; margin:8px 0 20px; font-weight:600; line-height:1.5;">같은 과일끼리 합쳐서 더 큰 과일로 진화! 공간이 가득 차면 게임 오버.</div>
+                <button onclick="suikaStart()" style="padding:12px 28px; background:linear-gradient(135deg,#ff7f2a,#e05a0a); color:white; border:none; border-radius:14px; font-size:1rem; font-weight:900; cursor:pointer; box-shadow:0 4px 20px rgba(255,127,42,0.45);">▶ 게임 시작</button>
+            </div>
+        </div>
+        <!-- 과일 진화 사다리 (가로) -->
+        <div style="width:100%; background:linear-gradient(135deg,#0f1420,#141929); border-radius:14px; border:1px solid rgba(255,127,42,0.25); padding:10px 12px; margin-top:8px; box-sizing:border-box; box-shadow:0 2px 12px rgba(0,0,0,0.3);">
+            <div style="font-size:0.65rem; font-weight:900; color:#ff9a55; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; text-align:center;">⚡ 합성 순서</div>
+            <div id="suika-ladder" style="display:flex; align-items:center; justify-content:center; gap:2px; flex-wrap:wrap;"></div>
+        </div>
+    </div>
+
+    <!-- 📈 주식 게임 화면 -->
+    <div id="stock-screen" class="s-dark" style="display:none; width:100%; max-width:1100px; padding:0 8px; box-sizing:border-box; overflow-y:auto; max-height:calc(100vh - 80px);">
+        <style>
+        /* 라이트 기본값 */
+        #stock-screen{--sbg:#f0f2f5;--ss:#fff;--ss2:#f8f9fa;--sb:#e2e8f0;--st:#1a202c;--st2:#718096;--sa:#3b82f6;--sg:#10b981;--sr:#ef4444;--sy:#f59e0b;transition:background .25s,color .25s}
+        /* 다크모드 */
+        #stock-screen.s-dark{--sbg:#0f1117;--ss:#1a1d27;--ss2:#22263a;--sb:#2d3250;--st:#e2e8f0;--st2:#8892b0;--sa:#60a5fa;--sg:#34d399;--sr:#f87171;--sy:#fbbf24;background:#0f1117}
+        #stock-screen.s-dark .s-toast{background:#1a1d27;border-color:#2d3250;color:#e2e8f0}
+        #stock-screen.s-dark .s-modal-box{background:#1a1d27;border-color:#2d3250;color:#e2e8f0}
+        #stock-screen.s-dark .s-mstat{background:#22263a;border-color:#2d3250}
+        #stock-screen.s-dark .s-tdesc{color:#8892b0}
+        #stock-screen .s-hdr{background:var(--ss);border-bottom:1px solid var(--sb);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;border-radius:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+        #stock-screen .s-logo{font-size:14px;font-weight:800}.s-logo span{color:var(--sa)}
+        #stock-screen .s-bal{background:var(--ss2);border:1px solid var(--sb);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600}
+        #stock-screen .s-bal .amt{color:var(--sa)}
+        #stock-screen .s-diff{display:flex;gap:5px}
+        #stock-screen .s-dbtn{padding:5px 10px;border-radius:6px;border:1px solid var(--sb);background:var(--ss2);color:var(--st2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+        #stock-screen .s-dbtn.active{border-color:var(--sa);color:var(--sa);background:rgba(59,130,246,.1)}
+        #stock-screen .s-layout{display:grid;grid-template-columns:1fr 320px;gap:10px}
+        @media(max-width:700px){#stock-screen .s-layout{grid-template-columns:1fr}}
+        #stock-screen .s-col{display:flex;flex-direction:column;gap:10px}
+        #stock-screen .s-card{background:var(--ss);border:1px solid var(--sb);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);overflow:hidden}
+        #stock-screen .s-chdr{padding:9px 13px;border-bottom:1px solid var(--sb);display:flex;align-items:center;justify-content:space-between}
+        #stock-screen .s-ctitle{font-size:10px;font-weight:700;color:var(--st2);text-transform:uppercase;letter-spacing:.6px}
+        #stock-screen .s-cbody{padding:12px 13px}
+        #stock-screen .s-news-list{display:flex;flex-direction:column;gap:7px}
+        #stock-screen .s-ni{background:var(--ss2);border:1px solid var(--sb);border-radius:8px;padding:10px 12px;cursor:pointer;transition:all .2s}
+        #stock-screen .s-ni:hover{border-color:var(--sa);transform:translateY(-1px)}
+        #stock-screen .s-ni.sel{border-color:var(--sa);background:rgba(59,130,246,.07)}
+        #stock-screen .s-ntag{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-bottom:4px;text-transform:uppercase}
+        #stock-screen .s-tp{background:rgba(16,185,129,.15);color:var(--sg)}
+        #stock-screen .s-tn{background:rgba(239,68,68,.15);color:var(--sr)}
+        #stock-screen .s-tnu{background:rgba(245,158,11,.15);color:var(--sy)}
+        #stock-screen .s-nh{font-size:12px;font-weight:600;line-height:1.4;margin-bottom:2px}
+        #stock-screen .s-ns{font-size:11px;color:var(--st2)}
+        #stock-screen .s-nhint{margin-top:6px;font-size:10px;color:var(--st2);font-style:italic;display:none}
+        #stock-screen .s-ni.sel .s-nhint{display:block}
+        #stock-screen .s-srow{display:flex;align-items:center;gap:7px;padding:8px 10px;border-radius:7px;background:var(--ss2);border:1px solid var(--sb);cursor:pointer;transition:all .2s;margin-bottom:5px}
+        #stock-screen .s-srow:hover{border-color:var(--sa)}
+        #stock-screen .s-srow.active{border-color:var(--sa);background:rgba(59,130,246,.07)}
+        #stock-screen .s-stk{font-size:11px;font-weight:700;width:44px;flex-shrink:0}
+        #stock-screen .s-snm{font-size:10px;color:var(--st2);flex:1}
+        #stock-screen .s-spr{font-size:12px;font-weight:600;width:70px;text-align:right;flex-shrink:0;transition:color .3s}
+        #stock-screen .s-sch{font-size:10px;font-weight:600;width:55px;text-align:right;flex-shrink:0}
+        #stock-screen .sup{color:var(--sg)}.sdown{color:var(--sr)}.sflat{color:var(--st2)}
+        #stock-screen .s-sib{background:var(--ss2);border:1px solid var(--sb);border-radius:8px;padding:12px;text-align:center}
+        #stock-screen .s-si-ticker{font-size:14px;font-weight:700}
+        #stock-screen .s-si-price{font-size:24px;font-weight:700;margin:3px 0;transition:color .2s}
+        #stock-screen .s-si-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+        #stock-screen .sbu{background:rgba(16,185,129,.15);color:var(--sg)}
+        #stock-screen .sbd{background:rgba(239,68,68,.15);color:var(--sr)}
+        #stock-screen .sbf{background:rgba(113,128,150,.15);color:var(--st2)}
+        #stock-screen .s-pp-box{background:var(--ss2);border:1px solid var(--sb);border-radius:8px;padding:10px 12px;display:none}
+        #stock-screen .s-pp-box.vis{display:block}
+        #stock-screen .s-pp-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
+        #stock-screen .s-pp-row:last-child{margin-bottom:0;padding-top:4px;border-top:1px solid var(--sb);font-weight:700}
+        #stock-screen .s-pp-lbl{color:var(--st2)}
+        #stock-screen .s-qty{display:flex;align-items:center;gap:5px;background:var(--ss2);border:1px solid var(--sb);border-radius:8px;padding:6px 10px}
+        #stock-screen .s-qty-lbl{font-size:11px;color:var(--st2);flex:1}
+        #stock-screen .s-qbtn{width:24px;height:24px;border-radius:5px;border:1px solid var(--sb);background:var(--ss);color:var(--st);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        #stock-screen .s-qbtn:hover{background:var(--sa);color:#fff;border-color:var(--sa)}
+        #stock-screen .s-qinp{width:44px;text-align:center;border:1px solid var(--sb);border-radius:5px;background:var(--ss);color:var(--st);font-size:12px;font-weight:600;padding:2px;outline:none}
+        #stock-screen .s-qinp:focus{border-color:var(--sa)}
+        #stock-screen .s-maxbtn{padding:2px 8px;border-radius:5px;border:1px solid var(--sa);background:rgba(59,130,246,.1);color:var(--sa);font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0}
+        #stock-screen .s-tbtns{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+        #stock-screen .s-bbuy{padding:9px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:var(--sg);color:#fff;transition:all .15s;position:relative;overflow:hidden}
+        #stock-screen .s-bbuy:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,185,129,.4)}
+        #stock-screen .s-bsell{padding:9px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:var(--sr);color:#fff;transition:all .15s;position:relative;overflow:hidden}
+        #stock-screen .s-bsell:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 12px rgba(239,68,68,.4)}
+        #stock-screen .s-bbuy:disabled,#stock-screen .s-bsell:disabled{opacity:.4;cursor:not-allowed}
+        #stock-screen .s-bnext{width:100%;padding:9px;border-radius:8px;border:none;background:var(--sa);color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+        #stock-screen .s-bnext:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 12px rgba(59,130,246,.4)}
+        #stock-screen .s-btn-tp{display:flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;border:1px solid var(--sb);background:var(--ss2);color:var(--st2);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s}
+        #stock-screen .s-btn-tp:hover,#stock-screen .s-btn-tp.active{border-color:var(--sa);color:var(--sa);background:rgba(59,130,246,.1)}
+        #stock-screen .s-port-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--ss2);border:1px solid var(--sb);border-radius:7px;font-size:11px;margin-bottom:5px}
+        #stock-screen .s-pt{font-weight:700;width:42px;flex-shrink:0}
+        #stock-screen .s-pi{flex:1;color:var(--st2);font-size:10px;line-height:1.6}
+        #stock-screen .s-pp{font-weight:600;text-align:right;font-size:11px;line-height:1.6}
+        #stock-screen .s-spark{width:55px;height:24px;flex-shrink:0}
+        #stock-screen .s-asset-wrap{position:relative;height:70px}
+        #stock-screen .s-hist-item{display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--sb);font-size:10px}
+        #stock-screen .s-hist-item:last-child{border-bottom:none}
+        #stock-screen .s-hbuy{padding:2px 6px;border-radius:3px;font-size:9px;font-weight:700;background:rgba(16,185,129,.15);color:var(--sg);flex-shrink:0}
+        #stock-screen .s-hsell{padding:2px 6px;border-radius:3px;font-size:9px;font-weight:700;background:rgba(239,68,68,.15);color:var(--sr);flex-shrink:0}
+        #stock-screen .s-hi{flex:1}
+        #stock-screen .s-ha{font-weight:600;text-align:right}
+        #stock-screen .s-empty{text-align:center;color:var(--st2);font-size:11px;padding:14px 0}
+        #stock-screen .s-live{width:6px;height:6px;border-radius:50%;background:var(--sg);display:inline-block;margin-right:4px;animation:slive 1.5s infinite}
+        @keyframes slive{0%,100%{opacity:1}50%{opacity:.4}}
+        #stock-screen .s-rbadge{background:var(--ss2);border:1px solid var(--sb);border-radius:20px;padding:2px 10px;font-size:10px;color:var(--st2)}
+        #stock-screen .s-rbadge span{color:var(--sa);font-weight:600}
+        #stock-screen .s-tape{background:var(--ss);border:1px solid var(--sb);border-radius:8px;height:28px;overflow:hidden;position:relative;margin-bottom:10px}
+        #stock-screen .s-tape-inner{display:flex;gap:0;white-space:nowrap;animation:stape 22s linear infinite;width:max-content}
+        #stock-screen .s-tape:hover .s-tape-inner{animation-play-state:paused}
+        @keyframes stape{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+        #stock-screen .s-tick{display:inline-flex;align-items:center;gap:5px;padding:0 16px;font-size:10px;font-weight:600;height:28px}
+        #stock-screen .s-shortcut{font-size:9px;color:var(--st2);text-align:center;padding:3px 0}
+        #stock-screen .s-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+        #stock-screen .s-modal-box{background:var(--ss);border:1px solid var(--sb);border-radius:14px;padding:24px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:smIn .3s cubic-bezier(.34,1.56,.64,1)}
+        @keyframes smIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+        #stock-screen .s-mstat{background:var(--ss2);border:1px solid var(--sb);border-radius:8px;padding:10px}
+        #stock-screen .s-mstat-label{font-size:10px;color:var(--st2);margin-bottom:3px}
+        #stock-screen .s-mstat-val{font-size:14px;font-weight:700}
+        #stock-screen .s-toast-wrap{position:fixed;top:65px;right:14px;z-index:10000;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+        .s-toast{background:var(--ss,#fff);border:1px solid var(--sb,#e2e8f0);border-radius:12px;padding:11px 14px;box-shadow:0 8px 28px rgba(0,0,0,.16);display:flex;align-items:center;gap:10px;min-width:220px;animation:stIn .35s cubic-bezier(.34,1.56,.64,1);pointer-events:auto}
+        .s-toast.out{animation:stOut .3s ease forwards}
+        .s-ticon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+        .s-tb .s-ticon{background:rgba(16,185,129,.18)}.s-ts .s-ticon{background:rgba(239,68,68,.18)}.s-tw .s-ticon{background:rgba(245,158,11,.18)}
+        .s-tbody{flex:1}.s-ttitle{font-size:11px;font-weight:700;margin-bottom:1px}.s-tdesc{font-size:10px;color:#718096}
+        .s-tamt{font-size:13px;font-weight:700;text-align:right;flex-shrink:0}
+        @keyframes stIn{from{opacity:0;transform:translateX(20px) scale(.94)}to{opacity:1;transform:translateX(0) scale(1)}}
+        @keyframes stOut{from{opacity:1}to{opacity:0;transform:translateX(20px) scale(.94)}}
+        @keyframes sfG{0%{background:rgba(16,185,129,.28)}100%{background:transparent}}
+        @keyframes sfR{0%{background:rgba(239,68,68,.28)}100%{background:transparent}}
+        #stock-screen .sfg{animation:sfG .7s ease}
+        #stock-screen .sfr{animation:sfR .7s ease}
+        .s-ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.35);transform:scale(0);animation:srip .5s linear;pointer-events:none}
+        @keyframes srip{to{transform:scale(4);opacity:0}}
+        .s-confetti{position:fixed;width:7px;height:7px;border-radius:2px;pointer-events:none;animation:scfall linear forwards}
+        @keyframes scfall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
+        </style>
+        <!-- 토스트 래퍼 -->
+        <div class="s-toast-wrap" id="s-tw"></div>
+        <!-- 헤더 -->
+        <div class="s-hdr">
+            <div class="s-logo">Stock<span>News</span></div>
+            <div style="display:flex;align-items:center;gap:7px">
+                <div class="s-bal">💰 <span class="amt" id="s-bal">₩10,000,000</span></div>
+                <div class="s-diff">
+                    <button class="s-dbtn active" id="sd0" onclick="sSetDiff(0)">초급</button>
+                    <button class="s-dbtn" id="sd1" onclick="sSetDiff(1)">중급</button>
+                    <button class="s-dbtn" id="sd2" onclick="sSetDiff(2)">고급</button>
+                </div>
+                <button id="s-theme-btn" onclick="sToggleTheme()" style="padding:5px 8px;border-radius:7px;border:1px solid var(--sb);background:var(--ss2);color:var(--st);font-size:14px;cursor:pointer;transition:all .15s;" title="다크/라이트 전환">🌙</button>
+                <button onclick="stockBackToMenu()" style="padding:5px 10px;background:#f5f5f5;border:1px solid #ddd;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;color:#555;">메뉴</button>
+            </div>
+        </div>
+        <!-- 티커테이프 -->
+        <div class="s-tape"><div class="s-tape-inner" id="s-tape"></div></div>
+        <!-- 레이아웃 -->
+        <div class="s-layout">
+            <div class="s-col">
+                <!-- 뉴스 -->
+                <div class="s-card">
+                    <div class="s-chdr">
+                        <span class="s-ctitle">📰 오늘의 뉴스</span>
+                        <div class="s-rbadge">라운드 <span id="s-rnum">1</span>/<span id="s-rmax">10</span></div>
+                    </div>
+                    <div class="s-cbody"><div class="s-news-list" id="s-nl"></div></div>
+                </div>
+                <!-- 시세 -->
+                <div class="s-card">
+                    <div class="s-chdr">
+                        <span class="s-ctitle"><span class="s-live"></span>실시간 시세</span>
+                    </div>
+                    <div class="s-cbody" id="s-sl"></div>
+                </div>
+                <!-- 자산 차트 -->
+                <div class="s-card">
+                    <div class="s-chdr"><span class="s-ctitle">📊 자산 변화</span></div>
+                    <div class="s-cbody">
+                        <div class="s-asset-wrap"><canvas id="s-asset-chart" height="70"></canvas></div>
+                    </div>
+                </div>
+                <!-- 보유종목 -->
+                <div class="s-card">
+                    <div class="s-chdr">
+                        <span class="s-ctitle">💼 보유 종목</span>
+                        <span id="s-tpnl" style="font-size:11px;font-weight:600"></span>
+                    </div>
+                    <div class="s-cbody">
+                        <div id="s-psw"></div>
+                        <div id="s-pl"><div class="s-empty">보유 종목 없음</div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="s-col">
+                <!-- 매매 -->
+                <div class="s-card">
+                    <div class="s-chdr"><span class="s-ctitle">⚡ 매매</span></div>
+                    <div class="s-cbody">
+                        <div style="display:flex;flex-direction:column;gap:8px">
+                            <div class="s-sib" id="s-sib"><div style="color:var(--st2);font-size:11px">뉴스 또는 종목을 선택하세요</div></div>
+                            <div style="display:flex;justify-content:flex-end">
+                                <button class="s-btn-tp" id="s-ptbtn" onclick="sToggleProfit()">📊 예상 수익</button>
+                            </div>
+                            <div class="s-pp-box" id="s-ppbox">
+                                <div class="s-pp-row"><span class="s-pp-lbl">평균 매수가</span><span id="s-ppavg">-</span></div>
+                                <div class="s-pp-row"><span class="s-pp-lbl">현재가</span><span id="s-ppcur">-</span></div>
+                                <div class="s-pp-row"><span class="s-pp-lbl">수량</span><span id="s-ppqty">-</span></div>
+                                <div class="s-pp-row"><span class="s-pp-lbl">예상 손익</span><span id="s-pppnl">-</span></div>
+                            </div>
+                            <div class="s-qty">
+                                <span class="s-qty-lbl">수량</span>
+                                <button class="s-qbtn" onclick="sCq(-10)">−−</button>
+                                <button class="s-qbtn" onclick="sCq(-1)">−</button>
+                                <input class="s-qinp" type="number" id="s-qty" value="1" min="1" oninput="if(parseInt(this.value)<1||isNaN(parseInt(this.value)))this.value=1;sUpdPP();">
+                                <button class="s-qbtn" onclick="sCq(1)">+</button>
+                                <button class="s-qbtn" onclick="sCq(10)">++</button>
+                                <button class="s-maxbtn" onclick="sSetMax()">MAX</button>
+                            </div>
+                            <div class="s-tbtns">
+                                <button class="s-bbuy" id="s-bbuy" onclick="sTrade('buy')" disabled>매수 [B]</button>
+                                <button class="s-bsell" id="s-bsell" onclick="sTrade('sell')" disabled>매도 [S]</button>
+                            </div>
+                            <button class="s-bnext" onclick="sNextRound()">다음 라운드 [N] →</button>
+                            <div class="s-shortcut">B 매수 · S 매도 · N 다음라운드</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 거래내역 -->
+                <div class="s-card">
+                    <div class="s-chdr"><span class="s-ctitle">📋 거래 내역</span></div>
+                    <div class="s-cbody" style="max-height:160px;overflow-y:auto"><div id="s-hl"><div class="s-empty">거래 내역 없음</div></div></div>
+                </div>
+            </div>
+        </div>
+        <!-- 결과 모달 -->
+        <div id="s-result-modal" style="display:none" class="s-modal">
+            <div class="s-modal-box">
+                <div id="s-modal-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ④ 인포 패널 -->
+
+    <div class="info-panel" id="info-panel">
+        <div class="score">점수: <span id="score-count">0</span></div>
+        <button class="hint-btn" id="hint-action-btn">💡 플래시 (<span id="hint-count">1</span>)</button>
+        <button class="hint-btn" id="hint-card-btn" style="background-color:#3b82f6;">🃏 카드힌트 (<span id="hint-card-count">1</span>)</button>
+        <div class="timer" id="timer-panel"><span id="timer-label">시간:</span> <span id="time-count">0.0</span>초</div>
+        <button class="settings-icon-btn" id="open-settings-btn" title="설정">⚙️</button>
+    </div>
+
+    <!-- ④-b 상태 메시지 (고정 높이 한 줄) -->
+    <div class="status" id="status-text">카드를 기억하세요!</div>
+
+    <!-- ⑤ 게임 보드 -->
+    <div class="game-board" id="board"></div>
+</div>
+
+<!-- 일시정지 오버레이 -->
+<div id="pause-overlay">
+    <div class="pause-box">
+        <div class="pause-icon">⏸️</div>
+        <div class="pause-title">일시정지</div>
+        <div class="pause-subtitle">게임이 멈췄습니다</div>
+        <div class="pause-btn-group">
+            <button class="pause-resume-btn" id="pause-resume-btn">▶ 계속하기</button>
+            <button class="pause-menu-btn"   id="pause-menu-btn">🏠 메인 메뉴로</button>
+        </div>
+        <div class="pause-esc-tip"><kbd>ESC</kbd> 키를 다시 누르면 계속됩니다</div>
+    </div>
+</div>
+
+<!-- 설정 모달 -->
+<div id="settings-overlay">
+    <div class="settings-box" style="max-height:88vh;overflow-y:auto;">
+        <div style="font-size:2.2rem;margin-bottom:6px;">⚙️</div>
+        <div class="settings-title">설정</div>
+        <div class="settings-subtitle">게임 옵션을 조정하세요</div>
+
+        <!-- 사운드 설정 -->
+        <div class="settings-group">
+            <span class="settings-group-label">🔊 사운드</span>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">효과음</div>
+                    <div class="settings-row-desc">카드 뒤집기 / 맞추기 효과음</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="settings-sfx-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">볼륨</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="range" class="settings-slider" id="settings-volume" min="0" max="100" value="70">
+                    <div class="settings-value-badge" id="settings-volume-val">70</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 화면 설정 -->
+        <div class="settings-group">
+            <span class="settings-group-label">🎨 화면</span>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">카드 뒤집기 애니메이션</div>
+                    <div class="settings-row-desc">빠른 기기에서 더 부드럽게</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="settings-anim-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">콤보 이펙트</div>
+                    <div class="settings-row-desc">콤보 달성 시 화면 효과</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="settings-combo-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">파티클 효과</div>
+                    <div class="settings-row-desc">매칭 시 파티클 연출</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="settings-particle-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 게임플레이 -->
+        <div class="settings-group">
+            <span class="settings-group-label">🎮 게임플레이</span>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">오답 시 흔들림 효과</div>
+                    <div class="settings-row-desc">틀렸을 때 카드가 흔들립니다</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="settings-shake-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">클리어 시 축하 효과</div>
+                    <div class="settings-row-desc">승리 시 폭죽 연출</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="settings-celebrate-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 접근성 -->
+        <div class="settings-group">
+            <span class="settings-group-label">♿ 접근성</span>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">고대비 카드 테두리</div>
+                    <div class="settings-row-desc">카드 구분선 강조 표시</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="settings-contrast-toggle">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">카드 크기</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="range" class="settings-slider" id="settings-card-size" min="80" max="120" value="100">
+                    <div class="settings-value-badge" id="settings-card-size-val">100%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 키보드 단축키 안내 -->
+        <div class="settings-group">
+            <span class="settings-group-label">⌨️ 단축키 안내</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:4px;">
+                <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:6px 8px;font-size:0.75rem;">
+                    <span style="background:#374151;color:#e2e8f0;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:0.7rem;">ESC</span>
+                    <span style="color:#94a3b8;margin-left:5px;">일시정지</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:6px 8px;font-size:0.75rem;">
+                    <span style="background:#374151;color:#e2e8f0;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:0.7rem;">H</span>
+                    <span style="color:#94a3b8;margin-left:5px;">플래시 힌트</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:6px 8px;font-size:0.75rem;">
+                    <span style="background:#374151;color:#e2e8f0;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:0.7rem;">B</span>
+                    <span style="color:#94a3b8;margin-left:5px;">주식 매수</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:6px 8px;font-size:0.75rem;">
+                    <span style="background:#374151;color:#e2e8f0;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:0.7rem;">S</span>
+                    <span style="color:#94a3b8;margin-left:5px;">주식 매도</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:6px 8px;font-size:0.75rem;">
+                    <span style="background:#374151;color:#e2e8f0;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:0.7rem;">N</span>
+                    <span style="color:#94a3b8;margin-left:5px;">다음 라운드</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:6px 8px;font-size:0.75rem;">
+                    <span style="background:#374151;color:#e2e8f0;border-radius:4px;padding:1px 5px;font-family:monospace;font-size:0.7rem;">←→</span>
+                    <span style="color:#94a3b8;margin-left:5px;">수박 이동</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 데이터 관리 -->
+        <div class="settings-group">
+            <span class="settings-group-label">🗂️ 데이터 관리</span>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">업적 데이터 초기화</div>
+                    <div class="settings-row-desc">모든 업적이 삭제됩니다</div>
+                </div>
+                <button id="settings-reset-achieve-btn" style="padding:4px 10px;background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.25);border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">초기화</button>
+            </div>
+            <div class="settings-row">
+                <div>
+                    <div class="settings-row-label">수박 최고점 초기화</div>
+                    <div class="settings-row-desc">수박게임 최고기록 삭제</div>
+                </div>
+                <button id="settings-reset-suika-btn" style="padding:4px 10px;background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.25);border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">초기화</button>
+            </div>
+        </div>
+
+        <div class="settings-btn-group">
+            <button class="settings-close-btn" id="close-settings-btn">✓ 설정 저장</button>
+            <button class="secondary-btn" id="settings-reset-btn" style="width:100%;margin:0;background:rgba(255,255,255,0.04);color:#64748b;border:1px solid rgba(255,255,255,0.1);border-radius:50px;padding:10px 0;font-size:0.9rem;">↺ 기본값으로 초기화</button>
+        </div>
+    </div>
+</div>
+
+<!-- 업적 모달 -->
+<div class="modal-overlay" id="achieve-modal-overlay">
+    <div class="custom-modal">
+        <h2>🏆 명예의 도전 과제 보관함</h2>
+        <p style="font-size:0.88rem; color:#777; margin-top:-5px; text-align:center;">상큼과일 마스터를 증명할 16개의 훈장입니다.</p>
+        <div class="modal-scroll-area" id="achieve-list-container"></div>
+        <button class="secondary-btn" id="close-achieve-btn" style="padding:9px 28px; margin-top:8px; width:100%;">닫기</button>
+    </div>
+</div>
+
+<!-- 결과 화면 -->
+<div id="result-screen">
+    <div class="result-box">
+        <div class="result-icon" id="result-icon"></div>
+        <div class="result-title" id="result-title"></div>
+        <div class="result-subtitle" id="result-subtitle"></div>
+        <div class="result-stats" id="result-stats"></div>
+        <div class="result-btn-group">
+            <button class="result-btn-retry" id="result-retry-btn">🔄 다시 도전하기</button>
+            <button class="result-btn-menu"  id="result-menu-btn">🏠 메인 메뉴로</button>
+        </div>
+    </div>
+</div>
+
+<!-- 패치노트 모달 -->
+<div class="modal-overlay" id="patch-modal-overlay">
+    <div class="custom-modal">
+        <h2>📋 업데이트 패치노트</h2>
+        <div class="modal-scroll-area">
+
+            <!-- 🆕 여기에 최신 패치노트를 추가합니다 -->
+            <div class="patch-version">
+                <h3>v1.1.15 버그 수정 종합 패치</h3>
+                <ul>
+                    <li><b>[주식] 다크모드</b>: 주식 게임 기본 다크모드 적용 및 🌙/☀️ 전환 버튼 추가.</li>
+                    <li><b>[주식] 수량 입력</b>: 음수·0 직접 입력 시 자동으로 1로 보정.</li>
+                    <li><b>[주식] 다시 시작 난이도</b>: 재시작 시 선택한 난이도가 유지되도록 수정 (버튼 표시·내부값 불일치 해소).</li>
+                    <li><b>[주식] 최종 라운드</b>: 10라운드 종료 후 불필요한 11라운드 뉴스 렌더 방지.</li>
+                    <li><b>[주식] 단축키 차단</b>: 결과 모달이 열린 상태에서 N/B/S 단축키가 동작하지 않도록 수정.</li>
+                    <li><b>[주식] 손익률 NaN</b>: 전체 매도 후 포트폴리오 손익률 NaN 표시 버그 수정.</li>
+                    <li><b>[주식] 결산 오류</b>: 결산 시 qty=0 잔존 포지션이 자산에 포함되던 버그 수정.</li>
+                    <li><b>[수박] 벽 뚫기</b>: 쌓인 과일이 좌우 벽 밖으로 밀려나는 버그 수정.</li>
+                    <li><b>[수박] 게임오버</b>: 과일이 데드라인을 넘으면 즉시 카운트다운 시작하도록 조건 대폭 완화.</li>
+                </ul>
+            </div>
+            <div class="patch-version">
+                <h3>v1.1.14 버그 수정</h3>
+                <ul>
+                    <li><b>버그 Fix</b>: 현재까지 발견된 버그들이 수정 되었습니다.</li>
+                    <li>현재 수박게임에 존재하는 버그는 고쳐지지 않았습니다.</li>
+                </ul>
+            </div>
+
+            <!-- 기존 v1.1.13 내용 -->
+            <div class="patch-version">
+                <h3>v1.1.13 가드헌터 & 힌트 대개편 빌드</h3>
+                <ul>
+                    <li><b>플래시 가드헌터 시스템 신설</b>: 30점 달성마다 자동으로 플래시 힌트가 1회 추가 지급됩니다. 고득점 플레이를 더욱 강력하게!</li>
+                    <li><b>기본 힌트 2개로 상향</b>: 쉬운 난이도(4x4)를 제외한 모든 모드에서 플래시 힌트와 카드 힌트가 기본 2개씩 지급됩니다.</li>
+                    <li><b>카드 색상 팔레트 전면 리뉴얼</b>: 더 선명하고 다채로운 16색 파스텔 팔레트로 교체하여 구별감을 대폭 향상.</li>
+                    <li><b>화면 고정 레이아웃 적용</b>: 게임 중 스크롤 없이 모든 요소가 화면에 딱 맞게 고정되도록 레이아웃 전면 개편.</li>
+                </ul>
+            </div>
+            
+            <!-- (이하 기존 v4.5.0, v4.0.0 내용 동일) -->
+            <div class="patch-version">
+                <h3>v1.1.10 게임 허브 시스템 아케이드 빌드</h3>
+                <ul>
+                    <li><b>게임 고르기 모듈 신설</b>: 인트로 진입 후 독자적인 아케이드 허브에서 게임을 직접 골라 입장하도록 시스템 설계.</li>
+                    <li><b>타이틀명 전면 리뉴얼</b>: '상큼 과일 아케이드 존'으로 통합 브랜딩 적용.</li>
+                    <li>화면 이동 간 유기적 구조를 위한 백트래킹(뒤로가기) 상호작용 강화.</li>
+                </ul>
+            </div>
+            <div class="patch-version">
+                <h3>v1.0.1 업적 대확장 오버홀</h3>
+                <ul>
+                    <li>도전 과제 시스템을 총 16종 업적 체계로 오버홀 대폭 확장 적용.</li>
+                    <li>로컬 스토리지 데이터 무결성 인덱싱 동기화 처리.</li>
+                    <li>콤보, 조커, 하드코어, 스피드 등 다양한 플레이 스타일에 맞는 업적 분류 정착.</li>
+                </ul>
+            </div>
+        </div>
+        <button class="secondary-btn" id="close-patch-btn" style="padding:9px 28px; margin-top:8px; width:100%;">확인 완료</button>
+    </div>
+</div>
+
+<script>
+    const fruitList = [
+        '🍎','🍊','🍌','🍇','🍓','🍒','🍑','🍍','🥝','🍉',
+        '🍈','🍏','🍋','🍐','🫐','🥥','🥭','🥑','🥦','🍅',
+        '🥕','🌽','🌶️','🫑','🥔','🍆','🌰','🥜','🍄','🧅',
+        '🧄','🍠'
+    ];
+
+    const achievementDefinitions = [
+        { id: 'first_clear',       title: '상큼한 첫걸음',       desc: '난이도 상관없이 첫 게임 세트 클리어 성공',                   icon: '🌱' },
+        { id: 'high_score',        title: '메모리 마스터',        desc: '한 게임에서 최종 스코어 150점 이상 기록',                    icon: '👑' },
+        { id: 'combo_king',        title: '콤보 폭발 폭주족',     desc: '연속 콤보 수 5회 이상 달성',                                 icon: '🔥' },
+        { id: 'hardcore_clear',    title: '강철의 심장',          desc: '5번 기회(하드코어) 조건에서 세트 클리어',                    icon: '🛡️' },
+        { id: 'joker_fever',       title: '조커 마술사',          desc: '스페셜 조커 모드 완전 클리어',                               icon: '🃏' },
+        { id: 'time_attack_master',title: '빛보다 빠른 손',       desc: '8x8 일반 타임어택 모드 클리어',                              icon: '⚡' },
+        { id: 'perfect_100',       title: 'Perfect 100',          desc: '오답 감점 없이 깔끔하게 점수 100점 돌파',                    icon: '💯' },
+        { id: 'no_hint_clear',     title: '미니멀리스트',         desc: '수동 힌트 버튼을 한 번도 쓰지 않고 클리어',                  icon: '🚫' },
+        { id: 'speed_racer',       title: '스피드 레이서',        desc: '게임 클리어 타임 20초 이하 기록 (4x4/6x6)',                  icon: '⏱️' },
+        { id: 'minus_score',       title: '마이너스의 손',        desc: '오답 연발로 최종 점수가 0점 미만 도달',                      icon: '📉' },
+        { id: 'joker_streak',      title: '조커 대폭발',          desc: '조커 모드에서 연속으로 조커를 3번 오픈',                     icon: '🎆' },
+        { id: 'fail_is_mother',    title: '실패는 성공의 어머니', desc: '라이프 제한 모드에서 클리어 실패(게임 오버) 1회 경험',        icon: '☠️' },
+        { id: 'lucky_seven',       title: '행운의 세븐',          desc: '정확히 최고 콤보 7회에서 콤보가 끊기거나 끝남',              icon: '🍀' },
+        { id: 'veteran_tester',    title: '진성 테스터',          desc: '크레딧(Credit) 창을 통산 3번 이상 열어 정독하기',            icon: '🔎' },
+        { id: 'score_rich',        title: '자산가 스코어',        desc: '최종 점수 250점 이상 초고득점 달성',                         icon: '💵' },
+        { id: 'speedy_fail',       title: '초고속 광탈',          desc: '하드코어 모드에서 시작 후 15초 안에 광속 게임오버',           icon: '💥' },
+        { id: 'all_achieved',      title: '진정한 과일 마스터',   desc: '나머지 16개의 모든 업적들을 전부 해금 완료',                 icon: '🎖️' }
+    ];
+
+    // 과일별 고유 색상 인덱스 매핑
+    const fruitColorMap = {};
+    fruitList.forEach((fruit, i) => { fruitColorMap[fruit] = `c${i % 16}`; });
+
+    // ──────────── 상태 변수 ────────────
+    let cardValues           = [];
+    let flippedCards         = [];
+    let matchedCount         = 0;
+    let isGameReady          = false;
+    let hasFlashed           = false;
+
+    let timerInterval        = null;
+    let timeRemaining        = 180.0;
+    let timeElapsed          = 0;
+    let currentScore         = 0;
+    let comboCount           = 0;
+    let maxComboReached      = 0;
+    let wrongCount           = 0;
+
+    let remainingHintButtons = 1;   // 플래시 힌트
+    let remainingHintCards   = 1;   // 카드 힌트
+    let isTimerPaused        = false; // 메시지 표시 중 타이머 정지
+    let isGameOver           = false; // 게임오버 플래그
+
+    let hintUsedInThisGame   = false;
+    let jokerComboCount      = 0;
+    let maxJokerComboReached = 0;
+    let lastMatchedValue     = "";
+    let sameValueMatchStreak = 0;
+
+    let configPreviewTime    = 2000;
+    let configMaxLife        = "infinite";
+    let configSoundOn        = true;
+    let currentGameMode      = "4";
+
+    // ──────────── DOM 캐싱 ────────────
+    const introScreen           = document.getElementById('intro-screen');
+    const gameSelectScreen      = document.getElementById('game-select-screen');
+    const setupScreen           = document.getElementById('setup-screen');
+    const infoPanel             = document.getElementById('info-panel');
+    const board                 = document.getElementById('board');
+
+    const playNavBtn            = document.getElementById('play-nav-btn');
+    const selectMemoryGame      = document.getElementById('select-memory-game');
+    const backToIntroFromSelect = document.getElementById('back-to-intro-from-select');
+    const backToSelectBtn       = document.getElementById('back-to-select-btn');
+    const creditBtn             = document.getElementById('credit-btn');
+    const exitBtn               = document.getElementById('exit-btn');
+    const startBtn              = document.getElementById('start-btn');
+    const hintActionBtn         = document.getElementById('hint-action-btn');
+    const hintCardBtn           = document.getElementById('hint-card-btn');
+    const hintCardCountSpan     = document.getElementById('hint-card-count');
+
+    const openAchieveBtn        = document.getElementById('open-achieve-btn');
+    const closeAchieveBtn       = document.getElementById('close-achieve-btn');
+    const achieveModalOverlay   = document.getElementById('achieve-modal-overlay');
+    const achieveListContainer  = document.getElementById('achieve-list-container');
+
+    const openPatchBtn          = document.getElementById('open-patch-btn');
+    const closePatchBtn         = document.getElementById('close-patch-btn');
+    const patchModalOverlay     = document.getElementById('patch-modal-overlay');
+
+    const sizeSelect            = document.getElementById('board-size');
+    const previewTimeSelect     = document.getElementById('preview-time');
+    const lifeLimitSelect       = document.getElementById('life-limit');
+    const soundToggleSelect     = document.getElementById('sound-toggle');
+    const previewWarning        = document.getElementById('preview-time-warning');
+
+    const timeCount             = document.getElementById('time-count');
+    const timerLabel            = document.getElementById('timer-label');
+    const timerPanel            = document.getElementById('timer-panel');
+    const scoreCount            = document.getElementById('score-count');
+    const statusText            = document.getElementById('status-text');
+    const hintCountSpan         = document.getElementById('hint-count');
+
+    // ──────────── 8x8 기억시간 경고 ────────────
+    function updatePreviewWarning() {
+        const mode = sizeSelect.value;
+        const time = parseInt(previewTimeSelect.value);
+        previewWarning.style.display = ((mode === '8' || mode === '8-joker') && time < 5000) ? 'block' : 'none';
+    }
+    sizeSelect.addEventListener('change', updatePreviewWarning);
+    previewTimeSelect.addEventListener('change', updatePreviewWarning);
+
+    // ──────────── 효과음 ────────────
+    function playSystemSound(type) {
+        if (!configSoundOn) return;
+        try {
+            const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+            const osc  = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            if (type === 'flip') {
+                osc.frequency.setValueAtTime(400, ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start(); osc.stop(ctx.currentTime + 0.05);
+            } else if (type === 'match') {
+                osc.frequency.setValueAtTime(600, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                osc.start(); osc.stop(ctx.currentTime + 0.2);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, ctx.currentTime);
+                osc.frequency.setValueAtTime(150, ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start(); osc.stop(ctx.currentTime + 0.25);
+            }
+        } catch(e) {}
+    }
+
+    // ──────────── 업적 ────────────
+    function getUnlockedAchievements() {
+        const data = localStorage.getItem('fruit_game_achievements');
+        return data ? JSON.parse(data) : {};
+    }
+    function unlockAchievement(id) {
+        const unlocked = getUnlockedAchievements();
+        if (!unlocked[id]) {
+            const now = new Date();
+            unlocked[id] = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            localStorage.setItem('fruit_game_achievements', JSON.stringify(unlocked));
+            alert(`🏆 업적 달성!\n[${achievementDefinitions.find(a => a.id === id).title}] 해금완료!`);
+            checkMasterAchievement();
+        }
+    }
+    function checkMasterAchievement() {
+        const unlocked = getUnlockedAchievements();
+        if (unlocked['all_achieved']) return;
+        const targets = achievementDefinitions.filter(a => a.id !== 'all_achieved');
+        if (targets.every(a => unlocked[a.id])) unlockAchievement('all_achieved');
+    }
+    function renderAchievements() {
+        checkMasterAchievement();
+        achieveListContainer.innerHTML = '';
+        const unlocked = getUnlockedAchievements();
+        achievementDefinitions.forEach(ach => {
+            const isUnlocked = !!unlocked[ach.id];
+            const item = document.createElement('div');
+            item.className = `achievement-item ${isUnlocked ? '' : 'locked'}`;
+            item.innerHTML = `
+                <div class="achievement-icon">${ach.icon}</div>
+                <div class="achievement-info">
+                    <div class="achievement-title">${ach.title}</div>
+                    <div class="achievement-desc">${ach.desc}</div>
+                    ${isUnlocked ? `<div class="achievement-date">달성일: ${unlocked[ach.id]}</div>` : ''}
+                </div>
+                <div class="achievement-badge">${isUnlocked ? '달성 완료' : '잠김'}</div>`;
+            achieveListContainer.appendChild(item);
+        });
+    }
+
+    // ──────────── 네비게이션 ────────────
+    playNavBtn.addEventListener('click', () => {
+        introScreen.style.display      = 'none';
+        gameSelectScreen.style.display = 'block';
+    });
+    backToIntroFromSelect.addEventListener('click', () => {
+        gameSelectScreen.style.display = 'none';
+        introScreen.style.display      = 'flex';
+    });
+    selectMemoryGame.addEventListener('click', () => {
+        gameSelectScreen.style.display = 'none';
+        setupScreen.style.display      = 'block';
+    });
+    document.getElementById('select-pang-game').addEventListener('click', () => {
+        gameSelectScreen.style.display = 'none';
+        suikaScreen.style.display      = 'flex';
+        initSuikaGame();
+    });
+    document.getElementById('select-extra-game').addEventListener('click', () => {
+        gameSelectScreen.style.display = 'none';
+        document.getElementById('stock-screen').style.display = 'block';
+        initStockGame();
+    });
+    document.getElementById('select-extra-game2').addEventListener('click', () => {
+        alert("현재 개발 단게 프로젝트 입니다.!\n곧 출시 예정입니다. 기대해 주세요!");
+    });
+
+    // 스크롤 힌트: 스크롤 하면 자동으로 숨김
+    const gameSelectScroll = document.getElementById('game-select-scroll');
+    const scrollHint = document.getElementById('scroll-hint');
+    if (gameSelectScroll && scrollHint) {
+        gameSelectScroll.addEventListener('scroll', () => {
+            if (gameSelectScroll.scrollTop > 10) scrollHint.style.display = 'none';
+        });
+    }
+    backToSelectBtn.addEventListener('click', () => {
+        setupScreen.style.display      = 'none';
+        gameSelectScreen.style.display = 'block';
+    });
+
+    openAchieveBtn.addEventListener('click',  () => { renderAchievements(); achieveModalOverlay.style.display = 'flex'; });
+    closeAchieveBtn.addEventListener('click', () => { achieveModalOverlay.style.display = 'none'; });
+    openPatchBtn.addEventListener('click',    () => { patchModalOverlay.style.display = 'flex'; });
+    closePatchBtn.addEventListener('click',   () => { patchModalOverlay.style.display = 'none'; });
+    startBtn.addEventListener('click', startGame);
+    hintActionBtn.addEventListener('click', useManualHint);
+    hintCardBtn.addEventListener('click', useHintCard);
+
+    creditBtn.addEventListener('click', () => {
+        let count = parseInt(localStorage.getItem('credit_view_count') || '0');
+        count++;
+        localStorage.setItem('credit_view_count', count);
+        if (count >= 3) unlockAchievement('veteran_tester');
+        alert("📜 크레딧 (Credit)\n\n과일 메모리 게임 v5.0.0\n\n👨\u200d💻 메인개발자 \n  은율 — 게임 전체 개발 및 품질 검증\n\n⚒️ 서브개발자\n  예찬 —(QA)\n  윤성 — (아이디어)\n  진 — (게임 일부 제작)\n\n해주신 당신께감사합니다! 🍓");
+    });
+    exitBtn.addEventListener('click', () => {
+        if (confirm("게임 창을 닫으시겠습니까?")) window.close();
+    });
+
+    // ──────────── 일시정지 시스템 ────────────
+    let isPaused = false;
+
+    function isInGame() {
+        // 메모리 게임 인게임: 보드가 보이고 게임오버 아닐 때
+        const boardVisible = board.style.display === 'grid' && !isGameOver;
+        // 수박 게임 인게임: 수박 화면이 보이고 게임중
+        const suikaPlaying = suikaScreen.style.display === 'flex' && SK.state === 'PLAYING';
+        // 주식 게임 인게임
+        const stockPlaying = document.getElementById('stock-screen').style.display === 'block';
+        return boardVisible || suikaPlaying || stockPlaying;
+    }
+
+    function pauseGame() {
+        if (!isInGame() || isPaused) return;
+        isPaused = true;
+        document.getElementById('pause-overlay').classList.add('active');
+
+        // 메모리 게임 타이머 정지
+        isTimerPaused = true;
+
+        // 수박 게임 루프 정지
+        if (SK.state === 'PLAYING') {
+            if (SK.animId) { cancelAnimationFrame(SK.animId); SK.animId = null; }
+            SK.state = 'PAUSED';
+        }
+    }
+
+    function resumeGame() {
+        if (!isPaused) return;
+        isPaused = false;
+        document.getElementById('pause-overlay').classList.remove('active');
+
+        // showStatusMsg의 타이머가 살아있지 않을 때만 타이머 재개
+        if (!_statusMsgTimer) isTimerPaused = false;
+
+        // 수박 게임 루프 재개
+        if (SK.state === 'PAUSED') {
+            SK.state = 'PLAYING';
+            SK.lastTime = performance.now();
+            SK.animId = requestAnimationFrame(suikaLoop);
+        }
+    }
+
+    document.getElementById('pause-resume-btn').addEventListener('click', resumeGame);
+    document.getElementById('pause-menu-btn').addEventListener('click', () => {
+        // resumeGame() 호출 없이 직접 오버레이 닫고 상태 정리
+        // (resumeGame은 타이머를 재개시키므로 메뉴 이동 시엔 사용하면 안 됨)
+        isPaused = false;
+        document.getElementById('pause-overlay').classList.remove('active');
+
+        if (board.style.display === 'grid') {
+            // 메모리 게임 → 메뉴
+            clearInterval(timerInterval);
+            if (_statusMsgTimer) { clearTimeout(_statusMsgTimer); _statusMsgTimer = null; }
+            isGameOver           = true;
+            isGameReady          = false;
+            isTimerPaused        = false;
+            board.style.display      = 'none';
+            infoPanel.style.display  = 'none';
+            statusText.style.display = 'none';
+            introScreen.style.display = 'flex';
+        } else if (document.getElementById('stock-screen').style.display === 'block') {
+            // 주식 게임 → 메뉴
+            stockBackToMenu();
+        } else {
+            // 수박 게임 → 메뉴
+            suikaBackToMenu();
+        }
+    });
+
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Escape') return;
+        e.preventDefault();
+        if (isPaused) resumeGame();
+        else pauseGame();
+    });
+
+    // ──────────── 유틸 ────────────
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    // ──────────── 게임 시작 ────────────
+    function startGame() {
+        currentGameMode   = sizeSelect.value;
+        configPreviewTime = parseInt(previewTimeSelect.value);
+        configMaxLife     = lifeLimitSelect.value;
+        configSoundOn     = soundToggleSelect.value === 'on';
+
+        board.innerHTML = '';
+        const sizeClass = currentGameMode === "4" ? 'size-4' : currentGameMode === "6" ? 'size-6' : 'size-8';
+        board.className = `game-board ${sizeClass}`;
+
+        flippedCards         = [];
+        matchedCount         = 0;
+        isGameReady          = false;
+        isGameOver           = false; // 게임오버 플래그 리셋
+        hasFlashed           = false;
+        comboCount           = 0;
+        maxComboReached      = 0;
+        wrongCount           = 0;
+        hintUsedInThisGame   = false;
+        jokerComboCount      = 0;
+        maxJokerComboReached = 0;
+        lastMatchedValue     = "";
+        sameValueMatchStreak = 0;
+
+        // 모드별 힌트 세팅
+        const isEasyMode   = currentGameMode === "4";
+        const is8Normal    = currentGameMode === "8"; // 8x8 일반(타임어택) — 플래시 없음, 카드힌트만
+
+        if (is8Normal) {
+            // 8x8 일반: 플래시/카드힌트 버튼 모두 숨김 (보드 내 특수 카드로 대체)
+            hintActionBtn.style.display    = 'none';
+            remainingHintButtons           = 0;
+            hintCountSpan.innerText        = 0;
+
+            hintCardBtn.style.display      = 'none';
+            remainingHintCards             = 0;
+            hintCardCountSpan.innerText    = 0;
+        } else {
+            // 나머지 모드: 둘 다 표시, 4x4는 1개씩 / 나머지는 2개씩
+            hintActionBtn.style.display    = '';
+            remainingHintButtons           = isEasyMode ? 1 : 2;
+            hintCountSpan.innerText        = remainingHintButtons;
+            hintActionBtn.disabled         = true;
+
+            remainingHintCards             = isEasyMode ? 1 : 2;
+            hintCardCountSpan.innerText    = remainingHintCards;
+            hintCardBtn.style.display      = '';
+            hintCardBtn.disabled           = true;
+        }
+
+        currentScore         = 0;
+        scoreCount.innerText = currentScore;
+        timerPanel.classList.remove('danger');
+        clearInterval(timerInterval);
+
+        if (currentGameMode === "8") {
+            timeRemaining        = 180.0;
+            timeCount.innerText  = timeRemaining.toFixed(1);
+            timerLabel.innerText = "남은 시간:";
+            timerPanel.style.color = "var(--success-color)";
+        } else if (currentGameMode === "8-joker") {
+            timeElapsed          = 0;
+            timeCount.innerText  = "0.0";
+            timerLabel.innerText = "무한 시간:";
+            timerPanel.style.color = "#9c27b0";
+        } else {
+            timeElapsed          = 0;
+            timeCount.innerText  = "0.0";
+            timerLabel.innerText = "시간:";
+            timerPanel.style.color = "var(--penalty-color)";
+        }
+
+        if (currentGameMode === "8-joker") {
+            const selectedFruits = fruitList.slice(0, 28);
+            const jokers         = Array(8).fill('🃏');
+            cardValues           = [...selectedFruits, ...selectedFruits, ...jokers];
+            shuffle(cardValues);
+        } else if (currentGameMode === "8") {
+            // 8x8 일반: 과일 30쌍(60장) + 특수카드 4장 (카드힌트2 + 전구2)
+            const fruits = fruitList.slice(0, 30);
+            const base   = [...fruits, ...fruits]; // 60장
+            shuffle(base);
+            // 특수 마커 삽입 후 다시 섞기
+            cardValues = [...base, '🃏HINT', '🃏HINT', '💡FLASH', '💡FLASH'];
+            shuffle(cardValues);
+        } else {
+            const num        = parseInt(currentGameMode);
+            const totalCards = num * num;
+            cardValues       = (() => { const s = fruitList.slice(0, totalCards / 2); return [...s, ...s]; })();
+            shuffle(cardValues);
+        }
+
+        introScreen.style.display      = 'none';
+        gameSelectScreen.style.display = 'none';
+        setupScreen.style.display      = 'none';
+        infoPanel.style.display        = 'flex';
+        statusText.style.display       = 'block';
+        board.style.display            = 'grid';
+
+        const gridCount = currentGameMode === "4" ? 4 : currentGameMode === "6" ? 6 : 8;
+        board.style.gridTemplateColumns = `repeat(${gridCount}, 1fr)`;
+        board.style.gridTemplateRows    = `repeat(${gridCount}, 1fr)`;
+
+        // 화면에 딱 맞게 보드 크기 동적 계산
+        requestAnimationFrame(() => {
+            const titleH   = document.querySelector('h1').offsetHeight;
+            const infoH    = infoPanel.offsetHeight;
+            const padding  = 24; // 상하 패딩 합계
+            const gap      = 8;  // info-panel 아래 margin
+            const available = window.innerHeight - titleH - infoH - padding - gap - 16;
+            const maxW      = Math.min(window.innerWidth - 24, available);
+            const size      = Math.max(maxW, 200);
+            board.style.width  = size + 'px';
+            board.style.height = size + 'px';
+        });
+
+        cardValues.forEach((value, index) => {
+            const card = document.createElement('div');
+            card.classList.add('card', 'flipped');
+            card.dataset.value = value;
+            card.dataset.index = index;
+
+            if (value === '🃏HINT') {
+                card.classList.add('special-card');
+                card.dataset.special = 'card-hint';
+                card.dataset.color   = '';
+                card.innerText       = '🃏';
+                card.dataset.label   = '카드힌트';
+            } else if (value === '💡FLASH') {
+                card.classList.add('special-card');
+                card.dataset.special = 'flash';
+                card.dataset.color   = '';
+                card.innerText       = '💡';
+                card.dataset.label   = '플래시';
+            } else {
+                card.dataset.color = fruitColorMap[value] || 'c0';
+                card.innerText     = value;
+            }
+
+            card.addEventListener('click', flipCard);
+            board.appendChild(card);
+        });
+
+        statusText.innerText   = "카드를 기억하세요!";
+        statusText.style.color = "#ff8f00";
+
+        setTimeout(() => {
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('flipped'));
+            isGameReady             = true;
+            if (currentGameMode !== "8") hintActionBtn.disabled = false; // 8x8 일반은 플래시 없음
+            if (currentGameMode !== "8") hintCardBtn.disabled = false;
+            statusText.innerText    = "상큼하게 진행 중...";
+            statusText.style.color  = "var(--success-color)";
+
+            let secondsForHint = 0;
+            timerInterval = setInterval(() => {
+                if (isTimerPaused) return; // 메시지 표시 중 또는 일시정지 중 타이머 정지
+                secondsForHint += 0.1;
+                timeElapsed += 0.1; // 모든 모드에서 경과 시간 누적 (결과 화면용)
+                if (currentGameMode === "8") {
+                    timeRemaining -= 0.1;
+                    if (timeRemaining <= 0) {
+                        timeRemaining = 0;
+                        timeCount.innerText = "0.0";
+                        gameOver(false, "time");
+                        return;
+                    }
+                    timeCount.innerText = timeRemaining.toFixed(1);
+                    if (timeRemaining <= 20.0) timerPanel.classList.add('danger');
+                } else {
+                    timeCount.innerText = timeElapsed.toFixed(1);
+                    if (currentGameMode === "6" && timeElapsed >= 30.0) timerPanel.classList.add('danger');
+                }
+                if (currentGameMode === "6" && !hasFlashed && secondsForHint >= 8.5) {
+                    hasFlashed = true;
+                    triggerMultiFlashEffect(2, "자동 시스템 힌트");
+                }
+            }, 100);
+        }, configPreviewTime);
+    }
+
+    // ──────────── 힌트: 플래시 ────────────
+    function useManualHint() {
+        if (!isGameReady || remainingHintButtons <= 0) return;
+        hintUsedInThisGame      = true;
+        remainingHintButtons--;
+        hintCountSpan.innerText = remainingHintButtons;
+        if (remainingHintButtons <= 0) hintActionBtn.disabled = true;
+        triggerMultiFlashEffect(1, "아이템 찬스 힌트");
+    }
+
+    // ──────────── 힌트: 카드 공개 ────────────
+    function useHintCard() {
+        if (!isGameReady || remainingHintCards <= 0) return;
+        hintUsedInThisGame          = true;
+        remainingHintCards--;
+        hintCardCountSpan.innerText = remainingHintCards;
+        if (remainingHintCards <= 0) hintCardBtn.disabled = true;
+
+        const candidates = Array.from(document.querySelectorAll('.card:not(.matched):not(.flipped)'))
+                               .filter(c => c.dataset.value !== '🃏' && !c.dataset.special);
+        if (candidates.length === 0) return;
+
+        isGameReady = false; // 힌트 공개 중 카드 클릭 차단
+        const target = candidates[Math.floor(Math.random() * candidates.length)];
+        target.classList.add('flipped');
+        showStatusMsg("🃏 카드 힌트! 2초간 카드를 확인하세요!", "#1565c0", 2000);
+        setTimeout(() => {
+            if (!target.classList.contains('matched')) target.classList.remove('flipped');
+            if (flippedCards.length === 0) isGameReady = true; // 클릭 재개
+        }, 2000);
+    }
+
+    // ──────────── 타이머 일시정지 후 메시지 표시 헬퍼 ────────────
+    let _statusMsgTimer = null;
+    function showStatusMsg(text, color, durationMs = 2000) {
+        if (_statusMsgTimer) clearTimeout(_statusMsgTimer);
+        isTimerPaused          = true;
+        statusText.innerText   = text;
+        statusText.style.color = color;
+        _statusMsgTimer = setTimeout(() => {
+            _statusMsgTimer = null;
+            // 일시정지 중이면 타이머 재개 안 함
+            if (!isPaused) isTimerPaused = false;
+            if (isGameReady && !isPaused) {
+                statusText.innerText   = "상큼하게 진행 중...";
+                statusText.style.color = "var(--success-color)";
+            }
+        }, durationMs);
+    }
+
+    // ──────────── 힌트: 플래시 효과 ────────────
+    function triggerMultiFlashEffect(pairsCount, hintType = "힌트") {
+        const validCards = Array.from(document.querySelectorAll('.card:not(.matched):not(.special-card)'))
+                               .filter(c => c.dataset.value !== '🃏' && !c.dataset.special);
+        if (validCards.length === 0) return;
+
+        const uniqueValues = [...new Set(validCards.map(c => c.dataset.value))];
+        shuffle(uniqueValues);
+        const targets = uniqueValues.slice(0, pairsCount);
+
+        validCards.forEach(card => {
+            if (targets.includes(card.dataset.value)) {
+                card.classList.add('flash');
+                setTimeout(() => card.classList.remove('flash'), 1600);
+            }
+        });
+
+        showStatusMsg(`⭐ ${hintType}! (${pairsCount}쌍 반짝임)`, "#ff8f00", 2000);
+    }
+
+    // ──────────── 카드 클릭 ────────────
+    function flipCard() {
+        if (!isGameReady
+            || flippedCards.length >= 2
+            || this.classList.contains('flipped')
+            || this.classList.contains('matched')
+            || this.classList.contains('joker-revealed')
+            || flippedCards.includes(this)) return;
+
+        this.classList.add('flipped');
+        playSystemSound('flip');
+
+        if (currentGameMode === "8-joker" && this.dataset.value === '🃏') {
+            isGameReady = false;
+            jokerComboCount++;
+            if (jokerComboCount > maxJokerComboReached) maxJokerComboReached = jokerComboCount;
+            triggerJokerEffect(this);
+            return;
+        }
+
+        // ── 8x8 일반: 특수 카드 처리 ──
+        if (currentGameMode === "8" && this.dataset.special) {
+            isGameReady = false;
+            const specialCard = this;
+            setTimeout(() => {
+                specialCard.classList.remove('flipped');
+                specialCard.classList.add('used');
+                if (specialCard.dataset.special === 'card-hint') {
+                    // 카드힌트: 랜덤 카드 1장 2초 공개
+                    const candidates = Array.from(document.querySelectorAll(
+                        '.card:not(.matched):not(.flipped):not(.used):not(.special-card)'
+                    ));
+                    if (candidates.length > 0) {
+                        const target = candidates[Math.floor(Math.random() * candidates.length)];
+                        target.classList.add('flipped');
+                        showStatusMsg('🃏 카드힌트 발동! 2초간 카드를 확인하세요!', '#1565c0', 2000);
+                        setTimeout(() => {
+                            if (!target.classList.contains('matched')) target.classList.remove('flipped');
+                            isGameReady = true;
+                        }, 2000);
+                    } else {
+                        isGameReady = true;
+                    }
+                } else if (specialCard.dataset.special === 'flash') {
+                    // 플래시: 랜덤 2쌍 반짝임
+                    showStatusMsg('💡 플래시 발동! 2쌍이 반짝입니다!', '#f57f17', 2000);
+                    const validCards = Array.from(document.querySelectorAll(
+                        '.card:not(.matched):not(.special-card)'
+                    )).filter(c => !c.dataset.special);
+                    const uniqueVals = [...new Set(validCards.map(c => c.dataset.value))];
+                    shuffle(uniqueVals);
+                    const targets = uniqueVals.slice(0, 2);
+                    validCards.forEach(c => {
+                        if (targets.includes(c.dataset.value)) {
+                            c.classList.add('flash');
+                            setTimeout(() => c.classList.remove('flash'), 1600);
+                        }
+                    });
+                    setTimeout(() => { isGameReady = true; }, 2000);
+                }
+            }, 400);
+            return;
+        }
+
+        if (flippedCards.length === 0) jokerComboCount = 0;
+        flippedCards.push(this);
+        if (flippedCards.length === 2) { isGameReady = false; checkMatch(); }
+    }
+
+    // ──────────── 조커 효과 ────────────
+    function triggerJokerEffect(jokerCard) {
+        statusText.innerText   = "🃏주변 카드가 3초간 노출됩니다!";
+        statusText.style.color = "#9c27b0";
+        playSystemSound('match');
+
+        jokerCard.classList.add('matched', 'matched-pop');
+        matchedCount++;
+        currentScore += 15;
+        scoreCount.innerText = currentScore;
+
+        const jokerIndex = parseInt(jokerCard.dataset.index);
+        const row = Math.floor(jokerIndex / 8), col = jokerIndex % 8;
+        const allCards = Array.from(document.querySelectorAll('.card'));
+        const revealedTargets = [];
+
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                const nr = row + dr, nc = col + dc;
+                if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+                    const t = allCards[nr * 8 + nc];
+                    if (!t.classList.contains('flipped') && !t.classList.contains('matched')) {
+                        t.classList.add('joker-revealed');
+                        revealedTargets.push(t);
+                    }
+                }
+            }
+        }
+
+        setTimeout(() => {
+            revealedTargets.forEach(c => c.classList.remove('joker-revealed'));
+            isGameReady = true;
+            statusText.innerText   = "상큼하게 진행 중...";
+            statusText.style.color = "var(--success-color)";
+            const jokerTotal = cardValues.filter(v => v === '🃏').length;
+            const specialCount2 = cardValues.filter(v => v === '🃏HINT' || v === '💡FLASH').length;
+            if (matchedCount === cardValues.length - specialCount2 - jokerTotal) gameOver(true);
+        }, 3000);
+    }
+
+    // ──────────── 매치 확인 ────────────
+    function checkMatch() {
+        const [card1, card2] = flippedCards;
+
+        if (card1.dataset.value === card2.dataset.value) {
+            comboCount++;
+            if (comboCount > maxComboReached) maxComboReached = comboCount;
+
+            const scoreGained = 10;
+            const prevScore   = currentScore;
+            currentScore += scoreGained;
+            scoreCount.innerText = currentScore;
+
+            // ── 플래시 가드헌터: 30점 단위 돌파 시 힌트 +1 (8x8 일반 제외) ──
+            const prevMilestone = Math.floor(prevScore / 30);
+            const newMilestone  = Math.floor(currentScore / 30);
+            if (newMilestone > prevMilestone && currentGameMode !== "8") {
+                remainingHintButtons++;
+                hintCountSpan.innerText = remainingHintButtons;
+                hintActionBtn.disabled  = false;
+                showStatusMsg(`🛡️ 가드헌터 발동! 플래시 힌트 +1 (총 ${remainingHintButtons}개)`, "#1565c0", 2000);
+                playSystemSound('match');
+            }
+
+            card1.classList.add('matched', 'matched-pop');
+            card2.classList.add('matched', 'matched-pop');
+            playSystemSound('match');
+
+            matchedCount += 2;
+            flippedCards  = [];
+
+            if (wrongCount === 0 && currentScore >= 100) unlockAchievement('perfect_100');
+
+            if (comboCount >= 3 && comboCount % 3 === 0) {
+                statusText.innerText   = `🔥 ${comboCount}연속 콤보 폭발!! 1쌍 보너스 힌트!!`;
+                statusText.style.color = "#d32f2f";
+                setTimeout(() => triggerMultiFlashEffect(1, "콤보 보너스 힌트"), 300);
+            } else if (comboCount > 1) {
+                statusText.innerText   = `🔥 ${comboCount}연속 콤보! (+${scoreGained}점)`;
+                statusText.style.color = "#ff5252";
+            } else {
+                statusText.innerText   = "맞췄습니다! (+10점)";
+                statusText.style.color = "var(--success-color)";
+            }
+
+            const specialCount = cardValues.filter(v => v === '🃏HINT' || v === '💡FLASH').length;
+            if (matchedCount === cardValues.length - specialCount) {
+                gameOver(true); // 클리어 — isGameReady는 gameOver 내부에서 false 처리
+            } else {
+                isGameReady = true;
+            }
+        } else {
+            comboCount = 0;
+            const penalty = (currentGameMode === "6" || currentGameMode === "8" || currentGameMode === "8-joker") ? 3 : 1;
+            currentScore -= penalty;
+            wrongCount++;
+            scoreCount.innerText = currentScore;
+            playSystemSound('wrong');
+
+            if (configMaxLife !== "infinite") {
+                const remainLife = parseInt(configMaxLife) - wrongCount;
+                if (remainLife <= 0) {
+                    statusText.innerText   = "💔 기회를 모두 상실했습니다!";
+                    statusText.style.color = "var(--penalty-color)";
+                    setTimeout(() => {
+                        card1.classList.remove('flipped');
+                        card2.classList.remove('flipped');
+                        flippedCards = [];
+                        gameOver(false, "life");
+                    }, 800);
+                    return;
+                } else {
+                    statusText.innerText   = `틀렸습니다! 남은 기회: ${remainLife}번`;
+                    statusText.style.color = "var(--penalty-color)";
+                }
+            } else {
+                statusText.innerText   = `틀렸습니다! (-${penalty}점)`;
+                statusText.style.color = "var(--penalty-color)";
+            }
+
+            setTimeout(() => {
+                card1.classList.remove('flipped');
+                card2.classList.remove('flipped');
+                flippedCards = [];
+                isGameReady  = true;
+            }, 1000);
+        }
+    }
+
+    // ──────────── 업적 최종 점검 ────────────
+    function checkGameAchievements(isWin) {
+        if (maxComboReached >= 5)  unlockAchievement('combo_king');
+        if (maxComboReached === 7) unlockAchievement('lucky_seven');
+        if (maxJokerComboReached >= 3) unlockAchievement('joker_streak');
+        if (currentScore < 0) unlockAchievement('minus_score');
+
+        if (!isWin) {
+            if (configMaxLife !== "infinite") unlockAchievement('fail_is_mother');
+            if (configMaxLife === "5" && currentGameMode !== "8" && timeElapsed <= 15.0)
+                unlockAchievement('speedy_fail');
+        }
+        if (isWin) {
+            unlockAchievement('first_clear');
+            if (currentScore >= 150) unlockAchievement('high_score');
+            if (currentScore >= 250) unlockAchievement('score_rich');
+            if (configMaxLife === "5") unlockAchievement('hardcore_clear');
+            if (currentGameMode === "8-joker") unlockAchievement('joker_fever');
+            if (currentGameMode === "8")       unlockAchievement('time_attack_master');
+            if (!hintUsedInThisGame)           unlockAchievement('no_hint_clear');
+            if ((currentGameMode === "4" || currentGameMode === "6") && timeElapsed <= 20.0)
+                unlockAchievement('speed_racer');
+        }
+    }
+
+    // ──────────── 게임 오버 ────────────
+    function gameOver(isWin, reason = "") {
+        if (isGameOver) return; // 중복 호출 방지
+        isGameOver    = true;
+        isGameReady   = false;
+        isTimerPaused = false;
+        if (_statusMsgTimer) { clearTimeout(_statusMsgTimer); _statusMsgTimer = null; } // 메시지 타이머 취소
+        clearInterval(timerInterval);
+        checkGameAchievements(isWin);
+
+        const allCards = document.querySelectorAll('.card');
+        allCards.forEach(c => c.style.pointerEvents = 'none');
+
+        setTimeout(() => { showResultScreen(isWin, reason); }, 400);
+    }
+
+    // ──────────── 결과 화면 표시 ────────────
+    function showResultScreen(isWin, reason) {
+        const resultScreen   = document.getElementById('result-screen');
+        const resultIcon     = document.getElementById('result-icon');
+        const resultTitle    = document.getElementById('result-title');
+        const resultSubtitle = document.getElementById('result-subtitle');
+        const resultStats    = document.getElementById('result-stats');
+
+        resultScreen.className = isWin ? 'win' : 'lose';
+
+        if (isWin) {
+            resultIcon.innerText     = '🎉';
+            resultTitle.innerText    = 'CLEAR!';
+            resultTitle.className    = 'result-title win';
+            resultSubtitle.innerText = '모든 카드를 맞췄습니다! 대단해요!';
+        } else if (reason === "time") {
+            resultIcon.innerText     = '⏰';
+            resultTitle.innerText    = 'TIME OVER';
+            resultTitle.className    = 'result-title lose';
+            resultSubtitle.innerText = '아쉽게도 제한 시간이 끝났습니다.';
+        } else if (reason === "life") {
+            resultIcon.innerText     = '💔';
+            resultTitle.innerText    = 'GAME OVER';
+            resultTitle.className    = 'result-title lose';
+            resultSubtitle.innerText = `오답 제한 ${configMaxLife}회를 초과했습니다.`;
+        } else {
+            resultIcon.innerText     = '😵';
+            resultTitle.innerText    = 'GAME OVER';
+            resultTitle.className    = 'result-title lose';
+            resultSubtitle.innerText = '다음엔 꼭 클리어해 봐요!';
+        }
+
+        const modeLabel = currentGameMode === "4" ? "4×4" : currentGameMode === "6" ? "6×6" : currentGameMode === "8-joker" ? "8×8 조커" : "8×8";
+        const timeLabel = `${timeElapsed.toFixed(1)}초`;
+
+        resultStats.innerHTML = `
+            <div class="result-stat">🏆 최종 점수<span>${currentScore}점</span></div>
+            <div class="result-stat">🔥 최대 콤보<span>${maxComboReached}연속</span></div>
+            <div class="result-stat">⏱️ 플레이<span>${timeLabel}</span></div>
+            <div class="result-stat">🎮 모드<span>${modeLabel}</span></div>
+        `;
+
+        resultScreen.style.display = 'flex';
+
+        document.getElementById('result-retry-btn').onclick = () => {
+            resultScreen.style.display = 'none';
+            document.querySelectorAll('.card').forEach(c => c.style.pointerEvents = 'auto');
+            infoPanel.style.display  = 'none';
+            statusText.style.display = 'none';
+            board.style.display      = 'none';
+            setupScreen.style.display = 'block';
+        };
+        document.getElementById('result-menu-btn').onclick = () => {
+            resultScreen.style.display     = 'none';
+            document.querySelectorAll('.card').forEach(c => c.style.pointerEvents = 'auto');
+            infoPanel.style.display        = 'none';
+            statusText.style.display       = 'none';
+            board.style.display            = 'none';
+            setupScreen.style.display      = 'none';
+            gameSelectScreen.style.display = 'none';
+            introScreen.style.display      = 'flex';
+        };
+    }
+
+    // ═══════════════════════════════════════════
+    //  📈 주식 뉴스 트레이딩 — 통합 모듈 (풀 기능)
+    // ═══════════════════════════════════════════
+    const S_DIFF=[
+        {label:'초급',hint:true,vol:.008,newsVol:.7},
+        {label:'중급',hint:false,vol:.012,newsVol:.85},
+        {label:'고급',hint:false,vol:.018,newsVol:1.0}
+    ];
+    const S_BASE=[
+        {ticker:'SAMS',name:'삼성전자',price:72000},
+        {ticker:'KAKAO',name:'카카오',price:48000},
+        {ticker:'NAVER',name:'네이버',price:185000},
+        {ticker:'HYND',name:'현대차',price:215000},
+        {ticker:'LGEL',name:'LG전자',price:95000},
+        {ticker:'CELT',name:'셀트리온',price:168000}
+    ];
+    const S_NP=[
+        {h:'삼성전자, 차세대 HBM4 양산 성공',s:'메모리 반도체 점유율 확대 기대',tag:'positive',hint:'SAMS 상승 가능성',t:['SAMS'],e:[.06,.10]},
+        {h:'카카오, 대규모 구조조정 단행 예정',s:'전체 인력 15% 감축 계획 유출',tag:'negative',hint:'KAKAO 하락 가능성',t:['KAKAO'],e:[-.09,-.05]},
+        {h:'네이버, AI 검색 점유율 70% 돌파',s:'광고 매출 전년 대비 40% 성장',tag:'positive',hint:'NAVER 상승 가능성',t:['NAVER'],e:[.05,.09]},
+        {h:'현대차, 미국 전기차 보조금 제외',s:'인플레이션 감축법 개정안 영향',tag:'negative',hint:'HYND 하락 가능성',t:['HYND'],e:[-.08,-.04]},
+        {h:'LG전자, 프리미엄 가전 글로벌 1위',s:'북미·유럽 시장 동반 성장',tag:'positive',hint:'LGEL 상승 가능성',t:['LGEL'],e:[.04,.08]},
+        {h:'셀트리온, FDA 바이오시밀러 승인',s:'미국 시장 진출 본격화',tag:'positive',hint:'CELT 상승 가능성',t:['CELT'],e:[.07,.12]},
+        {h:'반도체 업황 전반 둔화 우려',s:'글로벌 수요 감소 전망 보고서',tag:'negative',hint:'SAMS·LGEL 하락 가능성',t:['SAMS','LGEL'],e:[-.06,-.03]},
+        {h:'인터넷 플랫폼 규제 법안 통과',s:'빅테크 과징금 부과 기준 강화',tag:'negative',hint:'KAKAO·NAVER 하락 가능성',t:['KAKAO','NAVER'],e:[-.05,-.02]},
+        {h:'전기차 배터리 원자재 가격 급락',s:'리튬·코발트 가격 30% 하락',tag:'positive',hint:'HYND 상승 가능성',t:['HYND'],e:[.03,.07]},
+        {h:'바이오 섹터 임상 실패 연속 보고',s:'3개 기업 3상 임상 실패 발표',tag:'negative',hint:'CELT 하락 가능성',t:['CELT'],e:[-.10,-.06]},
+        {h:'외국인 투자자 코스피 대규모 순매수',s:'2조원 규모 매수세 유입',tag:'positive',hint:'전 종목 소폭 상승',t:['SAMS','KAKAO','NAVER','HYND','LGEL','CELT'],e:[.01,.03]},
+        {h:'원달러 환율 1,450원 돌파',s:'수출주 수혜, 내수주 부담',tag:'neutral',hint:'SAMS·HYND 상승 가능성',t:['SAMS','HYND'],e:[.02,.05]},
+        {h:'삼성전자 파운드리, TSMC 추격',s:'2nm 공정 수율 개선 성공',tag:'positive',hint:'SAMS 강한 상승 가능성',t:['SAMS'],e:[.08,.13]},
+        {h:'카카오페이, 금융당국 제재 예고',s:'불법 대출 중개 혐의 조사',tag:'negative',hint:'KAKAO 하락 가능성',t:['KAKAO'],e:[-.07,-.04]},
+        {h:'현대차·기아, 글로벌 판매 역대 최고',s:'1~5월 누적 판매 340만대 돌파',tag:'positive',hint:'HYND 상승 가능성',t:['HYND'],e:[.05,.09]},
+        {h:'셀트리온, 유럽 바이오시밀러 점유율 1위',s:'유럽 5개국 동시 처방 확대',tag:'positive',hint:'CELT 상승 가능성',t:['CELT'],e:[.06,.11]},
+        {h:'네이버 클라우드, 공공기관 수주 대박',s:'정부 디지털 전환 사업 독점 수주',tag:'positive',hint:'NAVER 상승 가능성',t:['NAVER'],e:[.04,.08]},
+        {h:'LG전자, 전장사업 적자 지속',s:'전기차 부품 수요 둔화 영향',tag:'negative',hint:'LGEL 하락 가능성',t:['LGEL'],e:[-.06,-.03]}
+    ];
+
+    let sStocks = S_BASE.map(s=>({...s,prev:s.price,chg:0,pct:0,hist:[s.price]}));
+    let sCurNews=[], sSelNews=null;
+    let sLiveTick=null;
+    const sState={balance:10000000,round:1,maxRound:10,sel:null,port:{},hist:[],diff:0,goal:20000000,ppVis:false,assetHist:[10000000]};
+
+    const sFmt=n=>'₩'+Math.round(n).toLocaleString('ko-KR');
+    const sFmtP=p=>(p>=0?'+':'')+p.toFixed(2)+'%';
+    const sGq=()=>Math.max(1,parseInt(document.getElementById('s-qty').value)||1);
+
+    function sSetDiff(d){
+        sState.diff=d;
+        [0,1,2].forEach(i=>document.getElementById('sd'+i).classList.toggle('active',i===d));
+        sShowMsg('난이도: '+S_DIFF[d].label);
+    }
+
+    // ── 예상수익 토글 ──
+    function sToggleProfit(){
+        sState.ppVis=!sState.ppVis;
+        document.getElementById('s-ptbtn').classList.toggle('active',sState.ppVis);
+        document.getElementById('s-ppbox').classList.toggle('vis',sState.ppVis);
+        if(sState.ppVis)sUpdPP();
+    }
+
+    function sUpdPP(){
+        if(!sState.ppVis||!sState.sel)return;
+        const st=sStocks.find(s=>s.ticker===sState.sel);
+        const pos=sState.port[sState.sel];
+        const q=sGq();
+        document.getElementById('s-ppcur').textContent=sFmt(st.price);
+        document.getElementById('s-ppqty').textContent=q+'주';
+        if(pos&&pos.qty>0){
+            document.getElementById('s-ppavg').textContent=sFmt(pos.avg);
+            const pnl=(st.price-pos.avg)*Math.min(q,pos.qty);
+            const el=document.getElementById('s-pppnl');
+            el.textContent=sFmt(pnl)+' ('+sFmtP((st.price-pos.avg)/pos.avg*100)+')';
+            el.className=pnl>=0?'sup':'sdown';
+        }else{
+            document.getElementById('s-ppavg').textContent='-';
+            document.getElementById('s-pppnl').textContent='-';
+            document.getElementById('s-pppnl').className='';
+        }
+    }
+
+    function sSelectStock(ticker){
+        sState.sel=ticker;
+        const st=sStocks.find(s=>s.ticker===ticker);
+        document.querySelectorAll('#stock-screen .s-srow').forEach(r=>r.classList.toggle('active',r.dataset.ticker===ticker));
+        const cls=st.pct>0?'sbu':st.pct<0?'sbd':'sbf';
+        const arrow=st.pct>0?'▲':st.pct<0?'▼':'─';
+        document.getElementById('s-sib').innerHTML=
+            '<div class="s-si-ticker">'+st.ticker+' <span style="font-size:11px;color:var(--st2);font-weight:400">'+st.name+'</span></div>'+
+            '<div class="s-si-price">'+sFmt(st.price)+'</div>'+
+            '<span class="s-si-badge '+cls+'">'+arrow+' '+sFmtP(st.pct)+'</span>';
+        document.getElementById('s-bbuy').disabled=false;
+        document.getElementById('s-bsell').disabled=!(sState.port[ticker]&&sState.port[ticker].qty>0);
+        sUpdPP();
+    }
+
+    function sCq(d){
+        const el=document.getElementById('s-qty');
+        el.value=Math.max(1,(parseInt(el.value)||1)+d);
+        sUpdPP();
+    }
+
+    function sSetMax(){
+        if(!sState.sel)return;
+        const st=sStocks.find(s=>s.ticker===sState.sel);
+        const max=Math.floor(sState.balance/st.price);
+        if(max<1){sShowMsg('잔액이 부족합니다');return;}
+        document.getElementById('s-qty').value=max;
+        sUpdPP();
+    }
+
+    // ── 스파크라인 ──
+    function sDrawSpark(canvas,hist,up){
+        const ctx=canvas.getContext('2d');
+        const w=canvas.width,h=canvas.height;
+        ctx.clearRect(0,0,w,h);
+        if(hist.length<2)return;
+        const mn=Math.min(...hist),mx=Math.max(...hist);
+        const range=mx-mn||1;
+        ctx.beginPath();
+        ctx.strokeStyle=up?'#10b981':'#ef4444';
+        ctx.lineWidth=1.5;
+        hist.forEach((v,i)=>{
+            const x=i/(hist.length-1)*w;
+            const y=h-(v-mn)/range*h*.85-h*.075;
+            i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        });
+        ctx.stroke();
+    }
+
+    // ── 자산 차트 ──
+    function sDrawAssetChart(){
+        const canvas=document.getElementById('s-asset-chart');
+        if(!canvas)return;
+        canvas.width=canvas.parentElement.offsetWidth||300;
+        const ctx=canvas.getContext('2d');
+        const w=canvas.width,h=canvas.height;
+        ctx.clearRect(0,0,w,h);
+        const hist=sState.assetHist;
+        if(hist.length<2)return;
+        const mn=Math.min(...hist)*.995,mx=Math.max(...hist)*1.005;
+        const range=mx-mn||1;
+        const last=hist[hist.length-1];
+        const up=last>=hist[0];
+        const color=up?'#10b981':'#ef4444';
+        const grad=ctx.createLinearGradient(0,0,0,h);
+        grad.addColorStop(0,up?'rgba(16,185,129,.25)':'rgba(239,68,68,.25)');
+        grad.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.beginPath();
+        hist.forEach((v,i)=>{
+            const x=i/(hist.length-1)*w;
+            const y=h-(v-mn)/range*(h-8)-4;
+            i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        });
+        ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.closePath();
+        ctx.fillStyle=grad;ctx.fill();
+        ctx.beginPath();
+        ctx.strokeStyle=color;ctx.lineWidth=2;
+        hist.forEach((v,i)=>{
+            const x=i/(hist.length-1)*w;
+            const y=h-(v-mn)/range*(h-8)-4;
+            i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        });
+        ctx.stroke();
+        ctx.fillStyle=color;
+        ctx.font='bold 10px sans-serif';
+        ctx.fillText(sFmt(last),3,10);
+    }
+
+    // ── 뉴스 렌더 ──
+    function sRenderNews(){
+        const pool=[...S_NP].sort(()=>Math.random()-.5);
+        sCurNews=pool.slice(0,3);
+        sSelNews=null;
+        const el=document.getElementById('s-nl');
+        el.innerHTML='';
+        sCurNews.forEach(n=>{
+            const tagCls=n.tag==='positive'?'s-tp':n.tag==='negative'?'s-tn':'s-tnu';
+            const tagTxt=n.tag==='positive'?'호재':n.tag==='negative'?'악재':'중립';
+            const showHint=S_DIFF[sState.diff].hint;
+            const div=document.createElement('div');
+            div.className='s-ni';
+            const tagEl=document.createElement('span');
+            tagEl.className='s-ntag '+tagCls;
+            tagEl.textContent=tagTxt;
+            const nhEl=document.createElement('div');
+            nhEl.className='s-nh';nhEl.textContent=n.h;
+            const nsEl=document.createElement('div');
+            nsEl.className='s-ns';nsEl.textContent=n.s;
+            div.appendChild(tagEl);div.appendChild(nhEl);div.appendChild(nsEl);
+            if(showHint){
+                const hintEl=document.createElement('div');
+                hintEl.className='s-nhint';hintEl.textContent='💡 '+n.hint;
+                hintEl.style.display='none';
+                div.appendChild(hintEl);
+            }
+            div.addEventListener('click',()=>{
+                document.querySelectorAll('#stock-screen .s-ni').forEach(x=>x.classList.remove('sel'));
+                div.classList.add('sel');
+                sSelNews=n;
+                if(showHint){const h=div.querySelector('.s-nhint');if(h)h.style.display='block';}
+                if(n.t.length===1)sSelectStock(n.t[0]);
+            });
+            el.appendChild(div);
+        });
+    }
+
+    // ── 시세 렌더 ──
+    function sRenderStocks(){
+        const el=document.getElementById('s-sl');
+        el.innerHTML='';
+        sStocks.forEach(st=>{
+            const cls=st.pct>0?'sup':st.pct<0?'sdown':'sflat';
+            const arrow=st.pct>0?'▲':st.pct<0?'▼':'─';
+            const div=document.createElement('div');
+            div.className='s-srow'+(sState.sel===st.ticker?' active':'');
+            div.dataset.ticker=st.ticker;
+            const stkEl=document.createElement('span');stkEl.className='s-stk';stkEl.textContent=st.ticker;
+            const snmEl=document.createElement('span');snmEl.className='s-snm';snmEl.textContent=st.name;
+            const canvas=document.createElement('canvas');canvas.className='s-spark';canvas.width=55;canvas.height=24;
+            const sprEl=document.createElement('span');sprEl.className='s-spr '+cls;sprEl.textContent=sFmt(st.price);
+            const schEl=document.createElement('span');schEl.className='s-sch '+cls;schEl.textContent=arrow+sFmtP(st.pct);
+            div.appendChild(stkEl);div.appendChild(snmEl);div.appendChild(canvas);div.appendChild(sprEl);div.appendChild(schEl);
+            div.addEventListener('click',()=>sSelectStock(st.ticker));
+            el.appendChild(div);
+            sDrawSpark(canvas,st.hist,st.pct>=0);
+        });
+    }
+
+    function sUpdateLivePrices(){
+        sStocks.forEach(st=>{
+            const row=document.querySelector('#stock-screen .s-srow[data-ticker="'+st.ticker+'"]');
+            if(!row)return;
+            const cls=st.pct>0?'sup':st.pct<0?'sdown':'sflat';
+            const arrow=st.pct>0?'▲':st.pct<0?'▼':'─';
+            const prEl=row.querySelector('.s-spr');
+            const chEl=row.querySelector('.s-sch');
+            const cvs=row.querySelector('.s-spark');
+            if(prEl){prEl.textContent=sFmt(st.price);prEl.className='s-spr '+cls;}
+            if(chEl){chEl.textContent=arrow+sFmtP(st.pct);chEl.className='s-sch '+cls;}
+            if(cvs)sDrawSpark(cvs,st.hist,st.pct>=0);
+        });
+        sRenderPortfolio();
+        if(sState.sel)sUpdSelPrice();
+        sUpdPP();
+    }
+
+    function sUpdSelPrice(){
+        const st=sStocks.find(s=>s.ticker===sState.sel);
+        if(!st)return;
+        const cls=st.pct>0?'sbu':st.pct<0?'sbd':'sbf';
+        const arrow=st.pct>0?'▲':st.pct<0?'▼':'─';
+        const sib=document.getElementById('s-sib');
+        const prEl=sib.querySelector('.s-si-price');
+        const bdEl=sib.querySelector('.s-si-badge');
+        if(prEl)prEl.textContent=sFmt(st.price);
+        if(bdEl){bdEl.textContent=arrow+' '+sFmtP(st.pct);bdEl.className='s-si-badge '+cls;}
+    }
+
+    // ── 행 깜빡임 ──
+    function sFlashRow(ticker,dir){
+        const row=document.querySelector('#stock-screen .s-srow[data-ticker="'+ticker+'"]');
+        if(!row)return;
+        row.classList.remove('sfg','sfr');
+        void row.offsetWidth;
+        row.classList.add(dir>0?'sfg':'sfr');
+        setTimeout(()=>row.classList.remove('sfg','sfr'),700);
+    }
+
+    function sUpdateTape(){
+        const tape=document.getElementById('s-tape');
+        let html='';
+        for(let i=0;i<2;i++){
+            sStocks.forEach(st=>{
+                const cls=st.pct>0?'sup':st.pct<0?'sdown':'sflat';
+                const arrow=st.pct>0?'▲':st.pct<0?'▼':'─';
+                html+='<span class="s-tick"><b>'+st.ticker+'</b> <span>'+sFmt(st.price)+'</span> <span class="'+cls+'">'+arrow+sFmtP(st.pct)+'</span></span>';
+            });
+        }
+        tape.innerHTML=html;
+    }
+
+    // ── 포트폴리오 렌더 ──
+    function sRenderPortfolio(){
+        const el=document.getElementById('s-pl');
+        const sw=document.getElementById('s-psw');
+        const keys=Object.keys(sState.port).filter(k=>sState.port[k].qty>0);
+        if(!keys.length){
+            el.innerHTML='<div class="s-empty">보유 종목 없음</div>';
+            sw.innerHTML='';
+            document.getElementById('s-tpnl').textContent='';
+            return;
+        }
+        let totalPnl=0,totalVal=0,totalCost=0;
+        el.innerHTML='';
+        keys.forEach(k=>{
+            const pos=sState.port[k];
+            const st=sStocks.find(s=>s.ticker===k);
+            const val=st.price*pos.qty;
+            const cost=pos.avg*pos.qty;
+            const pnl=val-cost;
+            totalPnl+=pnl;totalVal+=val;totalCost+=cost;
+            const cls=pnl>=0?'sup':'sdown';
+            const div=document.createElement('div');
+            div.className='s-port-item';
+            const ptEl=document.createElement('span');ptEl.className='s-pt';ptEl.textContent=k;
+            const piEl=document.createElement('span');piEl.className='s-pi';piEl.textContent=pos.qty+'주 · 평균 '+sFmt(pos.avg);
+            const br=document.createElement('br');
+            const piEl2=document.createElement('span');piEl2.textContent='평가액 '+sFmt(val);
+            piEl.appendChild(br);piEl.appendChild(piEl2);
+            const ppEl=document.createElement('span');ppEl.className='s-pp '+cls;
+            ppEl.textContent=sFmt(pnl);
+            const small=document.createElement('span');small.style.fontSize='9px';small.textContent=sFmtP(pnl/cost*100);
+            const br2=document.createElement('br');ppEl.appendChild(br2);ppEl.appendChild(small);
+            div.appendChild(ptEl);div.appendChild(piEl);div.appendChild(ppEl);
+            el.appendChild(div);
+        });
+        const tCls=totalPnl>=0?'sup':'sdown';
+        sw.innerHTML='<div style="background:var(--ss2);border:1px solid var(--sb);border-radius:7px;padding:7px 10px;font-size:11px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="color:var(--st2)">평가액 <b style="color:var(--st)">'+sFmt(totalVal)+'</b></span><span class="'+tCls+'" style="font-weight:700">'+sFmt(totalPnl)+'</span></div>';
+        document.getElementById('s-tpnl').innerHTML=totalCost>0?'<span class="'+tCls+'">'+sFmtP(totalPnl/totalCost*100)+'</span>':'';
+    }
+
+    // ── 거래내역 렌더 ──
+    function sRenderHistory(){
+        const el=document.getElementById('s-hl');
+        if(!sState.hist.length){el.innerHTML='<div class="s-empty">거래 내역 없음</div>';return;}
+        el.innerHTML='';
+        [...sState.hist].reverse().forEach(h=>{
+            const div=document.createElement('div');
+            div.className='s-hist-item';
+            const badge=document.createElement('span');badge.className=h.type==='buy'?'s-hbuy':'s-hsell';badge.textContent=h.type==='buy'?'매수':'매도';
+            const info=document.createElement('span');info.className='s-hi';info.textContent=h.ticker+' '+h.qty+'주 · '+sFmt(h.price);
+            const amt=document.createElement('span');amt.className='s-ha';amt.textContent=sFmt(h.total);
+            div.appendChild(badge);div.appendChild(info);div.appendChild(amt);
+            el.appendChild(div);
+        });
+    }
+
+    // ── 토스트 ──
+    function sShowToast(type,ticker,qty,price){
+        const wrap=document.getElementById('s-tw');
+        const t=document.createElement('div');
+        const isBuy=type==='buy';
+        t.className='s-toast '+(isBuy?'s-tb':'s-ts');
+        const icon=document.createElement('div');icon.className='s-ticon';icon.textContent=isBuy?'📈':'📉';
+        const body=document.createElement('div');body.className='s-tbody';
+        const title=document.createElement('div');title.className='s-ttitle';title.textContent=(isBuy?'매수 체결':'매도 체결')+' · '+ticker;
+        const desc=document.createElement('div');desc.className='s-tdesc';desc.textContent=qty+'주 @ '+sFmt(price);
+        body.appendChild(title);body.appendChild(desc);
+        const amt=document.createElement('div');amt.className='s-tamt '+(isBuy?'sdown':'sup');amt.textContent=(isBuy?'-':'+')+sFmt(price*qty);
+        t.appendChild(icon);t.appendChild(body);t.appendChild(amt);
+        wrap.appendChild(t);
+        setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300);},2800);
+    }
+
+    // ── 다크/라이트 전환 ──
+    function sToggleTheme(){
+        const el=document.getElementById('stock-screen');
+        const isDark=el.classList.toggle('s-dark');
+        document.getElementById('s-theme-btn').textContent=isDark?'🌙':'☀️';
+    }
+
+    function sShowMsg(msg){
+        const wrap=document.getElementById('s-tw');
+        if(!wrap)return;
+        const t=document.createElement('div');
+        t.className='s-toast s-tw';
+        const icon=document.createElement('div');icon.className='s-ticon';icon.textContent='⚠️';
+        const body=document.createElement('div');body.className='s-tbody';
+        const title=document.createElement('div');title.className='s-ttitle';title.textContent=msg;
+        body.appendChild(title);
+        t.appendChild(icon);t.appendChild(body);
+        wrap.appendChild(t);
+        setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300);},2000);
+    }
+
+    // ── 리플 ──
+    function sRipple(btn,e){
+        const r=document.createElement('span');
+        r.className='s-ripple';
+        const rect=btn.getBoundingClientRect();
+        const size=Math.max(rect.width,rect.height);
+        r.style.cssText='width:'+size+'px;height:'+size+'px;left:'+(e.clientX-rect.left-size/2)+'px;top:'+(e.clientY-rect.top-size/2)+'px';
+        btn.appendChild(r);
+        setTimeout(()=>r.remove(),500);
+    }
+
+    // ── 컨페티 ──
+    function sConfetti(){
+        const colors=['#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899'];
+        for(let i=0;i<28;i++){
+            const c=document.createElement('div');
+            c.className='s-confetti';
+            c.style.cssText='left:'+Math.random()*100+'vw;background:'+colors[i%colors.length]+';animation-duration:'+(0.8+Math.random()*1.2)+'s;animation-delay:'+Math.random()*.4+'s;top:-10px';
+            document.body.appendChild(c);
+            setTimeout(()=>c.remove(),2500);
+        }
+    }
+
+    // ── 매매 ──
+    function sTrade(type){
+        if(!sState.sel)return;
+        const st=sStocks.find(s=>s.ticker===sState.sel);
+        const q=sGq();
+        const btn=document.getElementById(type==='buy'?'s-bbuy':'s-bsell');
+        if(type==='buy'){
+            const cost=st.price*q;
+            if(cost>sState.balance){sShowMsg('잔액이 부족합니다');return;}
+            sState.balance-=cost;
+            if(!sState.port[sState.sel])sState.port[sState.sel]={qty:0,avg:0};
+            const pos=sState.port[sState.sel];
+            pos.avg=(pos.avg*pos.qty+st.price*q)/(pos.qty+q);
+            pos.qty+=q;
+            if(q>=10)sConfetti();
+        }else{
+            const pos=sState.port[sState.sel];
+            if(!pos||pos.qty<q){sShowMsg('보유 수량이 부족합니다');return;}
+            sState.balance+=st.price*q;
+            pos.qty-=q;
+        }
+        sState.hist.push({type,ticker:sState.sel,qty:q,price:st.price,total:st.price*q});
+        sShowToast(type,sState.sel,q,st.price);
+        document.getElementById('s-bal').textContent=sFmt(sState.balance);
+        document.getElementById('s-bsell').disabled=!(sState.port[sState.sel]&&sState.port[sState.sel].qty>0);
+        sRenderPortfolio();
+        sRenderHistory();
+        sUpdPP();
+    }
+
+    // 리플 이벤트
+    document.addEventListener('DOMContentLoaded',()=>{
+        const bb=document.getElementById('s-bbuy');
+        const bs=document.getElementById('s-bsell');
+        if(bb)bb.addEventListener('click',function(e){sRipple(this,e);});
+        if(bs)bs.addEventListener('click',function(e){sRipple(this,e);});
+    });
+
+    // ── 실시간 틱 ──
+    function sStartLiveTick(){
+        if(sLiveTick)clearInterval(sLiveTick);
+        sLiveTick=setInterval(()=>{
+            const vol=S_DIFF[sState.diff].vol;
+            sStocks.forEach(st=>{
+                const r=(Math.random()-.495)*vol;
+                st.prev=st.price;
+                st.price=Math.max(100,Math.round(st.price*(1+r)));
+                st.chg=st.price-st.prev;
+                st.pct=(st.chg/st.prev)*100;
+                st.hist.push(st.price);
+                if(st.hist.length>30)st.hist.shift();
+            });
+            sUpdateLivePrices();
+            sUpdateTape();
+        },1400);
+    }
+
+    // ── 다음 라운드 ──
+    function sNextRound(){
+        if(sLiveTick)clearInterval(sLiveTick);
+        sCurNews.forEach(n=>{
+            const vol=S_DIFF[sState.diff].newsVol;
+            const base=n.e[0]+Math.random()*(n.e[1]-n.e[0]);
+            const rate=base*vol;
+            n.t.forEach(tk=>{
+                const st=sStocks.find(s=>s.ticker===tk);
+                if(!st)return;
+                st.prev=st.price;
+                st.price=Math.max(100,Math.round(st.price*(1+rate)));
+                st.chg=st.price-st.prev;
+                st.pct=(st.chg/st.prev)*100;
+                st.hist.push(st.price);
+                if(st.hist.length>30)st.hist.shift();
+                sFlashRow(tk,rate);
+            });
+        });
+        sStocks.forEach(st=>{
+            if(!sCurNews.some(n=>n.t.includes(st.ticker))){
+                const r=(Math.random()-.48)*.025;
+                st.prev=st.price;
+                st.price=Math.max(100,Math.round(st.price*(1+r)));
+                st.chg=st.price-st.prev;
+                st.pct=(st.chg/st.prev)*100;
+                st.hist.push(st.price);
+                if(st.hist.length>30)st.hist.shift();
+                sFlashRow(st.ticker,r);
+            }
+        });
+        const totalVal=Object.keys(sState.port).reduce((a,k)=>{
+            const st=sStocks.find(s=>s.ticker===k);
+            return a+(st?st.price*sState.port[k].qty:0);
+        },0);
+        sState.assetHist.push(sState.balance+totalVal);
+        sState.round++;
+        document.getElementById('s-rnum').textContent=sState.round;
+        if(sState.round>sState.maxRound){
+            sRenderStocks();sRenderPortfolio();sDrawAssetChart();sUpdateTape();
+            setTimeout(()=>sShowResult(),400);return;
+        }
+        sRenderNews();sRenderStocks();sRenderPortfolio();
+        sDrawAssetChart();sUpdateTape();
+        if(sState.sel)sSelectStock(sState.sel);
+        sStartLiveTick();
+    }
+
+    // ── 결산 ──
+    function sShowResult(){
+        if(sLiveTick)clearInterval(sLiveTick);
+        const totalVal=Object.keys(sState.port).reduce((a,k)=>{
+            const pos=sState.port[k];
+            if(!pos||pos.qty<=0)return a;
+            const st=sStocks.find(s=>s.ticker===k);
+            return a+(st?st.price*pos.qty:0);
+        },0);
+        const final=sState.balance+totalVal;
+        const pnl=final-10000000;
+        const pct=pnl/10000000*100;
+        const win=final>=sState.goal;
+        if(win)sConfetti();
+        const mc=document.getElementById('s-modal-content');
+        mc.innerHTML=
+            '<div style="font-size:44px;margin-bottom:10px">'+(win?'🏆':'📉')+'</div>'+
+            '<h2 style="font-size:20px;font-weight:800;margin-bottom:7px;color:'+(win?'#10b981':'#ef4444')+'">'+(win?'목표 달성!':'게임 오버')+'</h2>'+
+            '<p style="color:#718096;font-size:13px;margin-bottom:16px">'+(win?'축하합니다! 목표 자산을 달성했습니다.':'아쉽게도 목표 자산에 도달하지 못했습니다.')+'</p>'+
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">'+
+            '<div class="s-mstat"><div class="s-mstat-label">최종 자산</div><div class="s-mstat-val" style="color:#3b82f6">'+sFmt(final)+'</div></div>'+
+            '<div class="s-mstat"><div class="s-mstat-label">총 손익</div><div class="s-mstat-val '+(pnl>=0?'sup':'sdown')+'">'+sFmt(pnl)+'</div></div>'+
+            '<div class="s-mstat"><div class="s-mstat-label">수익률</div><div class="s-mstat-val '+(pct>=0?'sup':'sdown')+'">'+sFmtP(pct)+'</div></div>'+
+            '<div class="s-mstat"><div class="s-mstat-label">거래 횟수</div><div class="s-mstat-val">'+sState.hist.length+'회</div></div>'+
+            '</div>'+
+            '<div style="display:flex;gap:7px">'+
+            '<button onclick="sResetGame()" style="flex:1;padding:10px;border-radius:8px;border:none;background:#3b82f6;color:#fff;font-size:13px;font-weight:700;cursor:pointer">다시 시작</button>'+
+            '<button onclick="stockBackToMenu()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #e2e8f0;background:#f8f9fa;color:#333;font-size:13px;font-weight:700;cursor:pointer">메뉴로</button>'+
+            '</div>';
+        document.getElementById('s-result-modal').style.display='flex';
+    }
+
+    function sResetGame(){
+        document.getElementById('s-result-modal').style.display='none';
+        const keptDiff=sState.diff;sState.balance=10000000;sState.round=1;sState.sel=null;sState.port={};sState.hist=[];sState.assetHist=[10000000];sState.ppVis=false;sState.diff=keptDiff;
+        sStocks=S_BASE.map(s=>({...s,prev:s.price,chg:0,pct:0,hist:[s.price]}));
+        [0,1,2].forEach(i=>document.getElementById('sd'+i).classList.toggle('active',i===keptDiff));
+        document.getElementById('s-bal').textContent=sFmt(sState.balance);
+        document.getElementById('s-rnum').textContent='1';
+        document.getElementById('s-bbuy').disabled=true;
+        document.getElementById('s-bsell').disabled=true;
+        document.getElementById('s-sib').innerHTML='<div style="color:var(--st2);font-size:11px">뉴스 또는 종목을 선택하세요</div>';
+        document.getElementById('s-ppbox').classList.remove('vis');
+        document.getElementById('s-ptbtn').classList.remove('active');
+        sRenderNews();sRenderStocks();sRenderPortfolio();sRenderHistory();sUpdateTape();sDrawAssetChart();
+        sStartLiveTick();
+    }
+
+    function stockBackToMenu(){
+        if(sLiveTick)clearInterval(sLiveTick);
+        document.getElementById('stock-screen').style.display='none';
+        document.getElementById('s-result-modal').style.display='none';
+        gameSelectScreen.style.display='block';
+    }
+
+    function initStockGame(){
+        sState.balance=10000000;sState.round=1;sState.sel=null;sState.port={};sState.hist=[];sState.diff=0;sState.assetHist=[10000000];sState.ppVis=false;
+        sStocks=S_BASE.map(s=>({...s,prev:s.price,chg:0,pct:0,hist:[s.price]}));
+        [0,1,2].forEach(i=>document.getElementById('sd'+i).classList.toggle('active',i===0));
+        document.getElementById('s-bal').textContent=sFmt(sState.balance);
+        document.getElementById('s-rnum').textContent='1';
+        document.getElementById('s-bbuy').disabled=true;
+        document.getElementById('s-bsell').disabled=true;
+        document.getElementById('s-sib').innerHTML='<div style="color:var(--st2);font-size:11px">뉴스 또는 종목을 선택하세요</div>';
+        document.getElementById('s-result-modal').style.display='none';
+        document.getElementById('s-ppbox').classList.remove('vis');
+        document.getElementById('s-ptbtn').classList.remove('active');
+        sRenderNews();sRenderStocks();sRenderPortfolio();sRenderHistory();sUpdateTape();
+        setTimeout(()=>sDrawAssetChart(),50);
+        sStartLiveTick();
+        // 단축키
+        document.addEventListener('keydown',sKeyHandler);
+    }
+
+    function sKeyHandler(e){
+        const screenVisible=document.getElementById('stock-screen').style.display==='block';
+        if(!screenVisible){document.removeEventListener('keydown',sKeyHandler);return;}
+        if(e.target.tagName==='INPUT')return;
+        const modalOpen=document.getElementById('s-result-modal').style.display!=='none';
+        if(modalOpen)return;
+        if(e.key==='b'||e.key==='B'){const btn=document.getElementById('s-bbuy');if(!btn.disabled)sTrade('buy');}
+        if(e.key==='s'||e.key==='S'){const btn=document.getElementById('s-bsell');if(!btn.disabled)sTrade('sell');}
+        if(e.key==='n'||e.key==='N')sNextRound();
+    }
+    // ═══════════════════════════════════════════
+    //  🍉 수박 게임 (Suika Lite) — 통합 모듈
+    // ═══════════════════════════════════════════
+    const SUIKA = {
+        CW: 420, CH: 560,
+        DEADLINE: 100,
+        COOLDOWN: 600,
+        GRAVITY: 0.35,
+        BOUNCE: 0.22,
+        FRICTION: 0.983,
+        LEFT: 10, RIGHT: 410, BOTTOM: 545,
+        FRUITS: [
+            { name:'체리',   emoji:'🍒', r:18,  score:1,    color:'#ff3b30' },
+            { name:'딸기',   emoji:'🍓', r:25,  score:3,    color:'#ff453a' },
+            { name:'포도',   emoji:'🍇', r:33,  score:6,    color:'#af52de' },
+            { name:'한라봉', emoji:'🍊', r:42,  score:10,   color:'#ff9f0a' },
+            { name:'감',     emoji:'🍅', r:51,  score:18,   color:'#ff6b6b' },
+            { name:'사과',   emoji:'🍎', r:61,  score:36,   color:'#ff3b30' },
+            { name:'배',     emoji:'🍐', r:72,  score:70,   color:'#ffd60a' },
+            { name:'복숭아', emoji:'🍑', r:84,  score:140,  color:'#ffb3bb' },
+            { name:'파인애플',emoji:'🍍',r:96,  score:280,  color:'#ffcc00' },
+            { name:'멜론',   emoji:'🍈', r:110, score:560,  color:'#30d158' },
+            { name:'수박',   emoji:'🍉', r:125, score:1200, color:'#34c759' },
+        ],
+        MAX_DROP: 4,
+    };
+
+    let SK = {
+        canvas: null, ctx: null,
+        bodies: [], particles: [], floatTexts: [],
+        score: 0, highScore: parseInt(localStorage.getItem('suika_hs')||'0'),
+        state: 'IDLE', // IDLE | PLAYING | PAUSED | OVER
+        dropX: 210, curLevel: 0, nextLevel: 0,
+        cooldown: false, animId: null,
+        shakeX: 0, shakeY: 0, shake: 0,
+        danger: false, dangerTime: 3.0,
+        muted: false, highestFruit: 0,
+        lastTime: 0,
+        _warnCd: 0,
+    };
+
+    const suikaScreen = document.getElementById('suika-screen');
+
+    function suikaBackToMenu() {
+        if (SK.animId) cancelAnimationFrame(SK.animId);
+        SK.state = 'IDLE';
+        suikaScreen.style.display = 'none';
+        document.getElementById('suika-next-wrap').style.display = 'none';
+        gameSelectScreen.style.display = 'block';
+    }
+
+    let suikaInitialized = false;
+    function initSuikaGame() {
+        SK.canvas = document.getElementById('suika-canvas');
+        SK.ctx    = SK.canvas.getContext('2d');
+
+        // 모바일 스케일 조정
+        const maxW = Math.min(window.innerWidth - 16, 420);
+        const scale = maxW / 420;
+        SK.canvas.style.width  = (420 * scale) + 'px';
+        SK.canvas.style.height = (560 * scale) + 'px';
+
+        if (!suikaInitialized) {
+            suikaInitialized = true;
+
+            SK.canvas.addEventListener('mousemove', e => {
+                if (SK.state !== 'PLAYING') return;
+                const rect = SK.canvas.getBoundingClientRect();
+                const sx = 420 / rect.width;
+                SK.dropX = Math.max(SUIKA.LEFT + 20, Math.min(SUIKA.RIGHT - 20, (e.clientX - rect.left) * sx));
+            });
+            SK.canvas.addEventListener('click', () => { if (SK.state === 'PLAYING' && !SK.cooldown) suikaDrop(); });
+            SK.canvas.addEventListener('touchmove', e => {
+                e.preventDefault();
+                if (SK.state !== 'PLAYING') return;
+                const rect = SK.canvas.getBoundingClientRect();
+                const sx = 420 / rect.width;
+                SK.dropX = Math.max(SUIKA.LEFT + 20, Math.min(SUIKA.RIGHT - 20, (e.touches[0].clientX - rect.left) * sx));
+            }, { passive: false });
+            SK.canvas.addEventListener('touchend', e => {
+                e.preventDefault();
+                if (SK.state === 'PLAYING' && !SK.cooldown) suikaDrop();
+            }, { passive: false });
+        }
+
+        renderSuikaLadder();
+        document.getElementById('suika-overlay').style.display = 'flex';
+        document.getElementById('suika-score').innerText = '0';
+    }
+
+    function renderSuikaLadder() {
+        const el = document.getElementById('suika-ladder');
+        el.innerHTML = SUIKA.FRUITS.map((f, i) =>
+            `<span id="sk-ladder-${i}" title="${f.name}" style="font-size:${i < 5 ? 1.1 : 0.9}rem; opacity:0.35; transition:all 0.3s;">${f.emoji}</span>` +
+            (i < SUIKA.FRUITS.length - 1 ? '<span style="color:#d97706; font-size:0.6rem; opacity:0.5;">›</span>' : '')
+        ).join('');
+    }
+
+    function updateSuikaLadder() {
+        SUIKA.FRUITS.forEach((_, i) => {
+            const el = document.getElementById(`sk-ladder-${i}`);
+            if (!el) return;
+            el.style.opacity  = i <= SK.highestFruit ? '1' : '0.35';
+            el.style.transform = i === SK.highestFruit ? 'scale(1.35)' : 'scale(1)';
+        });
+    }
+
+    function suikaRandLevel() { return Math.floor(Math.random() * (SUIKA.MAX_DROP + 1)); }
+
+    function suikaStart() {
+        SK.bodies = []; SK.particles = []; SK.floatTexts = [];
+        SK.score = 0; SK.shake = 0; SK.danger = false; SK.dangerTime = 3.0;
+        SK.highestFruit = 0; SK._warnCd = 0;
+        SK.curLevel  = suikaRandLevel();
+        SK.nextLevel = suikaRandLevel();
+        SK.state = 'PLAYING';
+        document.getElementById('suika-overlay').style.display = 'none';
+        document.getElementById('suika-danger-msg').style.display = 'none';
+        document.getElementById('suika-next-wrap').style.display = 'flex';
+        document.getElementById('suika-next-emoji').innerText = SUIKA.FRUITS[SK.nextLevel].emoji;
+        document.getElementById('suika-score').innerText = '0';
+        updateSuikaLadder();
+        if (SK.animId) cancelAnimationFrame(SK.animId);
+        SK.lastTime = performance.now();
+        SK.animId = requestAnimationFrame(suikaLoop);
+    }
+
+    function suikaRestart() { suikaStart(); }
+
+    function suikaMuteToggle() {
+        SK.muted = !SK.muted;
+        document.getElementById('suika-mute-btn').innerText = SK.muted ? '🔇' : '🔊';
+    }
+
+    function suikaDrop() {
+        const f = SUIKA.FRUITS[SK.curLevel];
+        const x = Math.max(SUIKA.LEFT + f.r + 2, Math.min(SUIKA.RIGHT - f.r - 2, SK.dropX));
+        SK.bodies.push({
+            id: Math.random().toString(36).slice(2),
+            lv: SK.curLevel, x, y: SUIKA.DEADLINE - 20,
+            vx: 0, vy: 1,
+            r: f.r, mass: f.r * f.r * 0.15,
+            angle: Math.random() * Math.PI, aVel: (Math.random() - 0.5) * 0.05,
+            scale: 0.1, sleeping: false, sleepT: 0,
+        });
+        suikaPlaySfx('drop');
+        SK.cooldown = true;
+        setTimeout(() => {
+            SK.curLevel  = SK.nextLevel;
+            SK.nextLevel = suikaRandLevel();
+            document.getElementById('suika-next-emoji').innerText = SUIKA.FRUITS[SK.nextLevel].emoji;
+            SK.cooldown = false;
+        }, SUIKA.COOLDOWN);
+    }
+
+    function suikaGameOver() {
+        SK.state = 'OVER';
+        suikaPlaySfx('over');
+        const ov = document.getElementById('suika-overlay');
+        const hs = SK.score > SK.highScore;
+        if (hs) { SK.highScore = SK.score; localStorage.setItem('suika_hs', SK.score); }
+        ov.innerHTML = `
+            <div style="font-size:3rem; margin-bottom:4px; filter:drop-shadow(0 0 10px rgba(239,68,68,0.5));">💔</div>
+            <div style="font-size:1.8rem; font-weight:900; color:#ff7f2a; text-transform:uppercase; text-shadow:0 0 20px rgba(255,127,42,0.4);">GAME OVER</div>
+            <div style="font-size:0.82rem; color:#94a3b8; margin:6px 0 16px;">수박 게임 완료! 수고하셨습니다 🍉</div>
+            <div style="background:linear-gradient(135deg,#0f1420,#141929); border:1px solid rgba(255,127,42,0.3); border-radius:14px; padding:14px 20px; margin-bottom:16px; width:220px; box-sizing:border-box;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span style="font-size:0.78rem; color:#94a3b8; font-weight:700;">이번 점수</span>
+                    <span style="font-size:1.3rem; font-weight:900; color:#ff7f2a; font-family:monospace;">${SK.score}점</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; padding-top:8px; border-top:1px solid rgba(255,127,42,0.2);">
+                    <span style="font-size:0.78rem; color:#94a3b8; font-weight:700;">최고 기록</span>
+                    <span style="font-size:0.9rem; font-weight:900; color:#e2e8f0; font-family:monospace;">${SK.highScore}점</span>
+                </div>
+            </div>
+            <button onclick="suikaStart()" style="width:220px; padding:12px; background:linear-gradient(135deg,#ff7f2a,#e05a0a); color:white; border:none; border-radius:14px; font-size:0.95rem; font-weight:900; cursor:pointer; margin-bottom:8px; box-shadow:0 4px 16px rgba(255,127,42,0.4);">🔄 다시 시작</button>
+            <button onclick="suikaBackToMenu()" style="width:220px; padding:10px; background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.1); border-radius:14px; font-size:0.85rem; font-weight:900; cursor:pointer;">🏠 메뉴로</button>
+        `;
+        ov.style.display = 'flex';
+        document.getElementById('suika-danger-msg').style.display = 'none';
+    }
+
+    // ── 효과음 ──
+    function suikaPlaySfx(type) {
+        if (SK.muted) return;
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            const t = ctx.currentTime;
+            if (type === 'drop') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, t);
+                osc.frequency.exponentialRampToValueAtTime(350, t + 0.1);
+                gain.gain.setValueAtTime(0.12, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+                osc.start(t); osc.stop(t + 0.14);
+            } else if (type === 'merge') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, t);
+                osc.frequency.exponentialRampToValueAtTime(900, t + 0.18);
+                gain.gain.setValueAtTime(0.15, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+                osc.start(t); osc.stop(t + 0.23);
+            } else if (type === 'warn') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, t);
+                gain.gain.setValueAtTime(0.06, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+                osc.start(t); osc.stop(t + 0.06);
+            } else if (type === 'over') {
+                [293.66, 261.63, 220].forEach((freq, i) => {
+                    const o2 = ctx.createOscillator();
+                    const g2 = ctx.createGain();
+                    o2.connect(g2); g2.connect(ctx.destination);
+                    o2.type = 'square';
+                    o2.frequency.setValueAtTime(freq, t + i * 0.15);
+                    g2.gain.setValueAtTime(0.1, t + i * 0.15);
+                    g2.gain.exponentialRampToValueAtTime(0.001, t + i * 0.15 + 0.14);
+                    o2.start(t + i * 0.15); o2.stop(t + i * 0.15 + 0.15);
+                });
+            }
+        } catch(e) {}
+    }
+
+    // ── 파티클 / 플로팅텍스트 ──
+    function suikaAddParticles(x, y, color, n) {
+        for (let i = 0; i < n; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const sp = 1 + Math.random() * 3;
+            SK.particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, r: 2+Math.random()*3, color, alpha:1, life:0, maxLife: 20+Math.random()*15 });
+        }
+    }
+    function suikaAddText(x, y, text, color) {
+        SK.floatTexts.push({ x, y, text, color, alpha:1, vx:(Math.random()-0.5), vy:-2 });
+    }
+
+    // ── 메인 루프 ──
+    function suikaLoop(time) {
+        if (SK.state === 'IDLE' || SK.state === 'PAUSED') return;
+        const dt = Math.min((time - SK.lastTime) / 16.666, 3);
+        SK.lastTime = time;
+        const { ctx, canvas } = SK;
+        ctx.clearRect(0, 0, SUIKA.CW, SUIKA.CH);
+
+        // 물리 시뮬레이션
+        if (SK.state === 'PLAYING') {
+            for (let step = 0; step < 2; step++) {
+                const gStep = SUIKA.GRAVITY / 2;
+                // 중력 + 이동
+                for (const b of SK.bodies) {
+                    if (b.sleeping) continue;
+                    b.vx = Math.max(-10, Math.min(10, b.vx));
+                    b.vy = Math.max(-10, Math.min(10, b.vy));
+                    const spd = b.vx*b.vx + b.vy*b.vy;
+                    if (spd < 0.08 && Math.abs(b.aVel) < 0.06) {
+                        b.sleepT = (b.sleepT||0) + 1;
+                        if (b.sleepT > 25) { b.vx=0; b.vy=0; b.aVel=0; b.sleeping=true; }
+                    } else { b.sleepT=0; b.sleeping=false; }
+                    if (b.sleeping) continue;
+                    b.vy += gStep;
+                    b.x += b.vx / 2; b.y += b.vy / 2;
+                    b.angle += b.aVel / 2;
+                    if (b.scale < 1) { b.scale = Math.min(1, b.scale + 0.08); }
+                    b.vx *= Math.pow(SUIKA.FRICTION - 0.01, 0.5);
+                    b.vy *= Math.pow(SUIKA.FRICTION - 0.01, 0.5);
+                    b.aVel *= Math.pow(0.96, 0.5);
+                }
+                // 벽 충돌 (sleeping 포함 모든 과일 경계 보정)
+                for (const b of SK.bodies) {
+                    const sr = b.r * b.scale;
+                    if (b.x - sr < SUIKA.LEFT)   { b.x = SUIKA.LEFT + sr;  b.vx =  Math.abs(b.vx) * SUIKA.BOUNCE; b.sleeping = false; b.sleepT = 0; }
+                    if (b.x + sr > SUIKA.RIGHT)  { b.x = SUIKA.RIGHT - sr; b.vx = -Math.abs(b.vx) * SUIKA.BOUNCE; b.sleeping = false; b.sleepT = 0; }
+                    if (b.y + sr > SUIKA.BOTTOM) { b.y = SUIKA.BOTTOM - sr; b.vy = -Math.abs(b.vy) * SUIKA.BOUNCE * 0.5; b.vx *= 0.8; b.aVel *= 0.85; if (Math.abs(b.vy)<0.25) b.vy=0; }
+                }
+                // 원-원 충돌 + 합성
+                const mergedIds = new Set();
+                const toMerge = [];
+                for (let i = 0; i < SK.bodies.length; i++) {
+                    const b1 = SK.bodies[i];
+                    for (let j = i+1; j < SK.bodies.length; j++) {
+                        const b2 = SK.bodies[j];
+                        if (mergedIds.has(b1.id)||mergedIds.has(b2.id)) continue;
+                        if (b1.sleeping && b2.sleeping) continue;
+                        const dx = b2.x-b1.x, dy = b2.y-b1.y;
+                        const d2 = dx*dx+dy*dy;
+                        const minD = b1.r*b1.scale + b2.r*b2.scale;
+                        if (d2 < minD*minD) {
+                            if (b1.sleeping) { b1.sleeping=false; b1.sleepT=0; }
+                            if (b2.sleeping) { b2.sleeping=false; b2.sleepT=0; }
+                            const d = Math.sqrt(d2)||0.1;
+                            const ov = minD - d;
+                            const nx = dx/d, ny = dy/d;
+                            const ti = 1/b1.mass + 1/b2.mass;
+                            b1.x -= nx*ov*(1/b1.mass)/ti*0.58; b1.y -= ny*ov*(1/b1.mass)/ti*0.58;
+                            b2.x += nx*ov*(1/b2.mass)/ti*0.58; b2.y += ny*ov*(1/b2.mass)/ti*0.58;
+                            const rvx=b2.vx-b1.vx, rvy=b2.vy-b1.vy;
+                            const vn = rvx*nx+rvy*ny;
+                            if (vn < 0) {
+                                const imp = -(1+SUIKA.BOUNCE*0.3)*vn/ti;
+                                b1.vx -= imp/b1.mass*nx; b1.vy -= imp/b1.mass*ny;
+                                b2.vx += imp/b2.mass*nx; b2.vy += imp/b2.mass*ny;
+                            }
+                            if (b1.lv === b2.lv) { mergedIds.add(b1.id); mergedIds.add(b2.id); toMerge.push([b1, b2]); }
+                        }
+                    }
+                }
+                // 합성 처리
+                for (const [b1, b2] of toMerge) {
+                    SK.bodies = SK.bodies.filter(b => b.id !== b1.id && b.id !== b2.id);
+                    const mx = (b1.x+b2.x)/2, my = (b1.y+b2.y)/2;
+                    const nl = b1.lv + 1;
+                    if (nl < SUIKA.FRUITS.length) {
+                        const nf = SUIKA.FRUITS[nl];
+                        SK.bodies.push({ id: Math.random().toString(36).slice(2), lv:nl, x:mx, y:my, vx:(b1.vx+b2.vx)*0.5, vy:(b1.vy+b2.vy)*0.5-2, r:nf.r, mass:nf.r*nf.r*0.15, angle:(b1.angle+b2.angle)*0.5, aVel:(b1.aVel+b2.aVel)*0.6, scale:0.1, sleeping:false, sleepT:0 });
+                        const pts = Math.round(b1.r+b2.r+nf.score);
+                        SK.score += pts;
+                        document.getElementById('suika-score').innerText = SK.score;
+                        suikaPlaySfx('merge');
+                        suikaAddParticles(mx, my, nf.color, 8);
+                        suikaAddText(mx, my-10, '+'+pts, nf.color);
+                        SK.shake = Math.max(SK.shake, 1.5 + nl*1.5);
+                        if (nl > SK.highestFruit) { SK.highestFruit = nl; updateSuikaLadder(); }
+                    } else {
+                        SK.score += 5000;
+                        document.getElementById('suika-score').innerText = SK.score;
+                        suikaAddParticles(mx, my, '#34c759', 20);
+                        suikaAddText(mx, my-15, '🍉 BOOM! +5000', '#34c759');
+                        SK.shake = 22;
+                    }
+                }
+            }
+
+            // 위험 체크: 과일 윗면이 데드라인 위로 넘으면 즉시 카운트다운
+            let hazard = false;
+            for (const b of SK.bodies) {
+                if (b.scale < 1) continue; // 성장 중인 과일 제외
+                if (b.y - b.r * b.scale < SUIKA.DEADLINE) { hazard = true; break; }
+            }
+            const dm = document.getElementById('suika-danger-msg');
+            const dt2 = document.getElementById('suika-danger-time');
+            if (hazard) {
+                SK.danger = true;
+                SK.dangerTime -= 1/60;
+                dm.style.display = 'block';
+                dt2.innerText = Math.max(0, SK.dangerTime).toFixed(1);
+                SK._warnCd--;
+                if (SK._warnCd <= 0) { suikaPlaySfx('warn'); SK._warnCd = Math.max(15, Math.round(SK.dangerTime*20)); }
+                if (SK.dangerTime <= 0) { suikaGameOver(); return; }
+            } else {
+                SK.dangerTime = Math.min(3.0, SK.dangerTime + 0.018); // 천천히 회복
+                if (SK.dangerTime >= 3.0) { SK.danger=false; dm.style.display='none'; }
+                else { dm.style.display='block'; dt2.innerText = SK.dangerTime.toFixed(1); }
+            }
+        }
+
+        // 파티클 / 텍스트 업데이트
+        SK.particles.forEach(p => { p.x+=p.vx; p.y+=p.vy; p.vy+=0.1; p.life++; p.alpha=1-p.life/p.maxLife; });
+        SK.particles = SK.particles.filter(p => p.life < p.maxLife);
+        SK.floatTexts.forEach(t => { t.x+=t.vx; t.y+=t.vy; t.alpha-=0.02; });
+        SK.floatTexts = SK.floatTexts.filter(t => t.alpha > 0);
+
+        // 화면 흔들기
+        SK.shakeX = SK.shake > 0.1 ? (Math.random()-0.5)*SK.shake : 0;
+        SK.shakeY = SK.shake > 0.1 ? (Math.random()-0.5)*SK.shake : 0;
+        SK.shake *= 0.88;
+
+        // ── 렌더링 ──
+        ctx.save();
+        ctx.translate(SK.shakeX, SK.shakeY);
+
+        // 배경
+        ctx.fillStyle = 'rgba(10,14,28,0.97)';
+        ctx.beginPath();
+        ctx.roundRect(SUIKA.LEFT, SUIKA.DEADLINE-30, SUIKA.RIGHT-SUIKA.LEFT, SUIKA.BOTTOM-(SUIKA.DEADLINE-30), [0,0,16,16]);
+        ctx.fill();
+        // 배경 그라디언트 오버레이
+        const bgGrad = ctx.createLinearGradient(SUIKA.LEFT, SUIKA.DEADLINE, SUIKA.LEFT, SUIKA.BOTTOM);
+        bgGrad.addColorStop(0, 'rgba(255,127,42,0.03)');
+        bgGrad.addColorStop(1, 'rgba(37,99,235,0.04)');
+        ctx.fillStyle = bgGrad;
+        ctx.beginPath();
+        ctx.roundRect(SUIKA.LEFT, SUIKA.DEADLINE-30, SUIKA.RIGHT-SUIKA.LEFT, SUIKA.BOTTOM-(SUIKA.DEADLINE-30), [0,0,16,16]);
+        ctx.fill();
+
+        // 데드라인
+        ctx.save();
+        ctx.setLineDash([6,6]);
+        ctx.lineWidth = 2.5;
+        if (SK.danger) {
+            ctx.strokeStyle = `rgba(239,68,68,${0.4+Math.sin(time*0.01)*0.3})`;
+            ctx.shadowColor='#ef4444'; ctx.shadowBlur=8;
+        } else { ctx.strokeStyle='rgba(148,163,184,0.4)'; }
+        ctx.beginPath(); ctx.moveTo(SUIKA.LEFT, SUIKA.DEADLINE); ctx.lineTo(SUIKA.RIGHT, SUIKA.DEADLINE); ctx.stroke();
+        ctx.restore();
+
+        // 과일 렌더
+        for (const b of SK.bodies) {
+            const f = SUIKA.FRUITS[b.lv]; if (!f) continue;
+            ctx.save();
+            ctx.translate(b.x, b.y); ctx.rotate(b.angle); ctx.scale(b.scale, b.scale);
+            ctx.shadowColor='rgba(0,0,0,0.3)'; ctx.shadowBlur=5; ctx.shadowOffsetY=2;
+            ctx.fillStyle = f.color;
+            ctx.beginPath(); ctx.arc(0,0,b.r,0,Math.PI*2); ctx.fill();
+            ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+            ctx.strokeStyle = (b.y-b.r < SUIKA.DEADLINE && SK.danger) ? 'rgba(239,68,68,0.9)' : 'rgba(255,255,255,0.35)';
+            ctx.lineWidth = 2; ctx.stroke();
+            const g = ctx.createLinearGradient(-b.r*0.4,-b.r*0.4,b.r*0.4,b.r*0.4);
+            g.addColorStop(0,'rgba(255,255,255,0.18)'); g.addColorStop(1,'rgba(0,0,0,0.15)');
+            ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,b.r,0,Math.PI*2); ctx.fill();
+            ctx.font=`bold ${b.r*1.15}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(f.emoji, 0, b.r*0.05);
+            ctx.restore();
+        }
+
+        // 조준선 + 드로퍼
+        if (SK.state === 'PLAYING' && !SK.cooldown) {
+            const f = SUIKA.FRUITS[SK.curLevel];
+            const cx = Math.max(SUIKA.LEFT+f.r+2, Math.min(SUIKA.RIGHT-f.r-2, SK.dropX));
+            ctx.save();
+            ctx.strokeStyle = f.color+'30'; ctx.setLineDash([4,6]); ctx.lineWidth=1.5;
+            ctx.beginPath(); ctx.moveTo(cx, SUIKA.DEADLINE-30); ctx.lineTo(cx, SUIKA.BOTTOM); ctx.stroke();
+            ctx.restore();
+            ctx.save(); ctx.translate(cx, SUIKA.DEADLINE-30);
+            ctx.shadowColor='rgba(0,0,0,0.2)'; ctx.shadowBlur=4;
+            ctx.fillStyle=f.color; ctx.beginPath(); ctx.arc(0,0,f.r,0,Math.PI*2); ctx.fill();
+            ctx.shadowBlur=0; ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=1.5; ctx.stroke();
+            ctx.font=`${f.r*1.1}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(f.emoji, 0, f.r*0.05);
+            ctx.restore();
+        }
+
+        // 파티클
+        for (const p of SK.particles) {
+            ctx.save(); ctx.globalAlpha=p.alpha; ctx.fillStyle=p.color;
+            ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); ctx.restore();
+        }
+        // 플로팅 텍스트
+        for (const t of SK.floatTexts) {
+            ctx.save(); ctx.globalAlpha=t.alpha; ctx.fillStyle=t.color;
+            ctx.font='bold 15px sans-serif'; ctx.textAlign='center';
+            ctx.shadowColor='rgba(0,0,0,0.4)'; ctx.shadowBlur=3;
+            ctx.fillText(t.text, t.x, t.y); ctx.restore();
+        }
+
+        // 외벽 테두리
+        ctx.strokeStyle='#ff7f2a'; ctx.lineWidth=8; ctx.lineCap='round'; ctx.setLineDash([]);
+        ctx.shadowColor='rgba(255,127,42,0.4)'; ctx.shadowBlur=10;
+        ctx.beginPath();
+        ctx.moveTo(SUIKA.LEFT, SUIKA.DEADLINE-30); ctx.lineTo(SUIKA.LEFT, SUIKA.BOTTOM);
+        ctx.lineTo(SUIKA.RIGHT, SUIKA.BOTTOM); ctx.lineTo(SUIKA.RIGHT, SUIKA.DEADLINE-30);
+        ctx.stroke();
+        ctx.shadowBlur=0;
+
+        ctx.restore();
+
+        SK.animId = requestAnimationFrame(suikaLoop);
+    }
+
+    // ════════════════════════════════════════
+    //  ⚙️ 설정 모달 로직
+    // ════════════════════════════════════════
+    const SETTINGS_KEY = 'fruitArcadeSettings';
+
+    const defaultSettings = {
+        sfxEnabled: true,
+        volume: 70,
+        animEnabled: true,
+        comboEffect: true,
+        highContrast: false,
+        cardScale: 100
+    };
+
+    let currentSettings = { ...defaultSettings };
+
+    function loadSettings() {
+        try {
+            const saved = localStorage.getItem(SETTINGS_KEY);
+            if (saved) { currentSettings = { ...defaultSettings, ...JSON.parse(saved) }; }
+        } catch(e) { currentSettings = { ...defaultSettings }; }
+        applySettingsToUI();
+        applySettingsToGame();
+    }
+
+    function saveSettings() {
+        try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(currentSettings)); } catch(e) {}
+        applySettingsToGame();
+    }
+
+    function applySettingsToUI() {
+        document.getElementById('settings-sfx-toggle').checked = currentSettings.sfxEnabled;
+        document.getElementById('settings-volume').value = currentSettings.volume;
+        document.getElementById('settings-volume-val').textContent = currentSettings.volume;
+        document.getElementById('settings-anim-toggle').checked = currentSettings.animEnabled;
+        document.getElementById('settings-combo-toggle').checked = currentSettings.comboEffect;
+        document.getElementById('settings-contrast-toggle').checked = currentSettings.highContrast;
+        document.getElementById('settings-card-size').value = currentSettings.cardScale;
+        document.getElementById('settings-card-size-val').textContent = currentSettings.cardScale + '%';
+    }
+
+    function readSettingsFromUI() {
+        currentSettings.sfxEnabled  = document.getElementById('settings-sfx-toggle').checked;
+        currentSettings.volume      = parseInt(document.getElementById('settings-volume').value);
+        currentSettings.animEnabled = document.getElementById('settings-anim-toggle').checked;
+        currentSettings.comboEffect = document.getElementById('settings-combo-toggle').checked;
+        currentSettings.highContrast= document.getElementById('settings-contrast-toggle').checked;
+        currentSettings.cardScale   = parseInt(document.getElementById('settings-card-size').value);
+    }
+
+    function applySettingsToGame() {
+        // 효과음 on/off를 기존 sound-toggle 셀렉트에 연동
+        const st = document.getElementById('sound-toggle');
+        if (st) st.value = currentSettings.sfxEnabled ? 'on' : 'off';
+
+        // 카드 크기 적용 (CSS 변수)
+        const scale = currentSettings.cardScale / 100;
+        document.documentElement.style.setProperty('--card-scale', scale);
+        document.querySelectorAll('.card').forEach(c => {
+            c.style.fontSize = '';  // 클래스로 관리되므로 리셋
+        });
+        // board에 scale CSS 적용
+        const board = document.getElementById('board');
+        if (board) board.style.transform = scale !== 1 ? `scale(${scale})` : '';
+
+        // 고대비 테두리
+        if (currentSettings.highContrast) {
+            document.documentElement.style.setProperty('--card-back', '#1d4ed8');
+        } else {
+            document.documentElement.style.setProperty('--card-back', '#3b82f6');
+        }
+
+        // 애니메이션 속도
+        document.documentElement.style.setProperty(
+            '--card-anim-speed', currentSettings.animEnabled ? '0.3s' : '0s'
+        );
+    }
+
+    function openSettingsModal() {
+        applySettingsToUI();
+        const overlay = document.getElementById('settings-overlay');
+        overlay.classList.add('active');
+        // 게임 타이머 일시 정지
+        if (typeof isTimerPaused !== 'undefined') isTimerPaused = true;
+    }
+
+    function closeSettingsModal() {
+        readSettingsFromUI();
+        saveSettings();
+        const overlay = document.getElementById('settings-overlay');
+        overlay.classList.remove('active');
+        // 타이머 재개
+        if (typeof isTimerPaused !== 'undefined') isTimerPaused = false;
+    }
+
+    // 슬라이더 실시간 미리보기
+    document.getElementById('settings-volume').addEventListener('input', function() {
+        document.getElementById('settings-volume-val').textContent = this.value;
+    });
+    document.getElementById('settings-card-size').addEventListener('input', function() {
+        document.getElementById('settings-card-size-val').textContent = this.value + '%';
+    });
+
+    // 버튼 이벤트
+    document.getElementById('open-settings-btn').addEventListener('click', openSettingsModal);
+    document.getElementById('close-settings-btn').addEventListener('click', closeSettingsModal);
+    // 인트로 설정 버튼
+    const introSettingsBtn = document.getElementById('open-settings-intro-btn');
+    if (introSettingsBtn) { introSettingsBtn.addEventListener('click', openSettingsModal); }
+
+    document.getElementById('settings-reset-btn').addEventListener('click', function() {
+        currentSettings = { ...defaultSettings };
+        applySettingsToUI();
+    });
+
+    // ESC 키로 닫기
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const so = document.getElementById('settings-overlay');
+            if (so.classList.contains('active')) { closeSettingsModal(); }
+        }
+    });
+
+    // 배경 클릭으로 닫기
+    document.getElementById('settings-overlay').addEventListener('click', function(e) {
+        if (e.target === this) closeSettingsModal();
+    });
+
+    // 초기 로드
+    loadSettings();
+
+</script>
+</body>
+</html>

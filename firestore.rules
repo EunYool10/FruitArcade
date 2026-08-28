@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  // Configured access for 'ai-studio-9fb7cc09-52d2-4de4-9866-b3ecaf99c200' database instance
+  match /databases/{database}/documents {
+
+    // Helper functions for authentication & ownership verification
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    // User personal game data: profile, statistics, achievements, settings
+    // Enforces that authenticated users can only read and write documents within their specific /users/{userId}/ path
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      // Recursive match for any subcollections under user document
+      match /{allPaths=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Default deny all other paths to prevent unauthorized access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "상큼 과일 아케이드 존",
+  "description": "과일 메모리 게임, 수박 게임(Suika), 주식 뉴스 트레이딩 및 16종 업적 시스템을 즐길 수 있는 아케이드 게임 존",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

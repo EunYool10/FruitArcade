@@ -1,0 +1,96 @@
+import { Achievement, UnlockedAchievements } from '../types';
+
+export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
+  { id: 'first_clear', title: '상큼한 첫걸음', desc: '메모리 게임 난이도 상관없이 첫 세트 클리어', icon: '🌱', game: 'memory' },
+  { id: 'high_score', title: '메모리 마스터', desc: '메모리 게임에서 최종 점수 150점 이상 기록', icon: '👑', game: 'memory' },
+  { id: 'combo_king', title: '콤보 폭발 폭주족', desc: '메모리 게임 연속 콤보 5회 이상 달성', icon: '🔥', game: 'memory' },
+  { id: 'hardcore_clear', title: '강철의 심장', desc: '5번 기회(하드코어) 조건에서 클리어', icon: '🛡️', game: 'memory' },
+  { id: 'joker_fever', title: '조커 마술사', desc: '스페셜 조커 모드 완전 클리어', icon: '🃏', game: 'memory' },
+  { id: 'time_attack_master', title: '빛보다 빠른 손', desc: '8x8 타임어택 모드 클리어', icon: '⚡', game: 'memory' },
+  { id: 'perfect_100', title: 'Perfect 100', desc: '오답 감점 없이 깔끔하게 100점 돌파', icon: '💯', game: 'memory' },
+  { id: 'no_hint_clear', title: '미니멀리스트', desc: '수동 힌트를 한 번도 쓰지 않고 클리어', icon: '🚫', game: 'memory' },
+  { id: 'speed_racer', title: '스피드 레이서', desc: '게임 클리어 타임 20초 이하 기록 (4x4/6x6)', icon: '⏱️', game: 'memory' },
+  { id: 'minus_score', title: '마이너스의 손', desc: '오답 연발로 최종 점수가 0점 미만 도달', icon: '📉', game: 'memory' },
+  { id: 'joker_streak', title: '조커 대폭발', desc: '조커 모드에서 연속으로 조커를 3번 오픈', icon: '🎆', game: 'memory' },
+  { id: 'fail_is_mother', title: '실패는 성공의 어머니', desc: '라이프 제한 모드에서 게임 오버 1회 경험', icon: '☠️', game: 'memory' },
+  { id: 'lucky_seven', title: '행운의 세븐', desc: '정확히 최고 콤보 7회 달성', icon: '🍀', game: 'memory' },
+  { id: 'veteran_tester', title: '진성 테스터', desc: '크레딧(Credit) 창을 통산 3번 이상 열어 정독', icon: '🔎', game: 'all' },
+  { id: 'score_rich', title: '자산가 스코어', desc: '최종 점수 250점 이상 초고득점 달성', icon: '💵', game: 'memory' },
+  { id: 'speedy_fail', title: '초고속 광탈', desc: '하드코어 모드에서 15초 안에 광속 게임오버', icon: '💥', game: 'memory' },
+  
+  // Fruit Dash New Achievements
+  { id: 'dash_survivor_30', title: '질주의 생존자', desc: 'FRUIT DASH에서 30초 이상 생존 달성', icon: '🏃', game: 'dash' },
+  { id: 'dash_survivor_60', title: '빛의 회피 장인', desc: 'FRUIT DASH에서 60초 이상 생존 달성', icon: '🌪️', game: 'dash' },
+  { id: 'dash_dodge_master', title: '회피의 신', desc: 'FRUIT DASH에서 500점 이상 득점 돌파', icon: '🎯', game: 'dash' },
+  { id: 'dash_star_collector', title: '별빛 과일 채집가', desc: 'FRUIT DASH에서 황금 보너스 스타 5회 획득', icon: '⭐', game: 'dash' },
+
+  // Suika & Stock Achievements
+  { id: 'suika_watermelon', title: '전설의 수박 탄생', desc: '수박 게임에서 거대 수박(🍉) 합성 성공', icon: '🍉', game: 'suika' },
+  { id: 'stock_millionaire', title: '여의도 투자의 귀재', desc: '주식 트레이딩에서 자산 2,000만원 달성', icon: '📈', game: 'stock' },
+
+  { id: 'all_achieved', title: '진정한 과일 마스터', desc: '모든 업적을 전부 해금 완료', icon: '🎖️', game: 'all' },
+];
+
+const ACHIEVEMENTS_KEY = 'fruit_game_achievements';
+let memoryAchievements: UnlockedAchievements = {};
+
+export function setMemoryAchievements(achievements: UnlockedAchievements): void {
+  memoryAchievements = { ...achievements };
+}
+
+export function getUnlockedAchievements(): UnlockedAchievements {
+  if (Object.keys(memoryAchievements).length > 0) {
+    return memoryAchievements;
+  }
+  try {
+    const data = localStorage.getItem(ACHIEVEMENTS_KEY);
+    return data ? JSON.parse(data) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function unlockAchievement(
+  id: string,
+  onUnlocked?: (ach: Achievement) => void
+): boolean {
+  const current = getUnlockedAchievements();
+  if (current[id]) return false;
+
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  current[id] = dateStr;
+  memoryAchievements[id] = dateStr;
+
+  try {
+    localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(current));
+  } catch {
+    // ignore
+  }
+
+  const def = ACHIEVEMENT_DEFINITIONS.find((a) => a.id === id);
+  if (def && onUnlocked) {
+    onUnlocked(def);
+  }
+
+  // Check if all other achievements are unlocked
+  if (id !== 'all_achieved') {
+    const regularAchievements = ACHIEVEMENT_DEFINITIONS.filter((a) => a.id !== 'all_achieved');
+    const allDone = regularAchievements.every((a) => current[a.id]);
+    if (allDone && !current['all_achieved']) {
+      unlockAchievement('all_achieved', onUnlocked);
+    }
+  }
+
+  return true;
+}
+
+export function resetAchievements(): void {
+  memoryAchievements = {};
+  try {
+    localStorage.removeItem(ACHIEVEMENTS_KEY);
+  } catch {
+    // ignore
+  }
+}
+

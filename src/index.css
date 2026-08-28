@@ -1,0 +1,294 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* V2.0 Centralized UI Design Tokens */
+    /* Spacing */
+    --ui-space-xs: 0.25rem;   /* 4px */
+    --ui-space-sm: 0.5rem;    /* 8px */
+    --ui-space-md: 0.75rem;   /* 12px */
+    --ui-space-lg: 1rem;      /* 16px */
+    --ui-space-xl: 1.5rem;    /* 24px */
+    --ui-space-2xl: 2rem;     /* 32px */
+
+    /* Component Heights */
+    --ui-btn-h-sm: 34px;
+    --ui-btn-h-nav: 36px;
+    --ui-btn-h-md: 44px;
+    --ui-btn-h-lg: 50px;
+    --ui-hud-h: 52px;
+    --ui-min-touch: 44px;
+
+    /* Typography Sizes */
+    --ui-font-xs: 0.75rem;    /* 12px */
+    --ui-font-sm: 0.8125rem;  /* 13px */
+    --ui-font-base: 0.875rem; /* 14px */
+    --ui-font-md: 1rem;       /* 16px */
+    --ui-font-lg: 1.125rem;   /* 18px */
+    --ui-font-xl: 1.25rem;    /* 20px */
+    --ui-font-2xl: 1.5rem;    /* 24px */
+
+    /* Border Radii */
+    --ui-radius-sm: 8px;
+    --ui-radius-btn: 12px;
+    --ui-radius-hud: 16px;
+    --ui-radius-card: 24px;
+    --ui-radius-full: 9999px;
+
+    /* Colors & Glassmorphism */
+    --ui-primary: #ff7a00;
+    --ui-primary-hover: #ff881a;
+    --ui-primary-active: #e66e00;
+    --ui-color-emerald: #10b981;
+    --ui-color-rose: #f43f5e;
+    --ui-color-blue: #3b82f6;
+    --ui-color-amber: #f59e0b;
+
+    --card-anim-speed: 0.3s;
+    --card-scale: 1;
+    --card-back: #2563eb;
+  }
+
+  @media (max-width: 640px) {
+    :root {
+      --ui-btn-h-nav: 44px;
+      --ui-btn-h-sm: 44px;
+      --ui-btn-h-md: 44px;
+      --ui-btn-h-lg: 48px;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body, #root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    user-select: none;
+    background: #0d101a;
+    color: #e2e8f0;
+  }
+}
+
+/* V2.0 Standardized Component Classes */
+.btn-arcade-nav {
+  height: var(--ui-btn-h-nav);
+  padding: 0 var(--ui-space-md);
+  border-radius: var(--ui-radius-btn);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  font-size: var(--ui-font-xs);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-space-xs);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn-arcade-nav:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+.btn-arcade-nav:active {
+  transform: scale(0.96);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.btn-arcade-primary {
+  height: var(--ui-btn-h-lg);
+  min-height: var(--ui-min-touch);
+  padding: 0 var(--ui-space-xl);
+  border-radius: var(--ui-radius-btn);
+  background-color: var(--ui-primary);
+  color: #ffffff;
+  font-size: var(--ui-font-base);
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-space-sm);
+  box-shadow: 0 4px 20px rgba(255, 122, 0, 0.35);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.btn-arcade-primary:hover {
+  background-color: var(--ui-primary-hover);
+  box-shadow: 0 6px 24px rgba(255, 122, 0, 0.45);
+  transform: translateY(-1px);
+}
+.btn-arcade-primary:active {
+  background-color: var(--ui-primary-active);
+  transform: translateY(0);
+}
+
+.btn-arcade-secondary {
+  height: var(--ui-btn-h-md);
+  min-height: var(--ui-min-touch);
+  padding: 0 var(--ui-space-lg);
+  border-radius: var(--ui-radius-btn);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  font-size: var(--ui-font-sm);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-space-sm);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.btn-arcade-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+.btn-arcade-secondary:active {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.game-container {
+  padding: var(--ui-space-lg);
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.arcade-hud-box {
+  width: 100%;
+  background-color: rgba(19, 23, 36, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--ui-radius-hud);
+  padding: var(--ui-space-sm) var(--ui-space-lg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-md);
+  user-select: none;
+}
+
+/* 20% Enlarged Memory Card Grid & Container */
+.memory-card-grid {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  gap: var(--ui-space-sm);
+  padding: var(--ui-space-md);
+  background-color: rgba(17, 22, 39, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--ui-radius-card);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+}
+
+/* Card Back with Retro-Modern Arcade Pattern */
+.arcade-card-back {
+  background-color: #12182b;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(255, 122, 0, 0.18) 0%, transparent 65%),
+    linear-gradient(45deg, rgba(255, 255, 255, 0.04) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.04) 75%, rgba(255, 255, 255, 0.04)),
+    linear-gradient(45deg, rgba(255, 255, 255, 0.04) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.04) 75%, rgba(255, 255, 255, 0.04));
+  background-size: 100% 100%, 16px 16px, 16px 16px;
+  background-position: 0 0, 0 0, 8px 8px;
+  border: 1.5px solid rgba(255, 122, 0, 0.35);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.arcade-card-back:hover {
+  border-color: #ff7a00;
+  box-shadow: inset 0 0 18px rgba(255, 122, 0, 0.25), 0 0 16px rgba(255, 122, 0, 0.4);
+}
+
+/* Matched Card Distinct State */
+.arcade-card-matched {
+  background-color: rgba(6, 44, 30, 0.9) !important;
+  border: 2px solid #10b981 !important;
+  box-shadow: inset 0 0 16px rgba(16, 185, 129, 0.35), 0 0 12px rgba(16, 185, 129, 0.2) !important;
+  opacity: 0.85;
+  transform: scale(0.96);
+  filter: saturate(1.2);
+}
+
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 20, 32, 0.6);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 122, 0, 0.3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 122, 0, 0.6);
+}
+
+/* 3D Card Flip Perspective */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+@keyframes single-flash {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); filter: drop-shadow(0 0 12px #ffca28); }
+  100% { transform: scale(1); }
+}
+
+.animate-flash {
+  animation: single-flash 0.8s ease-in-out infinite;
+}
+
+@keyframes pulse-danger {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0px red); }
+  100% { transform: scale(1.06); filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8)); }
+}
+
+.animate-pulse-danger {
+  animation: pulse-danger 0.5s infinite alternate;
+}
+
+@keyframes tape-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-tape {
+  animation: tape-scroll 24s linear infinite;
+}
+.animate-tape:hover {
+  animation-play-state: paused;
+}
+

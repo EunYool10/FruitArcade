@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "users": {
+      "title": "Users",
+      "description": "User profile, game progress, statistics and settings",
+      "type": "object",
+      "properties": {
+        "profile": {
+          "type": "object",
+          "properties": {
+            "uid": { "type": "string" },
+            "displayName": { "type": "string" },
+            "email": { "type": "string" },
+            "photoURL": { "type": "string" },
+            "createdAt": { "type": "string" },
+            "lastLoginAt": { "type": "string" }
+          },
+          "required": ["uid"]
+        },
+        "statistics": {
+          "type": "object",
+          "properties": {
+            "totalPlayCount": { "type": "number" },
+            "totalPlayTime": { "type": "number" },
+            "memoryPlayCount": { "type": "number" },
+            "suikaPlayCount": { "type": "number" },
+            "stockPlayCount": { "type": "number" },
+            "dashPlayCount": { "type": "number" },
+            "memoryHighScore": { "type": "number" },
+            "suikaHighScore": { "type": "number" },
+            "stockHighScore": { "type": "number" },
+            "dashHighScore": { "type": "number" },
+            "lastPlayedAt": { "type": "string" }
+          }
+        },
+        "achievements": {
+          "type": "object",
+          "description": "Map of achievement ID to unlocked date string"
+        },
+        "settings": {
+          "type": "object",
+          "description": "Game audio, graphics and gameplay preferences"
+        }
+      },
+      "required": ["profile"]
+    }
+  }
+}

@@ -254,6 +254,8 @@ export default function App() {
       else if (err?.code === 'auth/popup-blocked') error = '팝업이 차단됐어요. 브라우저에서 팝업을 허용해 주세요.';
       else if (err?.code === 'auth/cancelled-popup-request') error = '이전 로그인 요청이 취소됐어요.';
       else if (err?.code === 'auth/network-request-failed') error = '네트워크 연결을 확인해 주세요.';
+      else if (err?.code === 'auth/unauthorized-domain')
+        error = '이 주소에서는 아직 Google 로그인을 쓸 수 없어요. 게스트로 플레이해도 이 기기에 기록이 저장돼요.';
       return { success: false, error };
     }
   };

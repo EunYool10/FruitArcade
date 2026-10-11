@@ -1,303 +1,189 @@
 import React from 'react';
-import { Volume2, VolumeX, Eye, Sparkles, Sliders, RotateCcw, Keyboard, Trash2, X, Check } from 'lucide-react';
-import { GameSettings } from '../../types';
-import { resetAchievements } from '../../utils/achievements';
+import { RotateCcw, Trash2 } from 'lucide-react';
+import { GameSettings, ThemeMode } from '../../types';
+import { DEFAULT_SETTINGS } from '../../constants';
+import { Modal } from '../ui/Modal';
+import { SettingRow, Toggle } from '../ui/Toggle';
+import { Segmented } from '../ui/Segmented';
+import { ConfirmButton } from '../ui/ConfirmButton';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   settings: GameSettings;
-  onUpdateSettings: (newSettings: GameSettings) => void;
+  loggedIn: boolean;
+  onUpdateSettings: (next: GameSettings) => void;
+  onResetAchievements: () => void;
+  onResetRecords: () => void;
   onNotify: (msg: string) => void;
 }
+
+type BoolKey = { [K in keyof GameSettings]: GameSettings[K] extends boolean ? K : never }[keyof GameSettings];
+
+const Section: React.FC<{ icon: string; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
+  <section className="well space-y-3.5 p-4">
+    <h3 className="flex items-center gap-2 font-display text-lg">
+      <span aria-hidden="true">{icon}</span> {title}
+    </h3>
+    {children}
+  </section>
+);
+
+const SHORTCUTS: [string, string][] = [
+  ['일시정지 · 닫기', 'ESC'],
+  ['메모리 플래시 힌트', 'H'],
+  ['메모리 카드 힌트', 'C'],
+  ['수박 · 대시 이동', '← → / A D'],
+  ['수박 낙하', 'Space · ↓'],
+  ['게임 시작', 'Space · Enter'],
+];
 
 export const SettingsModal: React.FC<Props> = ({
   isOpen,
   onClose,
   settings,
+  loggedIn,
   onUpdateSettings,
+  onResetAchievements,
+  onResetRecords,
   onNotify,
 }) => {
-  if (!isOpen) return null;
+  const set = <K extends keyof GameSettings>(key: K, value: GameSettings[K]) => onUpdateSettings({ ...settings, [key]: value });
 
-  const handleChange = <K extends keyof GameSettings>(key: K, val: GameSettings[K]) => {
-    onUpdateSettings({ ...settings, [key]: val });
-  };
-
-  const handleResetSettings = () => {
-    onUpdateSettings({
-      sfxEnabled: true,
-      volume: 70,
-      animEnabled: true,
-      comboEffect: true,
-      particleEffect: true,
-      shakeEffect: true,
-      celebrateEffect: true,
-      highContrast: false,
-      cardScale: 100,
-    });
-    onNotify('설정이 기본값으로 초기화되었습니다.');
-  };
-
-  const handleResetAchievements = () => {
-    if (window.confirm('모든 업적 진행 상황을 초기화하시겠습니까?')) {
-      resetAchievements();
-      onNotify('업적이 모두 초기화되었습니다.');
-    }
-  };
-
-  const handleResetSuikaHs = () => {
-    if (window.confirm('수박 게임 최고 기록을 초기화하시겠습니까?')) {
-      localStorage.removeItem('suika_hs');
-      onNotify('수박 게임 최고 점수가 초기화되었습니다.');
-    }
-  };
+  // Plain function (not a component) so the switches keep focus across re-renders
+  const toggle = (key: BoolKey, title: string, desc: string) => (
+    <SettingRow title={title} desc={desc}>
+      <Toggle checked={settings[key]} onChange={(v) => set(key, v)} label={title} />
+    </SettingRow>
+  );
 
   return (
-    <div
-      id="settings-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="설정"
+      subtitle="바꾸는 즉시 저장돼요"
+      icon="⚙️"
+      tone="grape"
+      footer={
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              onUpdateSettings(DEFAULT_SETTINGS);
+              onNotify('설정을 기본값으로 되돌렸어요');
+            }}
+          >
+            <RotateCcw className="h-4 w-4" strokeWidth={2.5} /> 기본값
+          </button>
+          <button type="button" className="btn btn-primary flex-1" onClick={onClose}>
+            완료
+          </button>
+        </div>
+      }
     >
-      <div className="relative w-full max-w-md bg-gradient-to-b from-[#141a29] to-[#0d111d] border border-orange-500/30 rounded-3xl p-6 shadow-2xl text-slate-100 flex flex-col max-h-[90vh]">
-        {/* Close Button */}
-        <button
-          id="close-settings-x-btn"
-          onClick={onClose}
-          className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
+      <div className="space-y-3">
+        <Section icon="🎨" title="화면">
+          <Segmented<ThemeMode>
+            ariaLabel="테마"
+            columns={3}
+            value={settings.theme}
+            onChange={(v) => set('theme', v)}
+            options={[
+              { value: 'light', label: '☀️ 라이트' },
+              { value: 'dark', label: '🌙 다크' },
+              { value: 'system', label: '💻 시스템' },
+            ]}
+          />
+        </Section>
 
-        {/* Header */}
-        <div className="text-center mb-4">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/30 text-orange-400 mb-2">
-            <Sliders className="w-6 h-6" />
+        <Section icon="🔊" title="사운드">
+          {toggle('sfxEnabled', '효과음', '뒤집기, 합성, 충돌 소리')}
+          <SettingRow title="볼륨">
+            <div className="flex items-center gap-2.5">
+              <input
+                type="range"
+                className="range w-32"
+                min={0}
+                max={100}
+                value={settings.volume}
+                disabled={!settings.sfxEnabled}
+                onChange={(e) => set('volume', parseInt(e.target.value))}
+                aria-label="볼륨"
+              />
+              <span className="w-10 text-right font-display text-sm tabular-nums">{settings.sfxEnabled ? `${settings.volume}%` : 'OFF'}</span>
+            </div>
+          </SettingRow>
+        </Section>
+
+        <Section icon="✨" title="연출">
+          {toggle('animEnabled', '카드 회전', '메모리 카드를 부드럽게 뒤집어요')}
+          {toggle('comboEffect', '콤보 · 파티클', '콤보 강조와 합성 파티클')}
+          {toggle('shakeEffect', '흔들림', '틀린 카드와 수박 게임 화면 흔들림')}
+          {toggle('celebrateEffect', '꽃가루', '클리어와 신기록 축하')}
+        </Section>
+
+        <Section icon="👀" title="보기 편하게">
+          {toggle('highContrast', '고대비 카드', '메모리 카드 테두리를 두껍게')}
+          <SettingRow title="카드 크기" desc="메모리 게임판 크기">
+            <div className="flex items-center gap-2.5">
+              <input
+                type="range"
+                className="range w-32"
+                min={80}
+                max={120}
+                step={5}
+                value={settings.cardScale}
+                onChange={(e) => set('cardScale', parseInt(e.target.value))}
+                aria-label="카드 크기"
+              />
+              <span className="w-10 text-right font-display text-sm tabular-nums">{settings.cardScale}%</span>
+            </div>
+          </SettingRow>
+        </Section>
+
+        <Section icon="⌨️" title="조작키">
+          <dl className="grid gap-1.5 sm:grid-cols-2">
+            {SHORTCUTS.map(([what, key]) => (
+              <div key={what} className="flex items-center justify-between gap-2 rounded-xl border-2 border-line bg-surface px-3 py-2 text-xs">
+                <dt className="font-semibold text-ink-2">{what}</dt>
+                <dd className="font-display whitespace-nowrap">{key}</dd>
+              </div>
+            ))}
+          </dl>
+        </Section>
+
+        <Section icon="🗑️" title="데이터">
+          <p className="text-xs text-ink-3">
+            {loggedIn ? '로그인 중이라 클라우드에 저장된 데이터도 함께 지워져요.' : '이 기기에 저장된 데이터가 지워져요.'}
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <ConfirmButton
+              className="btn w-full"
+              question="업적을 모두 지울까요?"
+              confirmLabel="지우기"
+              onConfirm={() => {
+                onResetAchievements();
+                onNotify('업적을 초기화했어요');
+              }}
+            >
+              <Trash2 className="h-4 w-4" strokeWidth={2.5} /> 업적 초기화
+            </ConfirmButton>
+            <ConfirmButton
+              className="btn w-full"
+              question="최고 기록과 플레이 기록을 모두 지울까요?"
+              confirmLabel="지우기"
+              onConfirm={() => {
+                onResetRecords();
+                onNotify('기록을 초기화했어요');
+              }}
+            >
+              <Trash2 className="h-4 w-4" strokeWidth={2.5} /> 기록 초기화
+            </ConfirmButton>
           </div>
-          <h2 className="text-xl font-black tracking-tight text-slate-100">게임 환경설정</h2>
-          <p className="text-xs text-slate-400 mt-1">사운드, 그래픽 및 조작 옵션을 변경하세요</p>
-        </div>
-
-        {/* Settings Sections */}
-        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-          {/* Sound Settings */}
-          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-black tracking-wider text-orange-400 uppercase">
-              <Volume2 className="w-4 h-4" /> 사운드 (Sound)
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-bold text-slate-200">효과음 켜기</div>
-                <div className="text-[11px] text-slate-400">뒤집기, 매칭, 터치 효과음</div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="settings-sfx-toggle"
-                  checked={settings.sfxEnabled}
-                  onChange={(e) => handleChange('sfxEnabled', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-bold text-slate-200">볼륨 크기</div>
-              <div className="flex items-center gap-2.5">
-                <input
-                  type="range"
-                  id="settings-volume"
-                  min="0"
-                  max="100"
-                  value={settings.volume}
-                  disabled={!settings.sfxEnabled}
-                  onChange={(e) => handleChange('volume', parseInt(e.target.value))}
-                  className="w-28 accent-orange-500 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer disabled:opacity-40"
-                />
-                <span className="text-xs font-mono font-bold text-orange-400 min-w-[32px] text-right">
-                  {settings.sfxEnabled ? `${settings.volume}%` : 'OFF'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Graphics & Effects */}
-          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-black tracking-wider text-orange-400 uppercase">
-              <Sparkles className="w-4 h-4" /> 그래픽 & 비주얼 (Visual)
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-bold text-slate-200">카드 3D 회전 애니메이션</div>
-                <div className="text-[11px] text-slate-400">부드러운 뒤집기 연출</div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="settings-anim-toggle"
-                  checked={settings.animEnabled}
-                  onChange={(e) => handleChange('animEnabled', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-bold text-slate-200">콤보 및 파티클 연출</div>
-                <div className="text-[11px] text-slate-400">매칭 및 과일 합성 시 반짝임</div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="settings-combo-toggle"
-                  checked={settings.comboEffect}
-                  onChange={(e) => handleChange('comboEffect', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-bold text-slate-200">오답 흔들림 효과</div>
-                <div className="text-[11px] text-slate-400">틀렸을 때 카드 흔들림</div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="settings-shake-toggle"
-                  checked={settings.shakeEffect}
-                  onChange={(e) => handleChange('shakeEffect', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
-              </label>
-            </div>
-          </div>
-
-          {/* Accessibility & Sizing */}
-          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-black tracking-wider text-orange-400 uppercase">
-              <Eye className="w-4 h-4" /> 접근성 및 크기
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-bold text-slate-200">고대비 카드 테두리</div>
-                <div className="text-[11px] text-slate-400">진한 블루 테두리 및 명암 강조</div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  id="settings-contrast-toggle"
-                  checked={settings.highContrast}
-                  onChange={(e) => handleChange('highContrast', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-bold text-slate-200">카드 스케일 크기</div>
-              <div className="flex items-center gap-2.5">
-                <input
-                  type="range"
-                  id="settings-card-size"
-                  min="80"
-                  max="120"
-                  value={settings.cardScale}
-                  onChange={(e) => handleChange('cardScale', parseInt(e.target.value))}
-                  className="w-28 accent-orange-500 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-                />
-                <span className="text-xs font-mono font-bold text-orange-400 min-w-[36px] text-right">
-                  {settings.cardScale}%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Keyboard Shortcuts */}
-          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-black tracking-wider text-orange-400 uppercase">
-              <Keyboard className="w-4 h-4" /> 키보드 단축키
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="p-2 rounded-xl bg-black/20 border border-white/5 flex items-center justify-between">
-                <span className="text-slate-400">일시정지</span>
-                <kbd className="px-1.5 py-0.5 bg-slate-800 rounded font-mono text-[10px] text-orange-300 border border-slate-700">ESC</kbd>
-              </div>
-              <div className="p-2 rounded-xl bg-black/20 border border-white/5 flex items-center justify-between">
-                <span className="text-slate-400">플래시 힌트</span>
-                <kbd className="px-1.5 py-0.5 bg-slate-800 rounded font-mono text-[10px] text-orange-300 border border-slate-700">H</kbd>
-              </div>
-              <div className="p-2 rounded-xl bg-black/20 border border-white/5 flex items-center justify-between">
-                <span className="text-slate-400">주식 매수</span>
-                <kbd className="px-1.5 py-0.5 bg-slate-800 rounded font-mono text-[10px] text-emerald-400 border border-slate-700">B</kbd>
-              </div>
-              <div className="p-2 rounded-xl bg-black/20 border border-white/5 flex items-center justify-between">
-                <span className="text-slate-400">주식 매도</span>
-                <kbd className="px-1.5 py-0.5 bg-slate-800 rounded font-mono text-[10px] text-rose-400 border border-slate-700">S</kbd>
-              </div>
-              <div className="p-2 rounded-xl bg-black/20 border border-white/5 flex items-center justify-between">
-                <span className="text-slate-400">다음 라운드</span>
-                <kbd className="px-1.5 py-0.5 bg-slate-800 rounded font-mono text-[10px] text-blue-400 border border-slate-700">N</kbd>
-              </div>
-              <div className="p-2 rounded-xl bg-black/20 border border-white/5 flex items-center justify-between">
-                <span className="text-slate-400">수박 이동/낙하</span>
-                <kbd className="px-1.5 py-0.5 bg-slate-800 rounded font-mono text-[10px] text-amber-300 border border-slate-700">마우스/터치</kbd>
-              </div>
-            </div>
-          </div>
-
-          {/* Data Reset */}
-          <div className="p-3.5 rounded-2xl bg-rose-500/5 border border-rose-500/20 space-y-2">
-            <div className="text-xs font-black tracking-wider text-rose-400 uppercase">데이터 관리</div>
-            <div className="flex gap-2">
-              <button
-                id="settings-reset-achieve-btn"
-                onClick={handleResetAchievements}
-                className="flex-1 py-2 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> 업적 초기화
-              </button>
-              <button
-                id="settings-reset-suika-btn"
-                onClick={handleResetSuikaHs}
-                className="flex-1 py-2 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> 수박 최고점 리셋
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="mt-4 flex gap-2">
-          <button
-            id="settings-reset-btn"
-            onClick={handleResetSettings}
-            className="h-[var(--ui-btn-h-lg)] min-h-[44px] flex items-center justify-center gap-1.5 px-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-xs font-bold transition-colors cursor-pointer active:scale-95"
-          >
-            <RotateCcw className="w-3.5 h-3.5" /> 초기화
-          </button>
-          <button
-            id="close-settings-btn"
-            onClick={onClose}
-            className="h-[var(--ui-btn-h-lg)] min-h-[44px] flex-1 flex items-center justify-center gap-1.5 px-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-extrabold text-sm shadow-lg shadow-orange-500/25 transition-all cursor-pointer active:scale-95"
-          >
-            <Check className="w-4 h-4" /> 설정 저장 완료
-          </button>
-        </div>
+        </Section>
       </div>
-    </div>
+    </Modal>
   );
 };

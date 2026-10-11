@@ -1,14 +1,24 @@
-export type ScreenType = 'intro' | 'game-select' | 'memory-setup' | 'memory-play' | 'suika' | 'stock' | 'dash';
+export type ScreenType = 'lobby' | 'memory-setup' | 'memory-play' | 'suika' | 'dash';
+
+export type GameType = 'memory' | 'suika' | 'dash';
+
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 export type MemoryMode = '4' | '6' | '8' | '8-joker';
 export type LifeLimit = 'infinite' | '10' | '5';
 
+export interface MemoryConfig {
+  mode: MemoryMode;
+  previewTime: number; // ms
+  lifeLimit: LifeLimit;
+}
+
 export interface GameSettings {
+  theme: ThemeMode;
   sfxEnabled: boolean;
   volume: number; // 0 - 100
   animEnabled: boolean;
   comboEffect: boolean;
-  particleEffect: boolean;
   shakeEffect: boolean;
   celebrateEffect: boolean;
   highContrast: boolean;
@@ -20,20 +30,11 @@ export interface Achievement {
   title: string;
   desc: string;
   icon: string;
-  game?: 'all' | 'memory' | 'suika' | 'stock' | 'dash';
+  game?: 'all' | GameType;
 }
 
 export interface UnlockedAchievements {
   [id: string]: string; // id -> formatted date
-}
-
-export interface UserProfile {
-  uid: string;
-  displayName: string | null;
-  email: string | null;
-  photoURL: string | null;
-  createdAt: string;
-  lastLoginAt: string;
 }
 
 export interface UserStatistics {
@@ -41,20 +42,37 @@ export interface UserStatistics {
   totalPlayTime: number; // seconds
   memoryPlayCount: number;
   suikaPlayCount: number;
-  stockPlayCount: number;
   dashPlayCount: number;
   memoryHighScore: number;
   suikaHighScore: number;
-  stockHighScore: number;
   dashHighScore: number;
+  missionStamps: number; // days on which every daily mission was cleared
   lastPlayedAt: string;
 }
 
-export interface UserGameData {
-  profile: UserProfile;
-  statistics: UserStatistics;
-  achievements: UnlockedAchievements;
-  settings: GameSettings;
+/** What a game reports once a round ends. */
+export interface GameResult {
+  game: GameType;
+  score: number;
+  seconds: number;
+  won?: boolean;
+}
+
+/** What the app hands back so the result screen can celebrate. */
+export interface GameReward {
+  xpGained: number;
+  newBest: boolean;
+  prevBest: number;
+  levelUp: number | null;
+  missions: string[];
+  /** Achievements unlocked during this round, e.g. "🔥 콤보 폭발 폭주족" */
+  achievements: string[];
+  stamp: boolean;
+}
+
+export interface HistoryEntry extends GameResult {
+  at: number; // epoch ms
+  best?: boolean;
 }
 
 export interface MemoryCard {
@@ -145,37 +163,3 @@ export interface DashParticle {
   life: number;
   maxLife: number;
 }
-
-// Stock Game Types
-export interface StockItem {
-  ticker: string;
-  name: string;
-  price: number;
-  prev: number;
-  chg: number;
-  pct: number;
-  hist: number[];
-}
-
-export interface NewsItem {
-  h: string;
-  s: string;
-  tag: 'positive' | 'negative' | 'neutral';
-  hint: string;
-  t: string[];
-  e: [number, number];
-}
-
-export interface PortfolioPosition {
-  qty: number;
-  avg: number;
-}
-
-export interface TradeHistoryItem {
-  type: 'buy' | 'sell';
-  ticker: string;
-  qty: number;
-  price: number;
-  total: number;
-}
-

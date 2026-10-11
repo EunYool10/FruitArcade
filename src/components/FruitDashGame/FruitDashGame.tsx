@@ -1,14 +1,19 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { RotateCcw, Home, Zap, Trophy, Heart, Play, ShieldAlert, Sparkles } from 'lucide-react';
-import confetti from 'canvas-confetti';
-import { GameSettings, DashFallingFruit, DashParticle } from '../../types';
+import { RotateCcw } from 'lucide-react';
+import { DashFallingFruit, DashParticle, GameResult, GameReward, GameSettings } from '../../types';
+import { GAMES } from '../../constants';
 import { playSound } from '../../utils/audio';
-import { GameTimer, formatTime } from '../Common/GameTimer';
+import { celebrate } from '../../utils/fx';
+import { formatNumber, formatTime } from '../../utils/format';
+import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
+import { StartCard } from '../game/StartCard';
+import { ResultCard } from '../game/ResultCard';
 
 const CW = 440;
 const CH = 600;
 const PLAYER_Y = 530;
 const PLAYER_R = 20;
+const GROUND_Y = PLAYER_Y + PLAYER_R + 8;
 
 const FRUIT_TYPES = [
   { emoji: '🍓', color: '#ff4d4f', r: 16, hazard: true, points: 5 },
@@ -20,44 +25,78 @@ const FRUIT_TYPES = [
   { emoji: '⭐', color: '#fadb14', r: 15, hazard: false, isBonus: true, bonusPoints: 50 },
 ];
 
+const PALETTE = {
+  light: {
+    skyTop: '#bfe8ff',
+    skyBottom: '#fff5e6',
+    speck: 'rgba(43, 33, 64, 0.1)',
+    ground: '#7fd99f',
+    outline: '#2b2140',
+    lane: 'rgba(43, 33, 64, 0.18)',
+    shadow: 'rgba(43, 33, 64, 0.2)',
+  },
+  dark: {
+    skyTop: '#140f30',
+    skyBottom: '#2b2147',
+    speck: 'rgba(255, 244, 228, 0.55)',
+    ground: '#1f7a55',
+    outline: '#07050c',
+    lane: 'rgba(255, 244, 228, 0.18)',
+    shadow: 'rgba(0, 0, 0, 0.35)',
+  },
+};
+
+// Slowly drifting background dots (stars at night)
+const SPECKS = Array.from({ length: 36 }, (_, i) => ({
+  x: (i * 97.13) % CW,
+  y: (i * 53.71) % GROUND_Y,
+  r: 1 + ((i * 7) % 3) * 0.6,
+  speed: 0.15 + ((i * 13) % 5) * 0.06,
+}));
+
+const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+
 interface Props {
   settings: GameSettings;
-  onMenu: () => void;
+  dark: boolean;
+  best: number;
+  /** Start the round right away instead of showing the start card */
+  autoStart?: boolean;
   isPaused: boolean;
-  onGameOver?: (score: number, duration: number) => void;
-  handleGameComplete?: (gameType: 'dash', finalScore: number, playTimeSeconds: number) => void;
   onUnlockAchieve: (id: string) => void;
+  onGameComplete: (result: GameResult) => GameReward;
+  onRoundChange: (active: boolean) => void;
+  onExit: () => void;
 }
 
 export const FruitDashGame: React.FC<Props> = ({
   settings,
-  onMenu,
+  dark,
+  best,
+  autoStart = false,
   isPaused,
-  onGameOver,
-  handleGameComplete,
   onUnlockAchieve,
+  onGameComplete,
+  onRoundChange,
+  onExit,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [gameState, setGameState] = useState<'IDLE' | 'PLAYING' | 'OVER'>('IDLE');
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(() => {
-    try {
-      return parseInt(localStorage.getItem('dash_hs') || '0');
-    } catch {
-      return 0;
-    }
-  });
   const [elapsedTime, setElapsedTime] = useState(0);
   const [level, setLevel] = useState(1);
   const [bonusStarsCollected, setBonusStarsCollected] = useState(0);
+  const [reward, setReward] = useState<GameReward | null>(null);
 
   // Mutable Game Loop State
   const fruitsRef = useRef<DashFallingFruit[]>([]);
   const particlesRef = useRef<DashParticle[]>([]);
   const playerXRef = useRef<number>(CW / 2);
   const targetXRef = useRef<number>(CW / 2);
-  const keysPressedRef = useRef<{ [key: string]: boolean }>({});
+  const facingRef = useRef(1);
+  const crashedRef = useRef(false);
+  const keysPressedRef = useRef({ left: false, right: false });
   const isPlayingRef = useRef(false);
   const animFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef(performance.now());
@@ -67,48 +106,31 @@ export const FruitDashGame: React.FC<Props> = ({
   const timeRef = useRef(0);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Keyboard navigation
+  // Latest callbacks/values for code running inside the animation loop
+  const live = useRef({ onUnlockAchieve, onGameComplete, settings });
+  live.current = { onUnlockAchieve, onGameComplete, settings };
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'ArrowRight', 'a', 'A', 'd', 'D'].includes(e.key)) {
-        keysPressedRef.current[e.key.toLowerCase()] = true;
-      }
-      if (e.code === 'Space' && gameState !== 'PLAYING') {
-        e.preventDefault();
-        handleStartGame();
-      }
-    };
+    onRoundChange(gameState === 'PLAYING');
+  }, [gameState, onRoundChange]);
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'ArrowRight', 'a', 'A', 'd', 'D'].includes(e.key)) {
-        keysPressedRef.current[e.key.toLowerCase()] = false;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [gameState]);
+  useEffect(
+    () => () => {
+      isPlayingRef.current = false;
+    },
+    []
+  );
 
   // Track elapsed play time and level scaling
   useEffect(() => {
     if (gameState === 'PLAYING' && !isPaused) {
       timerIntervalRef.current = setInterval(() => {
-        setElapsedTime((t) => {
-          const next = t + 1;
-          timeRef.current = next;
-
-          // Achievement checks
-          if (next >= 30) onUnlockAchieve('dash_survivor_30');
-          if (next >= 60) onUnlockAchieve('dash_survivor_60');
-
-          const newLvl = Math.min(10, 1 + Math.floor(next / 10));
-          setLevel(newLvl);
-          return next;
-        });
+        const next = timeRef.current + 1;
+        timeRef.current = next;
+        setElapsedTime(next);
+        setLevel(Math.min(10, 1 + Math.floor(next / 10)));
+        if (next >= 30) live.current.onUnlockAchieve('dash_survivor_30');
+        if (next >= 60) live.current.onUnlockAchieve('dash_survivor_60');
       }, 1000);
     } else {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -117,23 +139,25 @@ export const FruitDashGame: React.FC<Props> = ({
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [gameState, isPaused, onUnlockAchieve]);
+  }, [gameState, isPaused]);
 
   const handleStartGame = () => {
     fruitsRef.current = [];
     particlesRef.current = [];
     playerXRef.current = CW / 2;
     targetXRef.current = CW / 2;
-    keysPressedRef.current = {};
+    keysPressedRef.current = { left: false, right: false };
     spawnTimerRef.current = 0;
     scoreRef.current = 0;
     starsRef.current = 0;
     timeRef.current = 0;
+    crashedRef.current = false;
 
     setScore(0);
     setElapsedTime(0);
     setLevel(1);
     setBonusStarsCollected(0);
+    setReward(null);
     setGameState('PLAYING');
     isPlayingRef.current = true;
     lastTimeRef.current = performance.now();
@@ -141,42 +165,68 @@ export const FruitDashGame: React.FC<Props> = ({
     playSound('click', settings);
   };
 
+  // "한 판 더" and "처음부터" skip the start card
+  useEffect(() => {
+    if (autoStart) handleStartGame();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleGameOver = useCallback((finalScore: number, finalTime: number) => {
+    const { settings: s, onUnlockAchieve: unlock, onGameComplete: complete } = live.current;
     isPlayingRef.current = false;
+    crashedRef.current = true;
     setGameState('OVER');
-    playSound('over', settings);
+    playSound('over', s);
 
-    if (finalScore > highScore) {
-      setHighScore(finalScore);
-      try {
-        localStorage.setItem('dash_hs', finalScore.toString());
-      } catch {
-        // ignore
+    if (finalScore >= 500) unlock('dash_dodge_master');
+    if (starsRef.current >= 5) unlock('dash_star_collector');
+
+    const r = complete({ game: 'dash', score: finalScore, seconds: finalTime });
+    setReward(r);
+    if (r.newBest && s.celebrateEffect) celebrate();
+  }, []);
+
+  // Keyboard: ← → / A D to move (by physical key, so a Korean layout works too)
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
+  const isPausedRef = useRef(isPaused);
+  isPausedRef.current = isPaused;
+  const startRef = useRef(handleStartGame);
+  startRef.current = handleStartGame;
+
+  useEffect(() => {
+    const isLeft = (e: KeyboardEvent) => e.code === 'ArrowLeft' || e.code === 'KeyA';
+    const isRight = (e: KeyboardEvent) => e.code === 'ArrowRight' || e.code === 'KeyD';
+
+    const onDown = (e: KeyboardEvent) => {
+      if (isPausedRef.current || e.ctrlKey || e.metaKey || e.altKey) return;
+      const state = gameStateRef.current;
+      if (isLeft(e) || isRight(e)) {
+        keysPressedRef.current[isLeft(e) ? 'left' : 'right'] = true;
+        if (state === 'PLAYING') e.preventDefault();
+        return;
       }
-      if (settings.celebrateEffect) {
-        confetti({
-          particleCount: 50,
-          spread: 60,
-          origin: { y: 0.6 },
-        });
+      if (e.code !== 'Space' && e.code !== 'Enter') return;
+      if (state === 'PLAYING') {
+        e.preventDefault();
+        (document.activeElement as HTMLElement | null)?.blur?.();
+      } else if (state === 'IDLE' && !(e.target as HTMLElement | null)?.closest?.('button')) {
+        e.preventDefault();
+        startRef.current();
       }
-    }
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (isLeft(e)) keysPressedRef.current.left = false;
+      if (isRight(e)) keysPressedRef.current.right = false;
+    };
 
-    if (finalScore >= 500) {
-      onUnlockAchieve('dash_dodge_master');
-    }
-    if (starsRef.current >= 5) {
-      onUnlockAchieve('dash_star_collector');
-    }
-
-    // Call stats update handlers
-    if (handleGameComplete) {
-      handleGameComplete('dash', finalScore, finalTime);
-    }
-    if (onGameOver) {
-      onGameOver(finalScore, finalTime);
-    }
-  }, [highScore, settings, onUnlockAchieve, onGameOver, handleGameComplete]);
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup', onUp);
+    return () => {
+      window.removeEventListener('keydown', onDown);
+      window.removeEventListener('keyup', onUp);
+    };
+  }, []);
 
   // Main Game Loop (Canvas + Update)
   useEffect(() => {
@@ -184,6 +234,9 @@ export const FruitDashGame: React.FC<Props> = ({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    const pixelRatio = Math.min(3, Math.max(1, window.devicePixelRatio || 1) * 1.25);
+    canvas.width = Math.round(CW * pixelRatio);
+    canvas.height = Math.round(CH * pixelRatio);
 
     const loop = (time: number) => {
       const dt = Math.min((time - lastTimeRef.current) / 16.666, 2.0);
@@ -193,10 +246,10 @@ export const FruitDashGame: React.FC<Props> = ({
         // 1. Keyboard or Pointer movement
         const keys = keysPressedRef.current;
         const keySpeed = 10 * dt;
-        if (keys['arrowleft'] || keys['a']) {
+        if (keys.left) {
           targetXRef.current = Math.max(PLAYER_R + 10, targetXRef.current - keySpeed);
         }
-        if (keys['arrowright'] || keys['d']) {
+        if (keys.right) {
           targetXRef.current = Math.min(CW - PLAYER_R - 10, targetXRef.current + keySpeed);
         }
 
@@ -297,7 +350,7 @@ export const FruitDashGame: React.FC<Props> = ({
             } else if (f.isHazard) {
               // HIT HAZARD -> GAME OVER
               handleGameOver(scoreRef.current, timeRef.current);
-              return;
+              break; // keep the loop (and rendering) alive for the next round
             }
           }
 
@@ -325,64 +378,85 @@ export const FruitDashGame: React.FC<Props> = ({
       }
 
       // --- RENDERING CANVAS ---
+      const P = dark ? PALETTE.dark : PALETTE.light;
+      ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
       ctx.clearRect(0, 0, CW, CH);
 
-      // 1. Background Grid & Glow
-      ctx.fillStyle = '#0b0f19';
+      // 1. Sky
+      const sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+      sky.addColorStop(0, P.skyTop);
+      sky.addColorStop(1, P.skyBottom);
+      ctx.fillStyle = sky;
       ctx.fillRect(0, 0, CW, CH);
 
-      // Grid lines
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-      ctx.lineWidth = 1;
-      for (let x = 20; x < CW; x += 30) {
+      // Drifting specks
+      ctx.fillStyle = P.speck;
+      for (const s of SPECKS) {
+        const y = (s.y + time * 0.02 * s.speed) % GROUND_Y;
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, CH);
-        ctx.stroke();
-      }
-      for (let y = 20; y < CH; y += 30) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(CW, y);
-        ctx.stroke();
+        ctx.arc(s.x, y, s.r, 0, Math.PI * 2);
+        ctx.fill();
       }
 
-      // 2. Danger Zone line near player bottom
+      // 2. Player lane
       ctx.save();
-      ctx.strokeStyle = 'rgba(255, 122, 0, 0.2)';
-      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = P.lane;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 8]);
       ctx.beginPath();
-      ctx.moveTo(10, PLAYER_Y);
-      ctx.lineTo(CW - 10, PLAYER_Y);
+      ctx.moveTo(12, PLAYER_Y);
+      ctx.lineTo(CW - 12, PLAYER_Y);
       ctx.stroke();
       ctx.restore();
 
-      // 3. Render Falling Fruits
+      // 3. Ground with a scalloped grass edge
+      ctx.fillStyle = P.ground;
+      ctx.strokeStyle = P.outline;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-4, CH + 4);
+      ctx.lineTo(-4, GROUND_Y);
+      for (let x = 0; x <= CW; x += 22) {
+        ctx.quadraticCurveTo(x + 11, GROUND_Y - 7, x + 22, GROUND_Y);
+      }
+      ctx.lineTo(CW + 4, CH + 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 4. Falling fruits
       for (let i = 0; i < fruitsRef.current.length; i++) {
         const f = fruitsRef.current[i];
         ctx.save();
         ctx.translate(f.x, f.y);
-        ctx.rotate(f.rot);
 
-        // Glow behind fruit
-        ctx.shadowColor = f.color;
-        ctx.shadowBlur = f.isBonus ? 12 : 6;
-        ctx.fillStyle = `${f.color}25`;
+        if (f.isBonus) {
+          const pulse = 1 + Math.sin(time * 0.012) * 0.12;
+          ctx.fillStyle = 'rgba(255, 210, 63, 0.35)';
+          ctx.beginPath();
+          ctx.arc(0, 0, (f.r + 8) * pulse, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = `${f.color}40`;
+        ctx.strokeStyle = P.outline;
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(0, 0, f.r + 2, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = 0.5;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
 
-        // Emoji Sprite
-        ctx.shadowBlur = 0;
-        ctx.font = `${f.r * 1.3}px Arial, sans-serif`;
+        ctx.rotate(f.rot);
+        ctx.fillStyle = '#000'; // color emoji inherit the fill alpha
+        ctx.font = `${Math.round(f.r * 1.3)}px ${EMOJI_FONT}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(f.emoji, 0, 2);
-
         ctx.restore();
       }
 
-      // 4. Render Particles
+      // 5. Particles
       for (let i = 0; i < particlesRef.current.length; i++) {
         const p = particlesRef.current[i];
         ctx.save();
@@ -394,42 +468,101 @@ export const FruitDashGame: React.FC<Props> = ({
         ctx.restore();
       }
 
-      // 5. Render Player Character
+      // 6. Player: a little running orange that looks where it is going
       const px = playerXRef.current;
-      const py = PLAYER_Y;
+      const step = targetXRef.current - px;
+      const moving = isPlayingRef.current && Math.abs(step) > 1.5;
+      if (moving) facingRef.current = step > 0 ? 1 : -1;
+      const fx = facingRef.current * 3;
+      const stride = moving ? Math.sin(time * 0.03) * 3 : 0;
+      const INK = '#2b2140';
 
       ctx.save();
-      ctx.translate(px, py);
+      ctx.translate(px, PLAYER_Y);
 
-      // Player Shadow
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      // Shadow on the grass
+      ctx.fillStyle = P.shadow;
       ctx.beginPath();
-      ctx.ellipse(0, 16, PLAYER_R * 0.9, 6, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, GROUND_Y - PLAYER_Y + 2, PLAYER_R * 0.9, 5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Neon Basket / Hero Base
-      const heroGrad = ctx.createLinearGradient(-PLAYER_R, -PLAYER_R, PLAYER_R, PLAYER_R);
-      heroGrad.addColorStop(0, '#ff7a00');
-      heroGrad.addColorStop(1, '#ff3e00');
+      ctx.strokeStyle = P.outline;
+      ctx.lineWidth = 2.5;
 
-      ctx.shadowColor = '#ff7a00';
-      ctx.shadowBlur = 12;
-      ctx.fillStyle = heroGrad;
+      // Feet, lifting in turn while running
+      ctx.fillStyle = '#e07800';
+      for (const side of [-1, 1]) {
+        const lift = Math.max(0, side < 0 ? stride : -stride);
+        ctx.beginPath();
+        ctx.ellipse(side * 8, PLAYER_R - 1 - lift, 6, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // Body
+      ctx.fillStyle = '#ffb627';
       ctx.beginPath();
       ctx.arc(0, 0, PLAYER_R, 0, Math.PI * 2);
       ctx.fill();
-
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2.5;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(-7, -9, 6, 3.5, -0.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, PLAYER_R - 1.5, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Face / Logo inside player
-      ctx.shadowBlur = 0;
-      ctx.font = 'bold 18px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('🏃', 0, 0);
+      // Leaf
+      ctx.lineWidth = 2;
+      ctx.fillStyle = '#2ec27e';
+      ctx.beginPath();
+      ctx.ellipse(4, -PLAYER_R - 1, 7, 3.5, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
 
+      // Cheeks
+      ctx.fillStyle = 'rgba(255, 71, 120, 0.45)';
+      for (const ex of [-10, 10]) {
+        ctx.beginPath();
+        ctx.ellipse(fx + ex, 4, 3.2, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.strokeStyle = INK;
+      ctx.fillStyle = INK;
+      ctx.lineCap = 'round';
+      if (crashedRef.current) {
+        // Dizzy face
+        ctx.lineWidth = 2;
+        for (const ex of [-5.5, 5.5]) {
+          ctx.beginPath();
+          ctx.moveTo(fx + ex - 2.5, -5.5);
+          ctx.lineTo(fx + ex + 2.5, -0.5);
+          ctx.moveTo(fx + ex + 2.5, -5.5);
+          ctx.lineTo(fx + ex - 2.5, -0.5);
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(fx, 6, 2.5, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        for (const ex of [-5.5, 5.5]) {
+          ctx.beginPath();
+          ctx.ellipse(fx + ex, -3, 2.3, 3.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#fff';
+        for (const ex of [-5.5, 5.5]) {
+          ctx.beginPath();
+          ctx.arc(fx + ex + 0.8, -4.3, 0.9, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(fx, 3, 4, 0.15 * Math.PI, 0.85 * Math.PI);
+        ctx.stroke();
+      }
       ctx.restore();
 
       animFrameRef.current = requestAnimationFrame(loop);
@@ -439,170 +572,116 @@ export const FruitDashGame: React.FC<Props> = ({
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isPaused, level, handleGameOver, settings]);
+  }, [isPaused, level, handleGameOver, settings, dark]);
 
   // Pointer move handler
   const handlePointerMove = (clientX: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const scale = CW / rect.width;
-    const canvasX = (clientX - rect.left) * scale;
-    targetXRef.current = canvasX;
+    targetXRef.current = (clientX - rect.left) * (CW / rect.width);
   };
 
+  const dodged = Math.max(0, Math.round((score - bonusStarsCollected * 50) / 2));
+
   return (
-    <div id="fruit-dash-board" className="flex-1 flex flex-col items-center justify-center p-[var(--ui-space-lg)] w-full max-w-[500px] mx-auto animate-in fade-in duration-300 select-none">
-      {/* Top HUD */}
-      <div
-        id="dash-hud"
-        className="arcade-hud-box mb-2.5"
-      >
-        {/* Score & Best */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30">
-              <Zap className="w-4 h-4 fill-orange-400/40" />
-            </div>
-            <div>
-              <div className="text-[10px] font-black text-orange-400 tracking-wider uppercase">SCORE</div>
-              <div className="text-lg sm:text-xl font-mono font-black text-white leading-none">{score}</div>
-            </div>
-          </div>
-
-          <div className="hidden sm:block pl-3 border-l border-white/10">
-            <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-              <Trophy className="w-2.5 h-2.5 text-amber-400" /> BEST
-            </div>
-            <div className="text-sm font-mono font-bold text-slate-300">{highScore}</div>
-          </div>
-        </div>
-
-        {/* Level & Stars & Timer */}
-        <div className="flex items-center gap-2">
-          {gameState === 'PLAYING' && (
-            <>
-              <GameTimer seconds={elapsedTime} id="dash-timer" />
-              <div className="px-2.5 py-1 rounded-xl bg-orange-500/10 border border-orange-500/30 text-orange-300 font-bold text-xs">
-                LV.{level}
-              </div>
-              {bonusStarsCollected > 0 && (
-                <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold text-xs">
-                  <Sparkles className="w-3 h-3" /> {bonusStarsCollected}
-                </div>
+    <>
+      <GameFrame
+        hud={
+          <Hud>
+            <HudStat label="점수" value={formatNumber(score)} />
+            <HudStat label="최고" value={formatNumber(Math.max(best, score))} tone={best > 0 && score > best ? 'hot' : 'default'} />
+            <HudStat label="생존" value={formatTime(elapsedTime)} />
+            <HudStat label="황금 별" value={`⭐${bonusStarsCollected}`} />
+          </Hud>
+        }
+        board={
+          <div className="board-fit w-full" style={{ maxWidth: 'calc((100dvh - var(--board-offset)) * 0.7333)' }}>
+            <div className="relative aspect-[440/600] w-full overflow-hidden rounded-[28px] border-2 border-line bg-surface-2 shadow-pop">
+              <canvas
+                ref={canvasRef}
+                aria-label="FRUIT DASH 판"
+                onPointerDown={(e) => handlePointerMove(e.clientX)}
+                onPointerMove={(e) => handlePointerMove(e.clientX)}
+                className="block h-full w-full cursor-ew-resize touch-none select-none"
+              />
+              {gameState === 'PLAYING' && (
+                <span className="chip pointer-events-none absolute left-3 top-3 z-10 bg-surface font-display text-sm">LV.{level}</span>
               )}
-            </>
-          )}
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={handleStartGame}
-            title="다시 시작"
-            className="h-[var(--ui-btn-h-nav)] min-h-[44px] sm:min-h-0 w-[36px] sm:w-[34px] rounded-xl bg-white/5 hover:bg-white/10 active:bg-white/5 border border-white/10 text-slate-300 transition-colors flex items-center justify-center cursor-pointer active:scale-95"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onMenu}
-            title="메인 메뉴"
-            className="h-[var(--ui-btn-h-nav)] min-h-[44px] sm:min-h-0 px-3 rounded-xl bg-white/5 hover:bg-white/10 active:bg-white/5 border border-white/10 text-slate-300 text-xs font-bold transition-colors flex items-center justify-center cursor-pointer whitespace-nowrap active:scale-95"
-          >
-            메뉴
-          </button>
-        </div>
-      </div>
-
-      {/* Canvas Screen */}
-      <div className="relative rounded-[22px] overflow-hidden border border-white/10 shadow-[0_15px_40px_rgba(0,0,0,0.6)] bg-[#0b0f19] w-full aspect-[440/600] max-h-[calc(100vh-185px)]">
-        <canvas
-          ref={canvasRef}
-          width={CW}
-          height={CH}
-          onMouseMove={(e) => handlePointerMove(e.clientX)}
-          onTouchMove={(e) => {
-            e.preventDefault();
-            handlePointerMove(e.touches[0].clientX);
-          }}
-          className="w-full h-full block cursor-ew-resize touch-none select-none"
-        />
-
-        {/* Start Overlay */}
-        {gameState === 'IDLE' && (
-          <div className="absolute inset-0 bg-[#0a0d18]/95 flex flex-col items-center justify-center p-6 text-center z-20 animate-in fade-in">
-            <div className="text-6xl mb-3 filter drop-shadow-[0_0_20px_rgba(255,122,0,0.7)] animate-bounce">
-              🏃💨
+              {gameState === 'IDLE' && (
+                <BoardOverlay>
+                  <StartCard meta={GAMES.dash} best={best} onStart={handleStartGame} />
+                </BoardOverlay>
+              )}
             </div>
-            <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-rose-400 tracking-tight">
-              FRUIT DASH
-            </h2>
-            <p className="text-xs text-slate-300 max-w-[280px] mt-2 mb-6 font-medium leading-relaxed">
-              위에서 쏟아지는 과일들을 피하며 생존하세요! 황금 별(⭐)을 먹으면 대량의 보너스 점수를 얻습니다!
-            </p>
-            <button
-              onClick={handleStartGame}
-              className="w-full max-w-[220px] btn-arcade-primary flex items-center justify-center gap-2"
-            >
-              <Play className="w-4 h-4 fill-white" /> 대쉬 시작하기
-            </button>
           </div>
-        )}
-
-        {/* Game Over Overlay */}
-        {gameState === 'OVER' && (
-          <div className="absolute inset-0 bg-[#0a0d18]/95 flex flex-col items-center justify-center p-6 text-center z-20 animate-in fade-in zoom-in-95">
-            <div className="text-5xl mb-2">💥</div>
-            <h2 className="text-2xl font-black text-rose-400 tracking-tight">CRASHED!</h2>
-            <p className="text-xs text-slate-400 mt-1 mb-5">과일에 충돌하여 질주가 종료되었습니다!</p>
-
-            <div className="w-full max-w-[260px] p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2 mb-5">
-              <div className="flex justify-between items-center text-xs font-bold text-slate-400">
-                <span>최종 점수</span>
-                <span className="text-lg font-black text-orange-400 font-mono">{score}점</span>
-              </div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-400 pt-1.5 border-t border-white/5">
-                <span>생존 시간</span>
-                <span className="text-sm font-black text-blue-400 font-mono">{formatTime(elapsedTime)}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-400 pt-1.5 border-t border-white/5">
-                <span>별빛 스타 채집</span>
-                <span className="text-sm font-black text-amber-300 font-mono">{bonusStarsCollected}개</span>
-              </div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-400 pt-1.5 border-t border-white/5">
-                <span>최고 기록</span>
-                <span className="text-sm font-black text-slate-200 font-mono">{highScore}점</span>
-              </div>
-            </div>
-
-            <div className="w-full max-w-[260px] space-y-2">
+        }
+        panel={
+          <div className="panel space-y-3 p-4">
+            <h3 className="font-display text-lg">플레이 방법</h3>
+            <ul className="space-y-2 text-sm">
+              <li className="flex items-center gap-2.5">
+                <span className="sticker h-8 w-8 shrink-0 bg-berry-soft text-base shadow-none" aria-hidden="true">
+                  🍎
+                </span>
+                <span>
+                  과일에 닿으면 끝! 피할 때마다 <b>+2점</b>
+                </span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <span className="sticker h-8 w-8 shrink-0 bg-mango-soft text-base shadow-none" aria-hidden="true">
+                  ⭐
+                </span>
+                <span>
+                  황금 별을 먹으면 <b>+50점</b>
+                </span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <span className="sticker h-8 w-8 shrink-0 bg-soda-soft text-base shadow-none" aria-hidden="true">
+                  ⏫
+                </span>
+                <span>10초마다 레벨이 올라 더 빨라져요</span>
+              </li>
+            </ul>
+            <div className="flex items-center justify-between gap-2">
+              <p className="hidden text-xs text-ink-3 sm:block">← → / A D · 마우스 · 터치</p>
               <button
-                onClick={handleStartGame}
-                className="w-full btn-arcade-primary flex items-center justify-center gap-2"
+                type="button"
+                className="btn btn-sm ml-auto"
+                onClick={(e) => {
+                  e.currentTarget.blur();
+                  handleStartGame();
+                }}
+                disabled={gameState === 'IDLE'}
               >
-                <RotateCcw className="w-4 h-4" /> 다시 질주하기
-              </button>
-              <button
-                onClick={onMenu}
-                className="w-full btn-arcade-secondary flex items-center justify-center gap-2"
-              >
-                <Home className="w-4 h-4" /> 메뉴로
+                <RotateCcw className="h-4 w-4" strokeWidth={2.5} /> 다시 시작
               </button>
             </div>
           </div>
-        )}
-      </div>
+        }
+      />
 
-      {/* Guide Banner */}
-      <div className="w-full bg-[#131724]/95 border border-white/10 rounded-2xl p-2.5 mt-2 shadow-md backdrop-blur-md flex items-center justify-between text-xs px-4">
-        <span className="text-slate-400 flex items-center gap-1.5">
-          <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-          마우스/터치로 캐릭터를 좌우로 조작
-        </span>
-        <span className="text-amber-400 font-bold flex items-center gap-1">
-          <Sparkles className="w-3 h-3" /> ⭐=+50점
-        </span>
-      </div>
-    </div>
+      {gameState === 'OVER' && (
+        <ScreenOverlay>
+          <ResultCard
+            emoji="💥"
+            title="CRASH!"
+            subtitle="과일에 부딪혔어요"
+            tone="berry"
+            score={score}
+            stats={[
+              { label: '생존 시간', value: formatTime(elapsedTime) },
+              { label: '도달 레벨', value: `Lv.${level}` },
+              { label: '피한 과일', value: `${dodged}개` },
+              { label: '황금 별', value: `${bonusStarsCollected}개` },
+            ]}
+            reward={reward}
+            shareText={`🏃 FRUIT DASH ${formatNumber(score)}점! ${elapsedTime}초 동안 살아남았어요`}
+            onRetry={handleStartGame}
+            onExit={onExit}
+          />
+        </ScreenOverlay>
+      )}
+    </>
   );
 };

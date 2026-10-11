@@ -1,154 +1,182 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
-import { auth, googleProvider } from './firebase';
+import type { User } from 'firebase/auth';
 import {
-  ScreenType,
-  MemoryMode,
-  LifeLimit,
-  GameSettings,
   Achievement,
-  UserGameData,
+  GameResult,
+  GameReward,
+  GameSettings,
+  GameType,
+  HistoryEntry,
+  MemoryConfig,
+  ScreenType,
   UserStatistics,
 } from './types';
-import { Navbar } from './components/Navbar';
-import { IntroScreen } from './components/IntroScreen';
-import { GameSelectScreen } from './components/GameSelectScreen';
+import { DEFAULT_SETTINGS, GAMES, PLAY_SCREENS } from './constants';
+import { Navbar, NavTarget } from './components/Navbar';
+import { Lobby, LobbyTarget } from './components/lobby/Lobby';
 import { MemorySetup } from './components/MemoryGame/MemorySetup';
-import { MemoryGameBoard } from './components/MemoryGame/MemoryGameBoard';
-import { SuikaGame } from './components/SuikaGame/SuikaGame';
-import { StockGame } from './components/StockGame/StockGame';
-import { FruitDashGame } from './components/FruitDashGame/FruitDashGame';
 import { AchievementsModal } from './components/Modals/AchievementsModal';
 import { PatchNotesModal } from './components/Modals/PatchNotesModal';
 import { SettingsModal } from './components/Modals/SettingsModal';
 import { CreditsModal } from './components/Modals/CreditsModal';
 import { PauseModal } from './components/Modals/PauseModal';
-import { LoginModal } from './components/Modals/LoginModal';
+import { ProfileModal } from './components/Modals/ProfileModal';
+import { RecordsModal } from './components/Modals/RecordsModal';
+import { Toast, ToastHost } from './components/ui/Toast';
 import {
-  unlockAchievement,
-  setMemoryAchievements,
+  countUnlocked,
   getUnlockedAchievements,
+  mergeAchievements,
+  resetAchievements,
+  unlockAchievement,
 } from './utils/achievements';
 import {
-  loadUserData,
-  saveGameResult,
-  saveAchievements,
-  saveUserSettings,
-  DEFAULT_STATISTICS,
-} from './utils/userDataService';
+  EMPTY_STATS,
+  XP,
+  applyResult,
+  bestKey,
+  clearLocalProgress,
+  computeXp,
+  levelInfo,
+  loadHistory,
+  loadLocalStats,
+  mergeStats,
+  pushHistory,
+  saveLocalStats,
+} from './utils/progress';
+import { DailyState, applyDaily, loadDaily, saveDaily, todayKey } from './utils/missions';
 import { playSound } from './utils/audio';
 
-const SETTINGS_KEY = 'fruit_arcade_settings';
+// Games are code-split so the lobby loads fast
+const MemoryGameBoard = lazy(() =>
+  import('./components/MemoryGame/MemoryGameBoard').then((m) => ({ default: m.MemoryGameBoard }))
+);
+const SuikaGame = lazy(() => import('./components/SuikaGame/SuikaGame').then((m) => ({ default: m.SuikaGame })));
+const FruitDashGame = lazy(() =>
+  import('./components/FruitDashGame/FruitDashGame').then((m) => ({ default: m.FruitDashGame }))
+);
 
-const defaultSettings: GameSettings = {
-  sfxEnabled: true,
-  volume: 70,
-  animEnabled: true,
-  comboEffect: true,
-  particleEffect: true,
-  shakeEffect: true,
-  celebrateEffect: true,
-  highContrast: false,
-  cardScale: 100,
-};
+// Firebase loads after the first paint; Firestore only once someone signs in
+const loadAuthApi = () => import('./authApi');
+type AuthApi = Awaited<ReturnType<typeof loadAuthApi>>;
+const cloudApi = () => import('./utils/userDataService');
+
+const SETTINGS_KEY = 'fruit_arcade_settings';
+const MEMORY_CFG_KEY = 'fruit_arcade_memory';
+const DEFAULT_MEMORY: MemoryConfig = { mode: '4', previewTime: 2000, lifeLimit: 'infinite' };
+
+type ModalId = NavTarget | LobbyTarget;
+
+function readJSON<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJSON(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore
+  }
+}
+
+const prefersDark = () => typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+const Loading = () => (
+  <div className="grid flex-1 place-items-center py-24 text-center">
+    <div>
+      <div className="text-5xl animate-bounce" aria-hidden="true">
+        🍓
+      </div>
+      <p className="mt-2 font-display text-lg text-ink-2">불러오는 중...</p>
+    </div>
+  </div>
+);
 
 export default function App() {
-  const [screen, setScreen] = useState<ScreenType>('intro');
-  const [memoryMode, setMemoryMode] = useState<MemoryMode>('4');
-  const [previewTime, setPreviewTime] = useState<number>(2000);
-  const [lifeLimit, setLifeLimit] = useState<LifeLimit>('infinite');
+  const [screen, setScreen] = useState<ScreenType>('lobby');
+  const [gameKey, setGameKey] = useState(0);
+  const [roundActive, setRoundActive] = useState(false);
+  const [autoStart, setAutoStart] = useState(false);
+  const [memoryCfg, setMemoryCfg] = useState<MemoryConfig>(() => readJSON(MEMORY_CFG_KEY, DEFAULT_MEMORY));
 
-  // Firebase Auth & Cloud Data State
   const [user, setUser] = useState<User | null>(null);
-  const [userStats, setUserStats] = useState<UserStatistics>(DEFAULT_STATISTICS);
+  const userRef = useRef<User | null>(null);
+  userRef.current = user;
 
-  // Modals
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isAchieveOpen, setIsAchieveOpen] = useState(false);
-  const [isPatchOpen, setIsPatchOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isCreditsOpen, setIsCreditsOpen] = useState(false);
+  const [stats, setStats] = useState<UserStatistics>(loadLocalStats);
+  const statsRef = useRef(stats);
+  const [history, setHistory] = useState<HistoryEntry[]>(loadHistory);
+  const historyRef = useRef(history);
+  const [daily, setDaily] = useState<DailyState>(loadDaily);
+  const [, setAchieveTick] = useState(0);
+
+  const [modal, setModal] = useState<ModalId | null>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
-  // Achievement unlock notification banner
-  const [unlockedBanner, setUnlockedBanner] = useState<Achievement | null>(null);
+  const [settings, setSettings] = useState<GameSettings>(() => readJSON(SETTINGS_KEY, DEFAULT_SETTINGS));
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const [systemDark, setSystemDark] = useState(prefersDark);
 
-  // Settings
-  const [settings, setSettings] = useState<GameSettings>(() => {
-    try {
-      const saved = localStorage.getItem(SETTINGS_KEY);
-      return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
-    } catch {
-      return defaultSettings;
-    }
-  });
+  const isPlayScreen = PLAY_SCREENS.includes(screen);
+  const isPlaying = isPlayScreen && roundActive;
+  // Games freeze while paused or while any window covers them
+  const gamePaused = isPaused || modal !== null;
 
-  // Listen to Auth State and Sync Cloud Data
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        try {
-          const data: UserGameData = await loadUserData(currentUser);
-          if (data.statistics) setUserStats(data.statistics);
-          if (data.achievements) {
-            setMemoryAchievements(data.achievements);
-          }
-          if (data.settings) {
-            setSettings(data.settings);
-          }
-        } catch (err) {
-          console.warn('Failed to load user cloud data:', err);
-        }
-      }
-    });
+  const achievementCount = countUnlocked();
+  const level = levelInfo(computeXp(stats, achievementCount));
 
-    return () => unsubscribe();
+  // ───────── helpers ─────────
+
+  const bumpAchievements = () => setAchieveTick((t) => t + 1);
+
+  const commitStats = useCallback((next: UserStatistics) => {
+    statsRef.current = next;
+    setStats(next);
+    saveLocalStats(next);
   }, []);
 
-  const handleLogin = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-      playSound('victory', settings);
-      return { success: true };
-    } catch (err: any) {
-      console.warn('Google Sign-in aborted or failed:', err);
-      let errorMsg = '로그인 중 오류가 발생했습니다.';
-      if (err?.code === 'auth/popup-closed-by-user') {
-        errorMsg = '로그인 팝업이 닫혔습니다. 다시 시도해주세요.';
-      } else if (err?.code === 'auth/cancelled-popup-request') {
-        errorMsg = '이전 로그인 요청이 취소되었습니다.';
-      } else if (err?.code === 'auth/network-request-failed') {
-        errorMsg = '네트워크 연결 상태를 확인해주세요.';
-      } else if (err?.message) {
-        errorMsg = err.message;
-      }
-      return { success: false, error: errorMsg };
-    }
-  };
+  const pushToast = useCallback((t: Omit<Toast, 'id'>) => {
+    setToasts((q) => [...q, { ...t, id: Date.now() + Math.random() }]);
+  }, []);
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      setUser(null);
-      setUserStats(DEFAULT_STATISTICS);
-      playSound('click', settings);
-    } catch (err) {
-      console.warn('Sign out failed:', err);
-    }
-  };
+  // One toast at a time
+  useEffect(() => {
+    if (!toasts.length) return;
+    const timer = setTimeout(() => setToasts((q) => q.slice(1)), toasts.length > 1 ? 1800 : 2800);
+    return () => clearTimeout(timer);
+  }, [toasts[0]?.id]);
 
-  const updateSettings = (newSettings: GameSettings) => {
-    setSettings(newSettings);
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
-    } catch {
-      // ignore
-    }
-    if (user) {
-      saveUserSettings(user.uid, newSettings).catch(() => {});
-    }
+  // ───────── theme ─────────
+
+  const resolvedTheme = settings.theme === 'system' ? (systemDark ? 'dark' : 'light') : settings.theme;
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolvedTheme === 'dark' ? '#151020' : '#fff5e6');
+  }, [resolvedTheme]);
+
+  // ───────── settings ─────────
+
+  const updateSettings = (next: GameSettings) => {
+    setSettings(next);
+    writeJSON(SETTINGS_KEY, next);
+    const u = userRef.current;
+    if (u) cloudApi().then((api) => api.saveUserSettings(u.uid, next)).catch(() => {});
   };
 
   const handleToggleSound = () => {
@@ -157,251 +185,379 @@ export default function App() {
     playSound('click', { sfxEnabled: next, volume: settings.volume });
   };
 
+  // ───────── auth & cloud sync ─────────
+
+  /** Merge this device's data with the signed-in user's cloud data. */
+  const syncCloud = useCallback(
+    async (u: User) => {
+      try {
+        const api = await cloudApi();
+        const cloud = await api.loadUserData(u);
+
+        // Settings: values saved in the cloud win, local ones fill the gaps
+        const nextSettings = { ...settingsRef.current, ...cloud.settings };
+        setSettings(nextSettings);
+        writeJSON(SETTINGS_KEY, nextSettings);
+        if (Object.keys(cloud.settings).length === 0) api.saveUserSettings(u.uid, nextSettings).catch(() => {});
+
+        // Achievements: union of both sides
+        const { merged, cloudOutdated } = mergeAchievements(cloud.achievements);
+        if (cloudOutdated) api.saveAchievements(u.uid, merged).catch(() => {});
+        bumpAchievements();
+
+        // Stats: field-wise max, pushed back up atomically
+        commitStats(mergeStats(statsRef.current, cloud.statistics));
+        api
+          .pushMergedStats(u.uid, statsRef.current)
+          .then((s) => commitStats(mergeStats(statsRef.current, s)))
+          .catch((err) => console.warn('Failed to merge stats:', err));
+      } catch (err) {
+        console.warn('Failed to load user cloud data:', err);
+        pushToast({ icon: '⚠️', title: '클라우드 동기화에 실패했어요', tone: 'berry' });
+      }
+    },
+    [commitStats, pushToast]
+  );
+
+  // Kept once loaded so the Google popup opens straight from the click (no await before it)
+  const authApiRef = useRef<AuthApi | null>(null);
+
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
+    loadAuthApi().then((authApi) => {
+      if (cancelled) return;
+      authApiRef.current = authApi;
+      unsubscribe = authApi.onAuthStateChanged(authApi.auth, (u) => {
+        setUser(u);
+        if (u) syncCloud(u);
+      });
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [syncCloud]);
+
+  const handleLogin = async () => {
+    try {
+      const authApi = authApiRef.current ?? (await loadAuthApi());
+      await authApi.signInWithPopup(authApi.auth, authApi.googleProvider);
+      playSound('victory', settings);
+      setModal(null);
+      pushToast({ icon: '👋', title: '로그인했어요', sub: '이제 기록이 클라우드에 저장돼요', tone: 'melon' });
+      return { success: true };
+    } catch (err: any) {
+      console.warn('Google sign-in failed:', err);
+      let error = '로그인 중 오류가 발생했어요.';
+      if (err?.code === 'auth/popup-closed-by-user') error = '로그인 창이 닫혔어요. 다시 시도해 주세요.';
+      else if (err?.code === 'auth/popup-blocked') error = '팝업이 차단됐어요. 브라우저에서 팝업을 허용해 주세요.';
+      else if (err?.code === 'auth/cancelled-popup-request') error = '이전 로그인 요청이 취소됐어요.';
+      else if (err?.code === 'auth/network-request-failed') error = '네트워크 연결을 확인해 주세요.';
+      return { success: false, error };
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const authApi = authApiRef.current ?? (await loadAuthApi());
+      await authApi.signOut(authApi.auth);
+    } catch (err) {
+      console.warn('Sign out failed:', err);
+      return;
+    }
+    // Don't let this account's progress leak into the next one on this device
+    clearLocalProgress();
+    resetAchievements();
+    bumpAchievements();
+    commitStats({ ...EMPTY_STATS });
+    historyRef.current = [];
+    setHistory([]);
+    setModal(null);
+    pushToast({ icon: '👋', title: '로그아웃했어요' });
+  };
+
+  // ───────── game events ─────────
+
+  // Achievements unlocked together (e.g. at the end of a round) share one toast
+  const pendingAchRef = useRef<Achievement[]>([]);
+  // Achievements unlocked during the current round, listed on the result card
+  const roundAchRef = useRef<string[]>([]);
+
+  const flushAchievementToasts = useCallback(() => {
+    const list = pendingAchRef.current;
+    pendingAchRef.current = [];
+    if (list.length === 0) return;
+    playSound('victory', settingsRef.current);
+    if (list.length === 1) {
+      pushToast({ icon: list[0].icon, title: list[0].title, sub: `업적 달성! +${XP.achievement} XP`, tone: 'mango' });
+    } else {
+      pushToast({ icon: '🏆', title: `업적 ${list.length}개 달성!`, sub: `+${XP.achievement * list.length} XP`, tone: 'mango' });
+    }
+  }, [pushToast]);
+
   const handleUnlockAchieve = useCallback(
     (id: string) => {
       unlockAchievement(id, (ach) => {
-        setUnlockedBanner(ach);
-        playSound('victory', settings);
-
-        // Sync to cloud if user is logged in
-        if (user) {
-          const current = getUnlockedAchievements();
-          saveAchievements(user.uid, current).catch(() => {});
-        }
-
-        setTimeout(() => {
-          setUnlockedBanner((prev) => (prev?.id === ach.id ? null : prev));
-        }, 4000);
+        pendingAchRef.current.push(ach);
+        roundAchRef.current.push(`${ach.icon} ${ach.title}`);
+        if (pendingAchRef.current.length === 1) setTimeout(flushAchievementToasts, 60);
+        const u = userRef.current;
+        if (u) cloudApi().then((api) => api.saveAchievements(u.uid, getUnlockedAchievements())).catch(() => {});
+        bumpAchievements();
       });
     },
-    [settings, user]
+    [flushAchievementToasts]
   );
 
-  // Save game result to cloud & local
+  const handleRoundChange = useCallback((active: boolean) => {
+    if (active) roundAchRef.current = [];
+    setRoundActive(active);
+  }, []);
+
+  /** Called once per finished round. Returns the rewards for the result screen. */
   const handleGameComplete = useCallback(
-    (gameType: 'memory' | 'suika' | 'stock' | 'dash', finalScore: number, playTimeSeconds: number) => {
-      if (user) {
-        saveGameResult(user.uid, gameType, finalScore, playTimeSeconds, userStats)
-          .then((updated) => setUserStats(updated))
+    (result: GameResult): GameReward => {
+      const prev = statsRef.current;
+      const prevBest = prev[bestKey(result.game)];
+      const achievements = countUnlocked();
+
+      const { state: nextDaily, completed, stampEarned } = applyDaily(loadDaily(), result);
+      saveDaily(nextDaily);
+      setDaily(nextDaily);
+
+      const next = applyResult(prev, result, stampEarned);
+      commitStats(next);
+
+      const newBest = result.score > 0 && result.score > prevBest;
+      historyRef.current = pushHistory(historyRef.current, { ...result, at: Date.now(), best: newBest });
+      setHistory(historyRef.current);
+
+      const before = levelInfo(computeXp(prev, achievements));
+      const after = levelInfo(computeXp(next, achievements));
+
+      const u = userRef.current;
+      if (u) {
+        cloudApi()
+          .then((api) => api.recordCloudResult(u.uid, result, stampEarned))
+          .then((cloud) => commitStats(mergeStats(statsRef.current, cloud)))
           .catch((err) => console.warn('Failed to save game result:', err));
       }
+
+      return {
+        xpGained: after.xp - before.xp,
+        newBest,
+        prevBest,
+        levelUp: after.level > before.level ? after.level : null,
+        missions: completed.map((m) => m.text),
+        achievements: [...roundAchRef.current],
+        stamp: stampEarned,
+      };
     },
-    [user, userStats]
+    [commitStats]
   );
 
-  // Start Memory Game from setup
-  const handleStartMemory = (m: MemoryMode, pt: number, ll: LifeLimit) => {
-    setMemoryMode(m);
-    setPreviewTime(pt);
-    setLifeLimit(ll);
-    setScreen('memory-play');
+  // ───────── navigation ─────────
+
+  const goTo = (next: ScreenType) => {
+    setIsPaused(false);
+    setRoundActive(false);
+    setScreen(next);
   };
 
-  // Keyboard shortcut listener for ESC (Pause toggle)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        const isGameRunning =
-          screen === 'memory-play' || screen === 'suika' || screen === 'stock' || screen === 'dash';
-        if (isGameRunning) {
-          setIsPaused((p) => !p);
-        } else if (isLoginOpen || isAchieveOpen || isPatchOpen || isSettingsOpen || isCreditsOpen) {
-          setIsLoginOpen(false);
-          setIsAchieveOpen(false);
-          setIsPatchOpen(false);
-          setIsSettingsOpen(false);
-          setIsCreditsOpen(false);
-        }
-      }
-    };
+  const restartGame = () => {
+    setIsPaused(false);
+    setRoundActive(false);
+    setAutoStart(true);
+    setGameKey((k) => k + 1);
+  };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [screen, isLoginOpen, isAchieveOpen, isPatchOpen, isSettingsOpen, isCreditsOpen]);
+  const startMemory = (cfg: MemoryConfig) => {
+    setMemoryCfg(cfg);
+    writeJSON(MEMORY_CFG_KEY, cfg);
+    setGameKey((k) => k + 1);
+    goTo('memory-play');
+  };
 
-  // Credit view count check for achievement
-  const handleOpenCredits = () => {
-    try {
-      let count = parseInt(localStorage.getItem('credit_view_count') || '0');
-      count++;
-      localStorage.setItem('credit_view_count', count.toString());
-      if (count >= 3) {
-        handleUnlockAchieve('veteran_tester');
+  /** quick = skip the start card ("한 판 더") */
+  const playGame = (g: GameType, quick = false) => {
+    setAutoStart(quick);
+    setGameKey((k) => k + 1);
+    goTo(GAMES[g].screen);
+  };
+
+  const openModal = (id: ModalId) => {
+    if (id === 'credits') {
+      try {
+        const count = parseInt(localStorage.getItem('credit_view_count') || '0') + 1;
+        localStorage.setItem('credit_view_count', String(count));
+        if (count >= 3) handleUnlockAchieve('veteran_tester');
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
     }
-    setIsCreditsOpen(true);
+    setModal(id);
+  };
+
+  // ESC: close the open window first, otherwise toggle pause mid-round
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (modal) setModal(null);
+      else if (isPlaying) setIsPaused((p) => !p);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [modal, isPlaying]);
+
+  // Pause when the tab is hidden mid-round
+  useEffect(() => {
+    if (!isPlaying) return;
+    const onVisibility = () => {
+      if (document.hidden) setIsPaused(true);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [isPlaying]);
+
+  // New day → new missions
+  useEffect(() => {
+    const refresh = () => setDaily((d) => (d.date === todayKey() ? d : loadDaily()));
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, []);
+
+  // ───────── data reset ─────────
+
+  const resetAllAchievements = () => {
+    resetAchievements();
+    bumpAchievements();
+    const u = userRef.current;
+    if (u) cloudApi().then((api) => api.saveAchievements(u.uid, {})).catch(() => {});
+  };
+
+  const resetAllRecords = () => {
+    clearLocalProgress();
+    commitStats({ ...EMPTY_STATS });
+    historyRef.current = [];
+    setHistory([]);
+    const u = userRef.current;
+    if (u) cloudApi().then((api) => api.resetCloudStats(u.uid)).catch(() => {});
+  };
+
+  // ───────── render ─────────
+
+  const gameCommon = {
+    settings,
+    isPaused: gamePaused,
+    onUnlockAchieve: handleUnlockAchieve,
+    onGameComplete: handleGameComplete,
+    onRoundChange: handleRoundChange,
+    onExit: () => goTo('lobby'),
   };
 
   return (
-    <div
-      id="app-wrapper"
-      className="relative flex flex-col items-center justify-between w-full h-screen overflow-hidden text-[#e8edf5] select-none"
-      style={{
-        background: 'linear-gradient(135deg, #171217 0%, #101019 45%, #070d19 100%)',
-        backgroundImage: `
-          radial-gradient(circle at 50% 50%, rgba(255, 122, 0, 0.08) 0%, transparent 65%),
-          radial-gradient(ellipse at 15% 10%, rgba(255, 122, 0, 0.10) 0%, transparent 50%),
-          radial-gradient(ellipse at 85% 85%, rgba(37, 99, 235, 0.09) 0%, transparent 50%),
-          linear-gradient(135deg, #171217 0%, #101019 45%, #070d19 100%)
-        `,
-      }}
-    >
-      {/* Achievement Unlocked Toast Banner */}
-      {unlockedBanner && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500/90 to-orange-500/90 border border-amber-300/80 text-white shadow-2xl backdrop-blur-md flex items-center gap-3 animate-in slide-in-from-top duration-300">
-          <div className="text-2xl animate-bounce">{unlockedBanner.icon}</div>
-          <div>
-            <div className="text-[10px] font-black tracking-widest text-amber-200 uppercase">🏆 업적 달성!</div>
-            <div className="text-sm font-extrabold">{unlockedBanner.title} 해금 완료!</div>
-          </div>
-        </div>
-      )}
+    <div className="flex h-dvh w-full flex-col overflow-hidden">
+      <ToastHost toast={toasts[0]} />
 
-      {/* Header Bar */}
       <Navbar
-        currentScreen={screen}
+        screen={screen}
+        roundActive={isPlaying}
         settings={settings}
         user={user}
-        onOpenLoginModal={() => setIsLoginOpen(true)}
-        onToggleSound={handleToggleSound}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenAchievements={() => setIsAchieveOpen(true)}
-        onOpenPatchNotes={() => setIsPatchOpen(true)}
+        level={level}
+        onHome={() => goTo(screen === 'memory-play' ? 'memory-setup' : 'lobby')}
         onPause={() => setIsPaused(true)}
-        onHome={() => {
-          setIsPaused(false);
-          setScreen('intro');
-        }}
+        onToggleSound={handleToggleSound}
+        onOpen={openModal}
       />
 
-      {/* Main Screen Content with Smooth Transition Animation */}
-      <main className="flex-1 w-full flex flex-col items-center justify-start overflow-y-auto overflow-x-hidden p-[var(--ui-space-lg)]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={screen}
-            initial={{ opacity: 0, y: 10, scale: 0.99 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.99 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full flex-1 flex flex-col items-center justify-center min-h-0"
-          >
-            {screen === 'intro' && (
-              <IntroScreen
-                onStart={() => setScreen('game-select')}
-                onOpenAchievements={() => setIsAchieveOpen(true)}
-                onOpenPatchNotes={() => setIsPatchOpen(true)}
-                onOpenSettings={() => setIsSettingsOpen(true)}
-                onOpenCredits={handleOpenCredits}
-                settings={settings}
-              />
-            )}
+      <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="flex min-h-full w-full flex-col px-4 pb-8 pt-1 sm:px-6">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={screen}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="flex flex-1 flex-col"
+            >
+              <Suspense fallback={<Loading />}>
+                {screen === 'lobby' && (
+                  <Lobby
+                    user={user}
+                    stats={stats}
+                    history={history}
+                    daily={daily}
+                    level={level}
+                    achievementCount={achievementCount}
+                    onPlay={playGame}
+                    onOpen={openModal}
+                  />
+                )}
 
-            {screen === 'game-select' && (
-              <GameSelectScreen
-                onSelectGame={(selectedScreen) => setScreen(selectedScreen)}
-                onBack={() => setScreen('intro')}
-                settings={settings}
-              />
-            )}
+                {screen === 'memory-setup' && (
+                  <MemorySetup initial={memoryCfg} settings={settings} onStart={startMemory} onBack={() => goTo('lobby')} />
+                )}
 
-            {screen === 'memory-setup' && (
-              <MemorySetup
-                onStartGame={handleStartMemory}
-                onBack={() => setScreen('game-select')}
-                settings={settings}
-                onToggleSound={handleToggleSound}
-              />
-            )}
+                {screen === 'memory-play' && (
+                  <MemoryGameBoard
+                    key={gameKey}
+                    {...memoryCfg}
+                    {...gameCommon}
+                    onRetry={restartGame}
+                    onChangeSetup={() => goTo('memory-setup')}
+                  />
+                )}
 
-            {screen === 'memory-play' && (
-              <MemoryGameBoard
-                mode={memoryMode}
-                previewTime={previewTime}
-                lifeLimit={lifeLimit}
-                settings={settings}
-                onOpenSettings={() => setIsSettingsOpen(true)}
-                onMenu={() => setScreen('intro')}
-                onRetry={() => setScreen('memory-setup')}
-                onUnlockAchieve={handleUnlockAchieve}
-                isPaused={isPaused}
-              />
-            )}
+                {screen === 'suika' && (
+                  <SuikaGame key={gameKey} {...gameCommon} autoStart={autoStart} dark={resolvedTheme === 'dark'} best={stats.suikaHighScore} />
+                )}
 
-            {screen === 'suika' && (
-              <SuikaGame
-                settings={settings}
-                onMenu={() => setScreen('intro')}
-                isPaused={isPaused}
-              />
-            )}
-
-            {screen === 'stock' && (
-              <StockGame
-                settings={settings}
-                onMenu={() => setScreen('intro')}
-                isPaused={isPaused}
-              />
-            )}
-
-            {screen === 'dash' && (
-              <FruitDashGame
-                settings={settings}
-                onMenu={() => setScreen('intro')}
-                isPaused={isPaused}
-                handleGameComplete={handleGameComplete}
-                onGameOver={(score, dur) => handleGameComplete('dash', score, dur)}
-                onUnlockAchieve={handleUnlockAchieve}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
+                {screen === 'dash' && (
+                  <FruitDashGame key={gameKey} {...gameCommon} autoStart={autoStart} dark={resolvedTheme === 'dark'} best={stats.dashHighScore} />
+                )}
+              </Suspense>
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </main>
 
-      {/* Overlays / Modals */}
-      <LoginModal
-        isOpen={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
+      <ProfileModal
+        isOpen={modal === 'profile'}
+        onClose={() => setModal(null)}
         user={user}
-        userStats={userStats}
+        stats={stats}
+        level={level}
+        achievementCount={achievementCount}
         onLogin={handleLogin}
         onLogout={handleLogout}
       />
-
-      <AchievementsModal
-        isOpen={isAchieveOpen}
-        onClose={() => setIsAchieveOpen(false)}
-      />
-
-      <PatchNotesModal
-        isOpen={isPatchOpen}
-        onClose={() => setIsPatchOpen(false)}
-      />
-
+      <AchievementsModal isOpen={modal === 'achievements'} onClose={() => setModal(null)} />
+      <RecordsModal isOpen={modal === 'records'} onClose={() => setModal(null)} stats={stats} history={history} />
       <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        isOpen={modal === 'settings'}
+        onClose={() => setModal(null)}
         settings={settings}
+        loggedIn={!!user}
         onUpdateSettings={updateSettings}
-        onNotify={(msg) => alert(msg)}
+        onResetAchievements={resetAllAchievements}
+        onResetRecords={resetAllRecords}
+        onNotify={(msg) => pushToast({ icon: '✅', title: msg, tone: 'melon' })}
       />
-
-      <CreditsModal
-        isOpen={isCreditsOpen}
-        onClose={() => setIsCreditsOpen(false)}
-        onUnlockAchieve={handleUnlockAchieve}
-      />
-
+      <PatchNotesModal isOpen={modal === 'patch'} onClose={() => setModal(null)} />
+      <CreditsModal isOpen={modal === 'credits'} onClose={() => setModal(null)} />
       <PauseModal
-        isOpen={isPaused}
+        isOpen={isPaused && isPlaying && modal === null}
         onResume={() => setIsPaused(false)}
-        onHome={() => {
-          setIsPaused(false);
-          setScreen('intro');
-        }}
+        onRestart={restartGame}
+        onExit={() => goTo('lobby')}
       />
     </div>
   );
 }
-

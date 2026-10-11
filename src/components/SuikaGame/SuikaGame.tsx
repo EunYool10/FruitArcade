@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { RotateCcw, Home, Sparkles, AlertTriangle, Play, Zap, Trophy, Clock } from 'lucide-react';
-import confetti from 'canvas-confetti';
-import { GameSettings, SuikaBody, SuikaFruitDef, SuikaParticle, SuikaFloatText } from '../../types';
+import { AlertTriangle, RotateCcw } from 'lucide-react';
+import { GameResult, GameReward, GameSettings, SuikaBody, SuikaFruitDef, SuikaParticle, SuikaFloatText } from '../../types';
+import { GAMES } from '../../constants';
 import { playSound } from '../../utils/audio';
-import { GameTimer, formatTime } from '../Common/GameTimer';
+import { celebrate } from '../../utils/fx';
+import { formatNumber, formatTime } from '../../utils/format';
+import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
+import { StartCard } from '../game/StartCard';
+import { ResultCard } from '../game/ResultCard';
 
 const FRUITS: SuikaFruitDef[] = [
   { name: '체리', emoji: '🍒', r: 17, score: 1, color: '#ff334b' },
@@ -28,30 +32,100 @@ const LEFT = WALL_MARGIN;
 const RIGHT = CW - WALL_MARGIN;
 const BOTTOM = 580;
 const DEADLINE = 115;
+const JAR_TOP = DEADLINE - 30;
 const GRAVITY = 0.38;
 const BOUNCE = 0.22;
 const FRICTION = 0.985;
 const COOLDOWN_MS = 550;
 const MAX_DROP_LEVEL = 4;
+const KEY_SPEED = 6.5;
+
+const PALETTE = {
+  light: {
+    jarTop: '#fffdf8',
+    jarBottom: '#ffe9c4',
+    wall: '#2b2140',
+    outline: '#2b2140',
+    deadline: 'rgba(43, 33, 64, 0.32)',
+    danger: '#e3285f',
+    guide: 'rgba(43, 33, 64, 0.3)',
+    textStroke: '#ffffff',
+  },
+  dark: {
+    jarTop: '#2c2443',
+    jarBottom: '#1d1729',
+    wall: '#ffb627',
+    outline: '#07050c',
+    deadline: 'rgba(255, 244, 228, 0.32)',
+    danger: '#ff4778',
+    guide: 'rgba(255, 244, 228, 0.3)',
+    textStroke: '#07050c',
+  },
+};
+type Palette = (typeof PALETTE)['light'];
+
+const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+
+/** Cartoon fruit: flat fill, gloss, outline, then the emoji (which rotates). */
+function drawFruit(ctx: CanvasRenderingContext2D, f: SuikaFruitDef, r: number, angle: number, P: Palette, warn: boolean) {
+  ctx.fillStyle = f.color;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.32)';
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.36, -r * 0.42, r * 0.3, r * 0.16, -0.65, 0, Math.PI * 2);
+  ctx.fill();
+
+  const lw = Math.max(2, r * 0.07);
+  ctx.lineWidth = lw;
+  ctx.strokeStyle = warn ? P.danger : P.outline;
+  ctx.beginPath();
+  ctx.arc(0, 0, r - lw / 2, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.rotate(angle);
+  ctx.fillStyle = '#000'; // color emoji inherit the fill alpha
+  ctx.font = `${Math.round(r * 1.1)}px ${EMOJI_FONT}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(f.emoji, 0, r * 0.07);
+  ctx.restore();
+}
 
 interface Props {
   settings: GameSettings;
-  onMenu: () => void;
+  dark: boolean;
+  best: number;
+  /** Start the round right away instead of showing the start card */
+  autoStart?: boolean;
   isPaused: boolean;
+  onUnlockAchieve: (id: string) => void;
+  onGameComplete: (result: GameResult) => GameReward;
+  onRoundChange: (active: boolean) => void;
+  onExit: () => void;
 }
 
-export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
+export const SuikaGame: React.FC<Props> = ({
+  settings,
+  dark,
+  best,
+  autoStart = false,
+  isPaused,
+  onUnlockAchieve,
+  onGameComplete,
+  onRoundChange,
+  onExit,
+}) => {
+  // Kept in a ref so the physics loop is not restarted when the callback identity changes
+  const onUnlockRef = useRef(onUnlockAchieve);
+  onUnlockRef.current = onUnlockAchieve;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [gameState, setGameState] = useState<'IDLE' | 'PLAYING' | 'OVER'>('IDLE');
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(() => {
-    try {
-      return parseInt(localStorage.getItem('suika_hs') || '0');
-    } catch {
-      return 0;
-    }
-  });
   const [curLevel, setCurLevel] = useState(0);
   const [nextLevel, setNextLevel] = useState(1);
   const [highestFruit, setHighestFruit] = useState(0);
@@ -59,6 +133,7 @@ export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
   const [isDanger, setIsDanger] = useState(false);
   const [isCooldown, setIsCooldown] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [reward, setReward] = useState<GameReward | null>(null);
 
   // Mutable game state refs for physics loop
   const bodiesRef = useRef<SuikaBody[]>([]);
@@ -67,6 +142,7 @@ export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
   const dropXRef = useRef(CW / 2);
   const shakeRef = useRef(0);
   const dangerTimerRef = useRef(3.0);
+  const dangerRef = useRef(false);
   const warnCdRef = useRef(0);
   const curLevelRef = useRef(0);
   const nextLevelRef = useRef(1);
@@ -76,6 +152,26 @@ export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
   const lastTimeRef = useRef(performance.now());
   const isPlayingRef = useRef(false);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const keysRef = useRef({ left: false, right: false });
+
+  // Report the finished round once
+  useEffect(() => {
+    if (gameState === 'OVER') {
+      setReward(onGameComplete({ game: 'suika', score, seconds: elapsedTime }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState]);
+
+  useEffect(() => {
+    onRoundChange(gameState === 'PLAYING');
+  }, [gameState, onRoundChange]);
+
+  useEffect(
+    () => () => {
+      isPlayingRef.current = false;
+    },
+    []
+  );
 
   const randLevel = () => Math.floor(Math.random() * (MAX_DROP_LEVEL + 1));
 
@@ -100,7 +196,9 @@ export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
     floatTextsRef.current = [];
     shakeRef.current = 0;
     dangerTimerRef.current = 3.0;
+    dangerRef.current = false;
     warnCdRef.current = 0;
+    keysRef.current = { left: false, right: false };
 
     const cLv = randLevel();
     const nLv = randLevel();
@@ -118,12 +216,19 @@ export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
     setIsDanger(false);
     setDangerTime(3.0);
     setIsCooldown(false);
+    setReward(null);
     setGameState('PLAYING');
     isPlayingRef.current = true;
     lastTimeRef.current = performance.now();
 
     playSound('click', settings);
   };
+
+  // "한 판 더" and "처음부터" skip the start card
+  useEffect(() => {
+    if (autoStart) handleStartGame();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Drop current fruit
   const handleDrop = useCallback(() => {
@@ -170,12 +275,21 @@ export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    const pixelRatio = Math.min(3, Math.max(1, window.devicePixelRatio || 1) * 1.25);
+    canvas.width = Math.round(CW * pixelRatio);
+    canvas.height = Math.round(CH * pixelRatio);
 
     const loop = (time: number) => {
       const rawDt = Math.min((time - lastTimeRef.current) / 16.666, 2.5);
       lastTimeRef.current = time;
 
       if (!isPaused && isPlayingRef.current) {
+        const dir = (keysRef.current.right ? 1 : 0) - (keysRef.current.left ? 1 : 0);
+        if (dir !== 0) {
+          const af = FRUITS[curLevelRef.current];
+          dropXRef.current = Math.max(LEFT + af.r + 2, Math.min(RIGHT - af.r - 2, dropXRef.current + dir * KEY_SPEED * rawDt));
+        }
+
         // Multi-substep physics simulation for high collision stability
         const SUBSTEPS = 4;
         const subDt = rawDt / SUBSTEPS;
@@ -352,23 +466,12 @@ export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
               });
 
               const pts = Math.round(b1.r + b2.r + nf.score);
-              setScore((s) => {
-                const nextS = s + pts;
-                if (nextS > highScore) {
-                  setHighScore(nextS);
-                  try {
-                    localStorage.setItem('suika_hs', nextS.toString());
-                  } catch {
-                    // ignore
-                  }
-                }
-                return nextS;
-              });
+              setScore((s) => s + pts);
 
               playSound('merge', settings);
 
               // Particle burst
-              for (let p = 0; p < 9; p++) {
+              for (let p = 0; p < (settings.comboEffect ? 9 : 0); p++) {
                 const a = Math.random() * Math.PI * 2;
                 const sp = 1.2 + Math.random() * 3.5;
                 particlesRef.current.push({
@@ -399,12 +502,13 @@ export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
                 highestFruitRef.current = nl;
                 setHighestFruit(nl);
               }
+              if (nl === FRUITS.length - 1) onUnlockRef.current('suika_watermelon');
             } else {
               // Watermelon + Watermelon Merge -> Huge bonus
               setScore((s) => s + 5000);
               playSound('victory', settings);
               shakeRef.current = 24;
-              confetti({ particleCount: 120, spread: 85, origin: { y: 0.6 } });
+              if (settings.celebrateEffect) celebrate(true);
             }
           }
         }
@@ -423,6 +527,7 @@ export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
         const dtSec = rawDt / 60;
         if (isHazard) {
           dangerTimerRef.current = Math.max(0, dangerTimerRef.current - dtSec);
+          dangerRef.current = true;
           setIsDanger(true);
           setDangerTime(dangerTimerRef.current);
 
@@ -440,9 +545,11 @@ export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
         } else {
           dangerTimerRef.current = Math.min(3.0, dangerTimerRef.current + dtSec * 1.6);
           if (dangerTimerRef.current >= 3.0) {
+            dangerRef.current = false;
             setIsDanger(false);
           } else {
-            setIsDanger(true);
+            dangerRef.current = true;
+          setIsDanger(true);
             setDangerTime(dangerTimerRef.current);
           }
         }
@@ -468,124 +575,81 @@ export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
       }
 
       // --- RENDERING CANVAS ---
+      const P = dark ? PALETTE.dark : PALETTE.light;
+      ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
       ctx.clearRect(0, 0, CW, CH);
 
-      const shakeX = shakeRef.current > 0.1 ? (Math.random() - 0.5) * shakeRef.current : 0;
-      const shakeY = shakeRef.current > 0.1 ? (Math.random() - 0.5) * shakeRef.current : 0;
+      const shake = settings.shakeEffect ? shakeRef.current : 0;
+      const shakeX = shake > 0.1 ? (Math.random() - 0.5) * shake : 0;
+      const shakeY = shake > 0.1 ? (Math.random() - 0.5) * shake : 0;
 
       ctx.save();
       ctx.translate(shakeX, shakeY);
 
-      // Play area backdrop
-      const boxGrad = ctx.createLinearGradient(0, DEADLINE - 30, 0, BOTTOM);
-      boxGrad.addColorStop(0, 'rgba(14, 18, 34, 0.95)');
-      boxGrad.addColorStop(1, 'rgba(9, 12, 24, 0.98)');
-      ctx.fillStyle = boxGrad;
+      // Jar interior
+      const jarGrad = ctx.createLinearGradient(0, JAR_TOP, 0, BOTTOM);
+      jarGrad.addColorStop(0, P.jarTop);
+      jarGrad.addColorStop(1, P.jarBottom);
+      ctx.fillStyle = jarGrad;
       ctx.beginPath();
-      ctx.roundRect(LEFT, DEADLINE - 30, RIGHT - LEFT, BOTTOM - (DEADLINE - 30), [0, 0, 16, 16]);
+      ctx.roundRect(LEFT, JAR_TOP, RIGHT - LEFT, BOTTOM - JAR_TOP, [0, 0, 24, 24]);
       ctx.fill();
 
-      // Deadline dashed line
+      // Deadline
       ctx.save();
-      ctx.setLineDash([6, 6]);
-      ctx.lineWidth = 2;
-      if (isDanger) {
-        ctx.strokeStyle = `rgba(239, 68, 68, ${0.6 + Math.sin(time * 0.012) * 0.4})`;
-        ctx.shadowColor = '#ef4444';
-        ctx.shadowBlur = 10;
+      ctx.setLineDash([8, 7]);
+      ctx.lineWidth = 2.5;
+      if (dangerRef.current) {
+        ctx.strokeStyle = P.danger;
+        ctx.globalAlpha = 0.55 + Math.sin(time * 0.012) * 0.45;
       } else {
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.strokeStyle = P.deadline;
       }
       ctx.beginPath();
-      ctx.moveTo(LEFT, DEADLINE);
-      ctx.lineTo(RIGHT, DEADLINE);
+      ctx.moveTo(LEFT + 6, DEADLINE);
+      ctx.lineTo(RIGHT - 6, DEADLINE);
       ctx.stroke();
       ctx.restore();
 
-      // Sort bodies by y position for natural stacking visual depth
-      const sortedBodies = [...bodiesRef.current].sort((a, b) => a.y - b.y);
+      const aiming = isPlayingRef.current && !isCooldownRef.current;
+      const aimFruit = FRUITS[curLevelRef.current];
+      const aimX = Math.max(LEFT + aimFruit.r + 2, Math.min(RIGHT - aimFruit.r - 2, dropXRef.current));
 
-      // Render fruit bodies
+      // Aiming guide (under the fruits)
+      if (aiming) {
+        ctx.save();
+        ctx.strokeStyle = P.guide;
+        ctx.setLineDash([3, 7]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(aimX, JAR_TOP + aimFruit.r);
+        ctx.lineTo(aimX, BOTTOM);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Fruits, back to front
+      const sortedBodies = [...bodiesRef.current].sort((a, b) => a.y - b.y);
       for (let i = 0; i < sortedBodies.length; i++) {
         const b = sortedBodies[i];
         const f = FRUITS[b.lv];
         if (!f) continue;
-
         ctx.save();
         ctx.translate(b.x, b.y);
-        ctx.rotate(b.angle);
         ctx.scale(b.scale, b.scale);
-
-        // Body base circle
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-        ctx.shadowBlur = 6;
-        ctx.shadowOffsetY = 3;
-        ctx.fillStyle = f.color;
-        ctx.beginPath();
-        ctx.arc(0, 0, b.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
-
-        // Border
-        const isNearDeadline = b.y - b.r < DEADLINE && isDanger;
-        ctx.strokeStyle = isNearDeadline ? 'rgba(239, 68, 68, 0.95)' : 'rgba(255, 255, 255, 0.45)';
-        ctx.lineWidth = 2.2;
-        ctx.stroke();
-
-        // Radial shading highlight
-        const g = ctx.createRadialGradient(-b.r * 0.35, -b.r * 0.35, b.r * 0.1, 0, 0, b.r);
-        g.addColorStop(0, 'rgba(255, 255, 255, 0.32)');
-        g.addColorStop(0.7, 'rgba(0, 0, 0, 0.05)');
-        g.addColorStop(1, 'rgba(0, 0, 0, 0.28)');
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(0, 0, b.r, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Emoji Sprite inside exact circle
-        ctx.font = `bold ${b.r * 1.12}px Arial, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(f.emoji, 0, b.r * 0.05);
-
+        drawFruit(ctx, f, b.r, b.angle, P, dangerRef.current && b.y - b.r < DEADLINE);
         ctx.restore();
       }
 
-      // Aiming guide & Dropper Fruit
-      if (isPlayingRef.current && !isCooldownRef.current) {
-        const f = FRUITS[curLevelRef.current];
-        const cx = Math.max(LEFT + f.r + 2, Math.min(RIGHT - f.r - 2, dropXRef.current));
-
-        // Dropper guide line
+      // Fruit waiting to be dropped
+      if (aiming) {
         ctx.save();
-        ctx.strokeStyle = `${f.color}50`;
-        ctx.setLineDash([4, 6]);
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(cx, DEADLINE - 30);
-        ctx.lineTo(cx, BOTTOM);
-        ctx.stroke();
-        ctx.restore();
-
-        // Dropper preview fruit
-        ctx.save();
-        ctx.translate(cx, DEADLINE - 30);
-        ctx.fillStyle = f.color;
-        ctx.beginPath();
-        ctx.arc(0, 0, f.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.font = `bold ${f.r * 1.1}px Arial, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(f.emoji, 0, f.r * 0.05);
+        ctx.translate(aimX, JAR_TOP);
+        drawFruit(ctx, aimFruit, aimFruit.r, 0, P, false);
         ctx.restore();
       }
 
-      // Render Particles
+      // Particles
       for (let p = 0; p < particlesRef.current.length; p++) {
         const pt = particlesRef.current[p];
         ctx.save();
@@ -597,35 +661,36 @@ export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
         ctx.restore();
       }
 
-      // Render Floating score texts
+      // Floating score texts
       for (let t = 0; t < floatTextsRef.current.length; t++) {
         const ft = floatTextsRef.current[t];
         ctx.save();
-        ctx.globalAlpha = ft.alpha;
-        ctx.fillStyle = ft.color;
-        ctx.font = 'bold 16px sans-serif';
+        ctx.globalAlpha = Math.max(0, ft.alpha);
+        ctx.font = '700 20px Fredoka, Jua, sans-serif';
         ctx.textAlign = 'center';
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-        ctx.shadowBlur = 4;
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = P.textStroke;
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillStyle = ft.color;
         ctx.fillText(ft.text, ft.x, ft.y);
         ctx.restore();
       }
 
-      // Exterior container frame / Neon walls
-      ctx.strokeStyle = '#ff7a00';
-      ctx.lineWidth = 5;
+      // Jar walls
+      ctx.strokeStyle = P.wall;
+      ctx.lineWidth = 6;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.setLineDash([]);
-      ctx.shadowColor = 'rgba(255, 122, 0, 0.45)';
-      ctx.shadowBlur = 10;
       ctx.beginPath();
-      ctx.moveTo(LEFT, DEADLINE - 30);
-      ctx.lineTo(LEFT, BOTTOM);
-      ctx.lineTo(RIGHT, BOTTOM);
-      ctx.lineTo(RIGHT, DEADLINE - 30);
+      ctx.moveTo(LEFT, JAR_TOP);
+      ctx.lineTo(LEFT, BOTTOM - 24);
+      ctx.arcTo(LEFT, BOTTOM, LEFT + 24, BOTTOM, 24);
+      ctx.lineTo(RIGHT - 24, BOTTOM);
+      ctx.arcTo(RIGHT, BOTTOM, RIGHT, BOTTOM - 24, 24);
+      ctx.lineTo(RIGHT, JAR_TOP);
       ctx.stroke();
-      ctx.shadowBlur = 0;
 
       ctx.restore();
 
@@ -637,197 +702,167 @@ export const SuikaGame: React.FC<Props> = ({ settings, onMenu, isPaused }) => {
     return () => {
       if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
     };
-  }, [isPaused, highScore, settings]);
+  }, [isPaused, settings, dark]);
+
+  // Keyboard: ← → / A D to aim, Space · ↓ · Enter to drop (or start)
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
+  const isPausedRef = useRef(isPaused);
+  isPausedRef.current = isPaused;
+  const actionsRef = useRef({ start: handleStartGame, drop: handleDrop });
+  actionsRef.current = { start: handleStartGame, drop: handleDrop };
+
+  useEffect(() => {
+    const isLeft = (e: KeyboardEvent) => e.code === 'ArrowLeft' || e.code === 'KeyA';
+    const isRight = (e: KeyboardEvent) => e.code === 'ArrowRight' || e.code === 'KeyD';
+    const isAction = (e: KeyboardEvent) => e.code === 'Space' || e.code === 'ArrowDown' || e.code === 'Enter';
+
+    const onDown = (e: KeyboardEvent) => {
+      if (isPausedRef.current || e.ctrlKey || e.metaKey || e.altKey) return;
+      const state = gameStateRef.current;
+      if (state === 'PLAYING') {
+        if (isLeft(e)) keysRef.current.left = true;
+        else if (isRight(e)) keysRef.current.right = true;
+        else if (isAction(e)) {
+          if (!e.repeat) actionsRef.current.drop();
+        } else return;
+        e.preventDefault();
+        // Keep Space from also "clicking" a button that still has focus
+        (document.activeElement as HTMLElement | null)?.blur?.();
+      } else if (state === 'IDLE' && isAction(e)) {
+        // A focused button handles Space/Enter itself
+        if ((e.target as HTMLElement | null)?.closest?.('button')) return;
+        e.preventDefault();
+        actionsRef.current.start();
+      }
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (isLeft(e)) keysRef.current.left = false;
+      if (isRight(e)) keysRef.current.right = false;
+    };
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup', onUp);
+    return () => {
+      window.removeEventListener('keydown', onDown);
+      window.removeEventListener('keyup', onUp);
+    };
+  }, []);
 
   // Pointer interactions with accurate canvas scaling
   const handlePointerMove = (clientX: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const scale = CW / rect.width;
-    const canvasX = (clientX - rect.left) * scale;
+    const canvasX = (clientX - rect.left) * (CW / rect.width);
     const f = FRUITS[curLevelRef.current];
     dropXRef.current = Math.max(LEFT + f.r + 2, Math.min(RIGHT - f.r - 2, canvasX));
   };
 
+  const topFruit = FRUITS[highestFruit];
+
   return (
-    <div id="suika-game-board" className="flex-1 flex flex-col items-center justify-center p-[var(--ui-space-lg)] w-full max-w-[500px] mx-auto animate-in fade-in duration-300 select-none">
-      {/* Top Game HUD - Standardized Arcade HUD Box */}
-      <div
-        id="suika-hud"
-        className="arcade-hud-box mb-2.5"
-      >
-        {/* Left: Score & Best */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30">
-              <Zap className="w-4 h-4 fill-orange-400/40" />
-            </div>
-            <div>
-              <div className="text-[10px] font-black text-orange-400 tracking-wider uppercase">SCORE</div>
-              <div className="text-lg sm:text-xl font-mono font-black text-white leading-none">{score}</div>
-            </div>
-          </div>
+    <>
+      <GameFrame
+        hud={
+          <Hud>
+            <HudStat label="점수" value={formatNumber(score)} />
+            <HudStat label="최고" value={formatNumber(Math.max(best, score))} tone={best > 0 && score > best ? 'hot' : 'default'} />
+            <HudStat label="시간" value={formatTime(elapsedTime)} />
+            <HudStat label="다음" value={<span className="text-2xl leading-none">{FRUITS[nextLevel]?.emoji}</span>} />
+          </Hud>
+        }
+        board={
+          <div className="board-fit w-full" style={{ maxWidth: 'calc((100dvh - var(--board-offset)) * 0.7333)' }}>
+            <div className="relative aspect-[440/600] w-full overflow-hidden rounded-[28px] border-2 border-line bg-surface-2 shadow-pop">
+              <canvas
+                ref={canvasRef}
+                aria-label="수박 게임 판"
+                onPointerDown={(e) => handlePointerMove(e.clientX)}
+                onPointerMove={(e) => handlePointerMove(e.clientX)}
+                onPointerUp={() => handleDrop()}
+                className="block h-full w-full cursor-crosshair touch-none select-none"
+              />
 
-          <div className="hidden sm:block pl-3 border-l border-white/10">
-            <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-              <Trophy className="w-2.5 h-2.5 text-amber-400" /> BEST
-            </div>
-            <div className="text-sm font-mono font-bold text-slate-300">{highScore}</div>
-          </div>
-        </div>
-
-        {/* Center/Right: Next Fruit & Timer */}
-        <div className="flex items-center gap-2">
-          {gameState === 'PLAYING' && (
-            <>
-              <GameTimer seconds={elapsedTime} id="suika-timer" />
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10">
-                <span className="text-[10px] font-extrabold text-orange-400">NEXT</span>
-                <span className="text-xl leading-none">{FRUITS[nextLevel]?.emoji}</span>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={handleStartGame}
-            title="다시 시작"
-            className="h-[var(--ui-btn-h-nav)] min-h-[44px] sm:min-h-0 w-[36px] sm:w-[34px] rounded-xl bg-white/5 hover:bg-white/10 active:bg-white/5 border border-white/10 text-slate-300 transition-colors flex items-center justify-center cursor-pointer active:scale-95"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onMenu}
-            title="메인 메뉴"
-            className="h-[var(--ui-btn-h-nav)] min-h-[44px] sm:min-h-0 px-3 rounded-xl bg-white/5 hover:bg-white/10 active:bg-white/5 border border-white/10 text-slate-300 text-xs font-bold transition-colors flex items-center justify-center cursor-pointer whitespace-nowrap active:scale-95"
-          >
-            메뉴
-          </button>
-        </div>
-      </div>
-
-      {/* Canvas Container */}
-      <div className="relative rounded-[22px] overflow-hidden border border-white/10 shadow-[0_15px_40px_rgba(0,0,0,0.6)] bg-[#0d1222] w-full aspect-[440/600] max-h-[calc(100vh-185px)]">
-        <canvas
-          ref={canvasRef}
-          width={CW}
-          height={CH}
-          onMouseMove={(e) => handlePointerMove(e.clientX)}
-          onClick={handleDrop}
-          onTouchMove={(e) => {
-            e.preventDefault();
-            handlePointerMove(e.touches[0].clientX);
-          }}
-          onTouchEnd={(e) => {
-            e.preventDefault();
-            handleDrop();
-          }}
-          className="w-full h-full block cursor-crosshair touch-none select-none"
-        />
-
-        {/* Danger Warning Alert Badge - Positioned cleanly right at deadline */}
-        {isDanger && gameState === 'PLAYING' && (
-          <div className="absolute top-[88px] left-1/2 -translate-x-1/2 bg-rose-600/95 border border-rose-400 text-white font-black px-3.5 py-1 rounded-full text-xs shadow-lg animate-pulse flex items-center gap-1.5 pointer-events-none whitespace-nowrap z-20">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-300" />
-            <span>과일 넘침 경고! {dangerTime.toFixed(1)}초</span>
-          </div>
-        )}
-
-        {/* Start Game Overlay */}
-        {gameState === 'IDLE' && (
-          <div className="absolute inset-0 bg-[#0a0d18]/95 flex flex-col items-center justify-center p-6 text-center z-20 animate-in fade-in">
-            <div className="text-6xl mb-3 filter drop-shadow-[0_0_20px_rgba(56,158,13,0.7)] animate-bounce">
-              🍉
-            </div>
-            <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-emerald-400 tracking-tight">
-              SUIKA WATERMELON
-            </h2>
-            <p className="text-xs text-slate-300 max-w-[260px] mt-2 mb-6 font-medium leading-relaxed">
-              같은 과일끼리 합쳐서 더 큰 과일로 진화시키세요! 수박을 완성해 보세요!
-            </p>
-            <button
-              onClick={handleStartGame}
-              className="w-full max-w-[220px] btn-arcade-primary flex items-center justify-center gap-2"
-            >
-              <Play className="w-4 h-4 fill-white" /> 게임 시작
-            </button>
-          </div>
-        )}
-
-        {/* Game Over Overlay */}
-        {gameState === 'OVER' && (
-          <div className="absolute inset-0 bg-[#0a0d18]/95 flex flex-col items-center justify-center p-6 text-center z-20 animate-in fade-in zoom-in-95">
-            <div className="text-5xl mb-2">💔</div>
-            <h2 className="text-2xl font-black text-rose-400 tracking-tight">GAME OVER</h2>
-            <p className="text-xs text-slate-400 mt-1 mb-5">과일이 상단 데드라인을 넘었습니다!</p>
-
-            <div className="w-full max-w-[260px] p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2 mb-5">
-              <div className="flex justify-between items-center text-xs font-bold text-slate-400">
-                <span>이번 점수</span>
-                <span className="text-lg font-black text-orange-400 font-mono">{score}점</span>
-              </div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-400 pt-1.5 border-t border-white/5">
-                <span>플레이 시간</span>
-                <span className="text-sm font-black text-blue-400 font-mono">{formatTime(elapsedTime)}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-400 pt-1.5 border-t border-white/5">
-                <span>최고 기록</span>
-                <span className="text-sm font-black text-slate-200 font-mono">{highScore}점</span>
-              </div>
-            </div>
-
-            <div className="w-full max-w-[260px] space-y-2">
-              <button
-                onClick={handleStartGame}
-                className="w-full btn-arcade-primary flex items-center justify-center gap-2"
-              >
-                <RotateCcw className="w-4 h-4" /> 다시 시작
-              </button>
-              <button
-                onClick={onMenu}
-                className="w-full btn-arcade-secondary flex items-center justify-center gap-2"
-              >
-                <Home className="w-4 h-4" /> 메뉴로
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Evolution Ladder Bar */}
-      <div className="w-full bg-[#131724]/95 border border-white/10 rounded-2xl p-2.5 mt-2 shadow-md backdrop-blur-md">
-        <div className="text-[10px] font-black text-orange-400 tracking-wider text-center uppercase mb-1 flex items-center justify-center gap-1">
-          <Sparkles className="w-3 h-3 text-amber-300" /> 과일 진화 단계
-        </div>
-        <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-wrap">
-          {FRUITS.map((f, i) => {
-            const isUnlocked = i <= highestFruit;
-            const isCurrentMax = i === highestFruit;
-            return (
-              <React.Fragment key={f.name}>
-                <span
-                  title={`${f.name} (${f.score}점)`}
-                  className={`transition-all duration-300 select-none ${
-                    isCurrentMax
-                      ? 'scale-125 opacity-100 filter drop-shadow-[0_0_8px_rgba(255,122,0,0.8)]'
-                      : isUnlocked
-                      ? 'opacity-90 scale-100'
-                      : 'opacity-25 grayscale scale-90'
-                  } ${i < 5 ? 'text-base sm:text-lg' : 'text-sm sm:text-base'}`}
+              {isDanger && gameState === 'PLAYING' && (
+                <div
+                  role="alert"
+                  style={{ top: `calc(${(DEADLINE / CH) * 100}% + 10px)` }}
+                  className="chip pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 animate-pulse bg-berry-deep text-white shadow-hard-sm"
                 >
-                  {f.emoji}
-                </span>
-                {i < FRUITS.length - 1 && (
-                  <span className="text-[10px] text-orange-500/40 font-bold">›</span>
-                )}
-              </React.Fragment>
-            );
-          })}
-        </div>
-      </div>
-    </div>
+                  <AlertTriangle className="h-3.5 w-3.5" strokeWidth={3} /> 넘치기 직전! {dangerTime.toFixed(1)}초
+                </div>
+              )}
+
+              {gameState === 'IDLE' && (
+                <BoardOverlay>
+                  <StartCard meta={GAMES.suika} best={best} onStart={handleStartGame} />
+                </BoardOverlay>
+              )}
+            </div>
+          </div>
+        }
+        panel={
+          <div className="panel p-4">
+            <div className="mb-2.5 flex items-center justify-between">
+              <h3 className="font-display text-lg">과일 진화</h3>
+              <span className="text-xs font-bold text-ink-3">
+                최고: {topFruit.emoji} {topFruit.name}
+              </span>
+            </div>
+            <ol className="grid grid-cols-6 gap-1.5">
+              {FRUITS.map((f, i) => {
+                const reached = i <= highestFruit;
+                const isTop = i === highestFruit && gameState !== 'IDLE';
+                return (
+                  <li
+                    key={f.name}
+                    title={`${f.name} · ${f.score}점`}
+                    className={`grid aspect-square place-items-center rounded-xl border-2 border-line text-xl transition-all ${
+                      isTop ? '-translate-y-0.5 bg-mango-soft shadow-hard-sm' : reached ? 'bg-surface-2' : 'bg-surface-3 opacity-40 grayscale'
+                    }`}
+                  >
+                    {f.emoji}
+                  </li>
+                );
+              })}
+            </ol>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <p className="hidden text-xs text-ink-3 sm:block">← → 이동 · Space 낙하</p>
+              <button
+                type="button"
+                className="btn btn-sm ml-auto"
+                onClick={(e) => {
+                  e.currentTarget.blur();
+                  handleStartGame();
+                }}
+                disabled={gameState === 'IDLE'}
+              >
+                <RotateCcw className="h-4 w-4" strokeWidth={2.5} /> 다시 시작
+              </button>
+            </div>
+          </div>
+        }
+      />
+
+      {gameState === 'OVER' && (
+        <ScreenOverlay>
+          <ResultCard
+            emoji={highestFruit === FRUITS.length - 1 ? '🍉' : '💥'}
+            title="GAME OVER"
+            subtitle="과일이 점선 위로 넘쳤어요"
+            tone="berry"
+            score={score}
+            stats={[
+              { label: '가장 큰 과일', value: `${topFruit.emoji} ${topFruit.name}` },
+              { label: '플레이 시간', value: formatTime(elapsedTime) },
+            ]}
+            reward={reward}
+            shareText={`🍉 수박 게임 ${formatNumber(score)}점! 가장 큰 과일은 ${topFruit.emoji} ${topFruit.name}`}
+            onRetry={handleStartGame}
+            onExit={onExit}
+          />
+        </ScreenOverlay>
+      )}
+    </>
   );
 };

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Sparkles, Zap, Flame, Clock, Heart, Settings, Award } from 'lucide-react';
-import confetti from 'canvas-confetti';
-import { MemoryMode, LifeLimit, GameSettings, MemoryCard } from '../../types';
+import { Search, Zap } from 'lucide-react';
+import { GameResult, GameReward, GameSettings, LifeLimit, MemoryCard, MemoryMode } from '../../types';
+import { Tone } from '../../constants';
 import { playSound } from '../../utils/audio';
-import { unlockAchievement } from '../../utils/achievements';
-import { MemoryResultModal } from './MemoryResultModal';
+import { celebrate } from '../../utils/fx';
+import { formatTime } from '../../utils/format';
+import { GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
+import { ResultCard } from '../game/ResultCard';
 
 const FRUITS = [
   '🍎', '🍊', '🍌', '🍇', '🍓', '🍒', '🍑', '🍍', '🥝', '🍉',
@@ -13,23 +15,29 @@ const FRUITS = [
   '🧄', '🍠'
 ];
 
-const FRUIT_COLORS: { [key: string]: string } = {
-  '🍎': 'from-red-500/20 to-red-600/30 border-red-500/40 text-red-200',
-  '🍊': 'from-orange-500/20 to-orange-600/30 border-orange-500/40 text-orange-200',
-  '🍌': 'from-yellow-500/20 to-yellow-600/30 border-yellow-500/40 text-yellow-200',
-  '🍇': 'from-purple-500/20 to-purple-600/30 border-purple-500/40 text-purple-200',
-  '🍓': 'from-rose-500/20 to-rose-600/30 border-rose-500/40 text-rose-200',
-  '🍒': 'from-pink-500/20 to-pink-600/30 border-pink-500/40 text-pink-200',
-  '🍑': 'from-amber-500/20 to-amber-600/30 border-amber-500/40 text-amber-200',
-  '🍍': 'from-yellow-400/20 to-amber-500/30 border-yellow-400/40 text-yellow-100',
-  '🥝': 'from-lime-500/20 to-green-600/30 border-lime-500/40 text-lime-200',
-  '🍉': 'from-emerald-500/20 to-red-500/30 border-emerald-500/40 text-emerald-200',
-  '🍈': 'from-teal-500/20 to-teal-600/30 border-teal-500/40 text-teal-200',
-  '🍏': 'from-green-500/20 to-green-600/30 border-green-500/40 text-green-200',
-  '🍋': 'from-yellow-300/20 to-yellow-500/30 border-yellow-300/40 text-yellow-100',
-  '🍐': 'from-lime-400/20 to-lime-600/30 border-lime-400/40 text-lime-100',
-  '🫐': 'from-blue-500/20 to-indigo-600/30 border-blue-500/40 text-blue-200',
-  '🥥': 'from-stone-500/20 to-stone-600/30 border-stone-500/40 text-stone-200',
+// Soft tint behind each card's emoji
+const FRUIT_TINT: Record<string, string> = {
+  '🍎': '#ff4d4f', '🍊': '#ff9f1c', '🍌': '#ffd23f', '🍇': '#9b5de5', '🍓': '#ff4778', '🍒': '#e5383b',
+  '🍑': '#ffad80', '🍍': '#ffc53d', '🥝': '#8ac926', '🍉': '#2ec27e', '🍈': '#b5e48c', '🍏': '#7bd389',
+  '🍋': '#ffe066', '🍐': '#c5e063', '🫐': '#4361ee', '🥥': '#a47148', '🥭': '#ffb627', '🥑': '#6a994e',
+  '🥦': '#40916c', '🍅': '#ef476f', '🥕': '#f77f00', '🌽': '#ffd166', '🌶️': '#d00000', '🫑': '#38b000',
+  '🥔': '#c9a66b', '🍆': '#7b2cbf', '🌰': '#8d5524', '🥜': '#d4a373', '🍄': '#e07a5f', '🧅': '#e5989b',
+  '🧄': '#e9d8a6', '🍠': '#b5838d',
+};
+
+const STATUS_CLASS: Record<Tone, string> = {
+  berry: 'bg-berry-soft text-berry-ink',
+  melon: 'bg-melon-soft text-melon-ink',
+  mango: 'bg-mango-soft text-mango-ink',
+  grape: 'bg-grape-soft text-grape-ink',
+  soda: 'bg-soda-soft text-soda-ink',
+};
+
+export const MODE_LABEL: Record<MemoryMode, string> = {
+  '4': '4×4',
+  '6': '6×6',
+  '8': '8×8 타임어택',
+  '8-joker': '8×8 조커',
 };
 
 function shuffle<T>(arr: T[]): T[] {
@@ -46,11 +54,13 @@ interface Props {
   previewTime: number;
   lifeLimit: LifeLimit;
   settings: GameSettings;
-  onOpenSettings: () => void;
-  onMenu: () => void;
-  onRetry: () => void;
-  onUnlockAchieve: (id: string) => void;
   isPaused: boolean;
+  onUnlockAchieve: (id: string) => void;
+  onGameComplete: (result: GameResult) => GameReward;
+  onRoundChange: (active: boolean) => void;
+  onRetry: () => void;
+  onChangeSetup: () => void;
+  onExit: () => void;
 }
 
 export const MemoryGameBoard: React.FC<Props> = ({
@@ -58,11 +68,13 @@ export const MemoryGameBoard: React.FC<Props> = ({
   previewTime,
   lifeLimit,
   settings,
-  onOpenSettings,
-  onMenu,
-  onRetry,
-  onUnlockAchieve,
   isPaused,
+  onUnlockAchieve,
+  onGameComplete,
+  onRoundChange,
+  onRetry,
+  onChangeSetup,
+  onExit,
 }) => {
   const [cards, setCards] = useState<MemoryCard[]>([]);
   const [flippedCards, setFlippedCards] = useState<number[]>([]);
@@ -75,7 +87,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
   const [timeRemaining, setTimeRemaining] = useState(180.0);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [statusMsg, setStatusMsg] = useState('카드를 기억하세요!');
-  const [statusColor, setStatusColor] = useState('text-amber-400');
+  const [statusColor, setStatusColor] = useState<Tone>('mango');
   const [flashHints, setFlashHints] = useState(1);
   const [cardHints, setCardHints] = useState(1);
   const [hintUsed, setHintUsed] = useState(false);
@@ -85,6 +97,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
   const [isWin, setIsWin] = useState(false);
   const [failReason, setFailReason] = useState<'time' | 'life' | 'quit' | undefined>(undefined);
   const [shakingCardIndex, setShakingCardIndex] = useState<number | null>(null);
+  const [reward, setReward] = useState<GameReward | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const statusTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -94,13 +107,13 @@ export const MemoryGameBoard: React.FC<Props> = ({
   const isJokerMode = mode === '8-joker';
   const gridSize = mode === '4' ? 4 : mode === '6' ? 6 : 8;
 
-  const showStatus = useCallback((text: string, color: string, duration = 2000) => {
+  const showStatus = useCallback((text: string, color: Tone, duration = 2000) => {
     if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
     setStatusMsg(text);
     setStatusColor(color);
     statusTimerRef.current = setTimeout(() => {
       setStatusMsg('상큼하게 진행 중...');
-      setStatusColor('text-emerald-400');
+      setStatusColor('melon');
     }, duration);
   }, []);
 
@@ -121,7 +134,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
       });
     });
 
-    showStatus(`⭐ ${label}! (${pairsCount}쌍 반짝임)`, 'text-amber-400', 2000);
+    showStatus(`⭐ ${label}! (${pairsCount}쌍 반짝임)`, 'mango', 2000);
 
     setTimeout(() => {
       setCards((prev) => prev.map((c) => ({ ...c, isFlashing: false })));
@@ -178,14 +191,14 @@ export const MemoryGameBoard: React.FC<Props> = ({
     setCardHints(is8Normal ? 0 : initHints);
 
     setStatusMsg('카드를 기억하세요!');
-    setStatusColor('text-amber-400');
+    setStatusColor('mango');
 
     // Preview timer
     const previewTimer = setTimeout(() => {
       setCards((prev) => prev.map((c) => ({ ...c, isFlipped: false })));
       setIsReady(true);
       setStatusMsg('상큼하게 진행 중...');
-      setStatusColor('text-emerald-400');
+      setStatusColor('melon');
     }, previewTime);
 
     return () => {
@@ -268,15 +281,24 @@ export const MemoryGameBoard: React.FC<Props> = ({
 
     if (won) {
       playSound('victory', settings);
-      if (settings.celebrateEffect) {
-        confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-      }
+      if (settings.celebrateEffect) celebrate();
     } else {
       playSound('over', settings);
     }
 
-    checkAchievements(won, score, maxCombo, timeElapsed, wrongCount);
-  }, [settings, checkAchievements, score, maxCombo, timeElapsed, wrongCount]);
+  }, [settings]);
+
+  // Runs after the final state update has rendered, so score/combo/time are never stale
+  useEffect(() => {
+    if (!isGameOver) return;
+    checkAchievements(isWin, score, maxCombo, timeElapsed, wrongCount);
+    setReward(onGameComplete({ game: 'memory', score, seconds: timeElapsed, won: isWin }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGameOver]);
+
+  useEffect(() => {
+    onRoundChange(!isGameOver);
+  }, [isGameOver, onRoundChange]);
 
   // Use manual flash hint button
   const handleUseFlashHint = () => {
@@ -299,7 +321,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
 
     const target = candidates[Math.floor(Math.random() * candidates.length)];
     setCards((prev) => prev.map((c) => (c.id === target.id ? { ...c, isFlipped: true } : c)));
-    showStatus('🃏 카드 힌트! 2초간 카드를 확인하세요!', 'text-blue-400', 2000);
+    showStatus('🃏 카드 힌트! 2초간 카드를 확인하세요!', 'soda', 2000);
 
     setTimeout(() => {
       setCards((prev) =>
@@ -307,6 +329,18 @@ export const MemoryGameBoard: React.FC<Props> = ({
       );
     }, 2000);
   };
+
+  const hotkeys = useRef({ flash: () => {}, card: () => {} });
+  hotkeys.current = { flash: handleUseFlashHint, card: handleUseCardHint };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (isPaused || isGameOver || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.code === 'KeyH') hotkeys.current.flash();
+      else if (e.code === 'KeyC') hotkeys.current.card();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isPaused, isGameOver]);
 
   // Card click handler
   const handleCardClick = (index: number) => {
@@ -349,7 +383,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
     if (newJokerStreak > maxJokerStreak) setMaxJokerStreak(newJokerStreak);
 
     setScore((s) => s + 15);
-    showStatus('🃏 조커 발동! 주변 카드가 3초간 노출됩니다! (+15점)', 'text-purple-400', 3000);
+    showStatus('🃏 조커 발동! 주변 카드가 3초간 노출됩니다! (+15점)', 'grape', 3000);
 
     const row = Math.floor(index / 8);
     const col = index % 8;
@@ -407,7 +441,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
       if (candidates.length > 0) {
         const target = candidates[Math.floor(Math.random() * candidates.length)];
         setCards((prev) => prev.map((c) => (c.id === target.id ? { ...c, isFlipped: true } : c)));
-        showStatus('🃏 카드힌트 발동! 2초간 카드를 확인하세요!', 'text-blue-400', 2000);
+        showStatus('🃏 카드힌트 발동! 2초간 카드를 확인하세요!', 'soda', 2000);
 
         setTimeout(() => {
           setCards((prev) =>
@@ -446,7 +480,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
         const newMilestone = Math.floor(nextScore / 30);
         if (newMilestone > prevMilestone && !is8Normal) {
           setFlashHints((h) => h + 1);
-          showStatus('🛡️ 가드헌터 발동! 플래시 힌트 +1 획득!', 'text-blue-400', 2200);
+          showStatus('🛡️ 가드헌터 발동! 플래시 힌트 +1 획득!', 'soda', 2200);
         }
 
         if (wrongCount === 0 && nextScore >= 100) {
@@ -459,13 +493,13 @@ export const MemoryGameBoard: React.FC<Props> = ({
       playSound('match', settings);
       if (newCombo >= 3 && newCombo % 3 === 0) {
         playSound('combo', settings);
-        showStatus(`🔥 ${newCombo}연속 콤보 폭발!! 1쌍 보너스 힌트!`, 'text-rose-400', 2000);
+        showStatus(`🔥 ${newCombo}연속 콤보 폭발!! 1쌍 보너스 힌트!`, 'berry', 2000);
         setTimeout(() => triggerFlash(1, '콤보 보너스 힌트'), 400);
       } else if (newCombo > 1) {
         playSound('combo', settings);
-        showStatus(`🔥 ${newCombo}연속 콤보! (+10점)`, 'text-orange-400', 1500);
+        showStatus(`🔥 ${newCombo}연속 콤보! (+10점)`, 'mango', 1500);
       } else {
-        showStatus('맞췄습니다! (+10점)', 'text-emerald-400', 1200);
+        showStatus('맞췄습니다! (+10점)', 'melon', 1200);
       }
 
       setCards((prev) =>
@@ -502,7 +536,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
         const maxL = parseInt(lifeLimit);
         const remainLife = maxL - newWrong;
         if (remainLife <= 0) {
-          showStatus('💔 기회를 모두 소진했습니다!', 'text-rose-400', 2000);
+          showStatus('💔 기회를 모두 소진했습니다!', 'berry', 2000);
           setTimeout(() => {
             setCards((prev) =>
               prev.map((c, i) => (i === idx1 || i === idx2 ? { ...c, isFlipped: false } : c))
@@ -512,10 +546,10 @@ export const MemoryGameBoard: React.FC<Props> = ({
           }, 800);
           return;
         } else {
-          showStatus(`틀렸습니다! 남은 기회: ${remainLife}번 (-${penalty}점)`, 'text-rose-400', 1500);
+          showStatus(`틀렸습니다! 남은 기회: ${remainLife}번 (-${penalty}점)`, 'berry', 1500);
         }
       } else {
-        showStatus(`틀렸습니다! (-${penalty}점)`, 'text-rose-400', 1500);
+        showStatus(`틀렸습니다! (-${penalty}점)`, 'berry', 1500);
       }
 
       setTimeout(() => {
@@ -528,201 +562,177 @@ export const MemoryGameBoard: React.FC<Props> = ({
     }
   };
 
-  const remainLife = lifeLimit !== 'infinite' ? parseInt(lifeLimit) - wrongCount : null;
+  const remainLife = lifeLimit !== 'infinite' ? Math.max(0, parseInt(lifeLimit) - wrongCount) : null;
+  const lowTime = is8Normal && timeRemaining <= 20;
+  const scale = settings.cardScale / 100;
+
+  // Size everything by grid density
+  const emojiSize = gridSize === 4 ? 'text-4xl sm:text-6xl' : gridSize === 6 ? 'text-3xl sm:text-4xl' : 'text-xl sm:text-3xl';
+  const markSize = gridSize === 4 ? 'text-2xl sm:text-4xl' : gridSize === 6 ? 'text-lg sm:text-2xl' : 'text-xs sm:text-lg';
+  const gap = gridSize === 8 ? 'gap-1 sm:gap-1.5' : 'gap-1.5 sm:gap-2.5';
+  const radius = gridSize === 8 ? 'rounded-lg sm:rounded-xl' : 'rounded-xl sm:rounded-2xl';
+  const border = settings.highContrast ? 'border-[3px]' : 'border-2';
+
+  const resultTitle = isWin ? 'CLEAR!' : failReason === 'time' ? 'TIME OVER' : 'GAME OVER';
+  const resultEmoji = isWin ? '🎉' : failReason === 'time' ? '⏰' : '💔';
+  const resultSub = isWin ? '모든 짝을 찾았어요!' : failReason === 'time' ? '시간이 다 됐어요' : '목숨을 모두 썼어요';
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-[var(--ui-space-lg)] w-full max-w-[620px] mx-auto animate-in fade-in duration-300 select-none">
-      {/* Top Info HUD with standardized design tokens */}
-      <div
-        id="info-panel"
-        className="arcade-hud-box mb-2.5"
-      >
-        {/* Left: Score & Combo & Life */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30">
-              <Award className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-[10px] font-black text-orange-400 tracking-wider uppercase">SCORE</div>
-              <div id="score-count" className="text-base sm:text-lg font-mono font-black text-white leading-none">
-                {score}점
-              </div>
-            </div>
-          </div>
-
-          {combo > 1 && (
-            <div className="px-2 py-0.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 font-black text-[11px] sm:text-xs flex items-center gap-1 animate-pulse">
-              <Flame className="w-3.5 h-3.5 fill-red-400" /> {combo} 콤보
-            </div>
-          )}
-
-          {remainLife !== null && (
+    <>
+      <GameFrame
+        hud={
+          <Hud
+            footer={
+              <p
+                role="status"
+                className={`mt-2.5 truncate rounded-xl border-2 border-line px-3 py-1.5 text-center text-sm font-bold ${STATUS_CLASS[statusColor]}`}
+              >
+                {statusMsg}
+              </p>
+            }
+          >
+            <HudStat label="점수" value={score} />
+            <HudStat
+              label="콤보"
+              value={combo > 1 ? `${combo}🔥` : '–'}
+              tone={combo > 1 && settings.comboEffect ? 'hot' : 'default'}
+            />
+            <HudStat
+              label={is8Normal ? '남은 시간' : '시간'}
+              value={is8Normal ? formatTime(timeRemaining, lowTime) : formatTime(timeElapsed)}
+              tone={lowTime ? 'warn' : 'default'}
+            />
+            <HudStat
+              label="목숨"
+              value={remainLife === null ? '∞' : `♥${remainLife}`}
+              tone={remainLife !== null && remainLife <= 2 ? 'warn' : 'default'}
+            />
+          </Hud>
+        }
+        board={
+          <div className="board-fit w-full" style={{ maxWidth: `calc((100dvh - var(--board-offset)) * ${scale})` }}>
             <div
-              className={`px-2 py-0.5 rounded-lg border font-bold text-[11px] sm:text-xs flex items-center gap-1 ${
-                remainLife <= 2
-                  ? 'bg-rose-500/20 border-rose-500 text-rose-400 animate-pulse'
-                  : 'bg-white/5 border-white/10 text-slate-300'
-              }`}
+              id="board"
+              className={`grid aspect-square w-full rounded-[26px] border-2 border-line bg-surface-2 p-2 shadow-pop sm:p-3 ${gap}`}
+              style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
             >
-              <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" /> {remainLife}
-            </div>
-          )}
-        </div>
+              {cards.map((card, idx) => {
+                const isFlipped = card.isFlipped || card.isMatched || card.isJokerRevealed;
+                const isJoker = card.value === '🃏';
+                const display = card.value === '🃏HINT' ? '🃏' : card.value === '💡FLASH' ? '💡' : card.value;
+                const frontBg = card.isMatched ? 'bg-melon-soft' : card.isSpecial ? 'bg-mango' : isJoker ? 'bg-grape' : 'bg-surface';
+                const tint = !card.isMatched && !card.isSpecial && !isJoker ? FRUIT_TINT[card.value] : undefined;
 
-        {/* Right: Hint Items, Timer & Settings */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {!is8Normal && (
-            <>
-              <button
-                id="hint-action-btn"
-                onClick={handleUseFlashHint}
-                disabled={!isReady || flashHints <= 0 || isGameOver}
-                className="h-[var(--ui-btn-h-nav)] min-h-[44px] sm:min-h-0 px-2 sm:px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-[11px] sm:text-xs transition-all flex items-center gap-1 shadow-sm cursor-pointer whitespace-nowrap active:scale-95"
-              >
-                <Zap className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
-                <span className="hidden sm:inline">플래시</span>
-                <span className="px-1 rounded bg-black/30 text-[10px] font-mono">{flashHints}</span>
-              </button>
-
-              <button
-                id="hint-card-btn"
-                onClick={handleUseCardHint}
-                disabled={!isReady || cardHints <= 0 || isGameOver}
-                className="h-[var(--ui-btn-h-nav)] min-h-[44px] sm:min-h-0 px-2 sm:px-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-[11px] sm:text-xs transition-all flex items-center gap-1 shadow-sm cursor-pointer whitespace-nowrap active:scale-95"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-cyan-200" />
-                <span className="hidden sm:inline">카드힌트</span>
-                <span className="px-1 rounded bg-black/30 text-[10px] font-mono">{cardHints}</span>
-              </button>
-            </>
-          )}
-
-          {/* Timer Display */}
-          <div
-            id="timer-panel"
-            className={`px-2.5 py-1 h-[var(--ui-btn-h-nav)] min-h-[44px] sm:min-h-0 rounded-xl bg-white/5 border border-white/10 font-mono font-bold text-xs sm:text-sm flex items-center gap-1.5 min-w-[80px] justify-center ${
-              is8Normal && timeRemaining <= 20.0
-                ? 'text-rose-400 border-rose-500/50 animate-pulse'
-                : 'text-slate-200'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span>{is8Normal ? timeRemaining.toFixed(1) : timeElapsed.toFixed(1)}s</span>
-          </div>
-
-          <button
-            id="open-settings-btn"
-            onClick={onOpenSettings}
-            title="게임 설정"
-            className="h-[var(--ui-btn-h-nav)] min-h-[44px] sm:min-h-0 w-[36px] sm:w-[34px] rounded-xl bg-white/5 hover:bg-white/10 active:bg-white/5 border border-white/10 text-slate-400 hover:text-slate-200 transition-colors flex items-center justify-center cursor-pointer active:scale-95"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Status Notice Banner */}
-      <div
-        id="status-text"
-        className={`w-full text-center py-1 text-xs sm:text-sm font-extrabold tracking-wide transition-all h-6 mb-1.5 ${statusColor}`}
-      >
-        {statusMsg}
-      </div>
-
-      {/* Game Board Grid Container - Enlarged by 20% and Centered */}
-      <div className="flex items-center justify-center w-full max-w-[98vw] sm:max-w-[580px] md:max-w-[620px] aspect-square max-h-[calc(100vh-175px)]">
-        <div
-          id="board"
-          className="memory-card-grid"
-          style={{
-            gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
-            gridTemplateRows: `repeat(${gridSize}, minmax(0, 1fr))`,
-            transform: `scale(${Math.max(1, (settings.cardScale / 100) * 1.05)})`,
-            transition: 'transform 0.2s ease',
-          }}
-        >
-          {cards.map((card, idx) => {
-            const isFlipped = card.isFlipped || card.isMatched || card.isJokerRevealed;
-            const isMatched = card.isMatched;
-            const isSpecial = !!card.isSpecial;
-            const isFlashing = card.isFlashing;
-            const isShaking = shakingCardIndex === idx;
-
-            const fruitColor = FRUIT_COLORS[card.value] || 'from-orange-500/20 to-amber-500/30 border-orange-500/40 text-orange-200';
-
-            return (
-              <div
-                key={card.id}
-                onClick={() => handleCardClick(idx)}
-                className={`relative w-full h-full rounded-xl sm:rounded-2xl cursor-pointer perspective-1000 select-none ${
-                  isShaking ? 'animate-bounce' : ''
-                } ${isFlashing ? 'animate-pulse' : ''}`}
-              >
-                {/* 3D Inner Card */}
-                <div
-                  className={`w-full h-full rounded-xl sm:rounded-2xl transform-style-3d transition-all duration-300 flex items-center justify-center relative ${
-                    isFlipped ? '[transform:rotateY(180deg)]' : ''
-                  }`}
-                >
-                  {/* Card Back with Arcade Pattern */}
-                  <div
-                    className={`absolute inset-0 rounded-xl sm:rounded-2xl flex items-center justify-center backface-hidden shadow-md transition-all arcade-card-back hover:scale-[1.03] active:scale-95`}
+                return (
+                  <button
+                    key={card.id}
+                    type="button"
+                    onClick={() => handleCardClick(idx)}
+                    aria-label={isFlipped ? `${idx + 1}번 카드: ${display}` : `${idx + 1}번 카드`}
+                    className={`card-3d relative aspect-square w-full ${radius} ${
+                      shakingCardIndex === idx ? 'animate-shake' : ''
+                    } ${card.isFlashing ? 'card-flash' : ''} ${isFlipped ? '' : 'transition-transform hover:-translate-y-0.5'}`}
                   >
-                    <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-black/40 border border-orange-500/40 flex items-center justify-center text-[10px] sm:text-xs text-orange-400 font-black filter drop-shadow-[0_0_6px_rgba(255,122,0,0.6)]">
-                      🕹️
-                    </div>
-                  </div>
-
-                  {/* Card Front */}
-                  <div
-                    className={`absolute inset-0 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center backface-hidden [transform:rotateY(180deg)] border shadow-md transition-all ${
-                      isMatched
-                        ? 'arcade-card-matched'
-                        : isSpecial
-                        ? 'bg-gradient-to-br from-amber-200 to-yellow-300 border-yellow-400 text-slate-900 font-bold'
-                        : card.value === '🃏'
-                        ? 'bg-gradient-to-br from-purple-900 to-indigo-950 border-purple-400 text-purple-200'
-                        : `bg-gradient-to-br ${fruitColor}`
-                    }`}
-                  >
-                    <span
-                      className={`leading-none select-none filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.3)] ${
-                        gridSize === 4
-                          ? 'text-4xl sm:text-6xl'
-                          : gridSize === 6
-                          ? 'text-3xl sm:text-5xl'
-                          : 'text-2xl sm:text-3xl'
+                    <div
+                      className={`card-inner ${settings.animEnabled ? 'transition-transform duration-300' : ''} ${
+                        isFlipped ? 'card-flipped' : ''
                       }`}
                     >
-                      {card.value === '🃏HINT' ? '🃏' : card.value === '💡FLASH' ? '💡' : card.value}
-                    </span>
-
-                    {card.isSpecial && (
-                      <span className="text-[8px] sm:text-[9px] font-black text-slate-800 tracking-tighter mt-0.5">
-                        {card.isSpecial === 'card-hint' ? '카드힌트' : '플래시'}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                      {/* Back */}
+                      <div className={`card-face dots grid place-items-center ${radius} ${border} border-line bg-berry shadow-hard-sm`}>
+                        <span
+                          className={`grid aspect-square w-[48%] place-items-center rounded-full border-2 border-line bg-surface font-display leading-none text-ink ${markSize}`}
+                        >
+                          ?
+                        </span>
+                      </div>
+                      {/* Front */}
+                      <div
+                        className={`card-face card-front grid place-items-center ${radius} ${border} border-line ${frontBg}`}
+                        style={tint ? { backgroundColor: `color-mix(in srgb, ${tint} 24%, var(--surface))` } : undefined}
+                      >
+                        <span className={`leading-none ${emojiSize} ${card.isMatched ? 'opacity-60' : ''}`}>{display}</span>
+                        {card.isSpecial && (
+                          <span className="absolute bottom-0.5 text-[8px] font-black text-on-bright sm:text-[10px]">
+                            {card.isSpecial === 'card-hint' ? '카드힌트' : '플래시'}
+                          </span>
+                        )}
+                        {card.isMatched && (
+                          <span className="absolute right-0.5 top-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-line bg-melon text-[9px] font-black text-on-bright sm:h-5 sm:w-5 sm:text-[10px]">
+                            ✓
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        }
+        panel={
+          <div className="panel space-y-3 p-4">
+            {!is8Normal ? (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className="btn btn-melon px-2"
+                  onClick={handleUseFlashHint}
+                  disabled={!isReady || flashHints <= 0 || isGameOver}
+                  aria-label={`플래시 힌트 ${flashHints}개 남음 (H)`}
+                >
+                  <Zap className="h-4 w-4" strokeWidth={2.5} /> 플래시
+                  <span className="rounded-md bg-on-bright/15 px-1.5 text-sm tabular-nums">{flashHints}</span>
+                  <span className="kbd hidden lg:inline-block">H</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-soda px-2"
+                  onClick={handleUseCardHint}
+                  disabled={!isReady || cardHints <= 0 || isGameOver}
+                  aria-label={`카드 힌트 ${cardHints}개 남음 (C)`}
+                >
+                  <Search className="h-4 w-4" strokeWidth={2.5} /> 카드
+                  <span className="rounded-md bg-on-bright/15 px-1.5 text-sm tabular-nums">{cardHints}</span>
+                  <span className="kbd hidden lg:inline-block">C</span>
+                </button>
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Result Modal */}
-      <MemoryResultModal
-        isOpen={isGameOver}
-        isWin={isWin}
-        reason={failReason}
-        score={score}
-        maxCombo={maxCombo}
-        timeElapsed={timeElapsed}
-        mode={mode}
-        onRetry={onRetry}
-        onMenu={onMenu}
+            ) : (
+              <p className="well px-3 py-2.5 text-sm text-ink-2">
+                💡 숨어 있는 특수 카드(🃏 카드힌트 · 💡 플래시)를 뒤집으면 힌트가 발동해요.
+              </p>
+            )}
+            <div className="flex flex-wrap gap-1.5">
+              <span className="chip bg-berry-soft">{MODE_LABEL[mode]}</span>
+              <span className="chip bg-surface-2">👀 {previewTime / 1000}초</span>
+              <span className="chip bg-surface-2">♥ {lifeLimit === 'infinite' ? '무제한' : `${lifeLimit}번`}</span>
+            </div>
+          </div>
+        }
       />
-    </div>
+
+      {isGameOver && (
+        <ScreenOverlay>
+          <ResultCard
+            emoji={resultEmoji}
+            title={resultTitle}
+            subtitle={resultSub}
+            tone={isWin ? 'melon' : 'berry'}
+            score={score}
+            stats={[
+              { label: '최대 콤보', value: `${maxCombo}연속` },
+              { label: '걸린 시간', value: formatTime(timeElapsed) },
+              { label: '실수', value: `${wrongCount}번` },
+              { label: '모드', value: MODE_LABEL[mode] },
+            ]}
+            reward={reward}
+            shareText={`🍓 과일 메모리 ${MODE_LABEL[mode]} ${isWin ? '클리어!' : '도전!'} ${score}점`}
+            onRetry={onRetry}
+            onExit={onExit}
+            extraAction={{ label: '설정 변경', onClick: onChangeSetup }}
+          />
+        </ScreenOverlay>
+      )}
+    </>
   );
 };

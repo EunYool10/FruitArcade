@@ -19,7 +19,7 @@ function getAudioContext(): AudioContext | null {
 }
 
 export function playSound(
-  type: 'flip' | 'match' | 'wrong' | 'drop' | 'merge' | 'warn' | 'over' | 'victory' | 'buy' | 'sell' | 'click' | 'combo',
+  type: 'flip' | 'match' | 'wrong' | 'drop' | 'merge' | 'warn' | 'over' | 'victory' | 'click' | 'combo',
   settings: { sfxEnabled: boolean; volume: number }
 ) {
   if (!settings.sfxEnabled || settings.volume <= 0) return;
@@ -150,30 +150,6 @@ export function playSound(
         o.start(now + i * 0.1);
         o.stop(now + i * 0.1 + 0.16);
       });
-    } else if (type === 'buy') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
-      gain.gain.setValueAtTime(vol * 0.6, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-      osc.start(now);
-      osc.stop(now + 0.11);
-    } else if (type === 'sell') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(700, now);
-      osc.frequency.exponentialRampToValueAtTime(350, now + 0.08);
-      gain.gain.setValueAtTime(vol * 0.6, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-      osc.start(now);
-      osc.stop(now + 0.11);
     }
   } catch {
     // Audio Context errors are gracefully suppressed

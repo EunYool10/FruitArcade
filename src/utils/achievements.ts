@@ -24,30 +24,61 @@ export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
   { id: 'dash_dodge_master', title: '회피의 신', desc: 'FRUIT DASH에서 500점 이상 득점 돌파', icon: '🎯', game: 'dash' },
   { id: 'dash_star_collector', title: '별빛 과일 채집가', desc: 'FRUIT DASH에서 황금 보너스 스타 5회 획득', icon: '⭐', game: 'dash' },
 
-  // Suika & Stock Achievements
+  // Suika Achievements
   { id: 'suika_watermelon', title: '전설의 수박 탄생', desc: '수박 게임에서 거대 수박(🍉) 합성 성공', icon: '🍉', game: 'suika' },
-  { id: 'stock_millionaire', title: '여의도 투자의 귀재', desc: '주식 트레이딩에서 자산 2,000만원 달성', icon: '📈', game: 'stock' },
 
   { id: 'all_achieved', title: '진정한 과일 마스터', desc: '모든 업적을 전부 해금 완료', icon: '🎖️', game: 'all' },
 ];
 
-const ACHIEVEMENTS_KEY = 'fruit_game_achievements';
-let memoryAchievements: UnlockedAchievements = {};
+export const ACHIEVEMENT_COUNT = ACHIEVEMENT_DEFINITIONS.length;
 
-export function setMemoryAchievements(achievements: UnlockedAchievements): void {
-  memoryAchievements = { ...achievements };
+const ACHIEVEMENTS_KEY = 'fruit_game_achievements';
+let cache: UnlockedAchievements | null = null;
+
+function persist(achievements: UnlockedAchievements): void {
+  try {
+    localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(achievements));
+  } catch {
+    // ignore
+  }
 }
 
 export function getUnlockedAchievements(): UnlockedAchievements {
-  if (Object.keys(memoryAchievements).length > 0) {
-    return memoryAchievements;
-  }
+  if (cache) return cache;
   try {
     const data = localStorage.getItem(ACHIEVEMENTS_KEY);
-    return data ? JSON.parse(data) : {};
+    cache = data ? JSON.parse(data) : {};
   } catch {
-    return {};
+    cache = {};
   }
+  return cache!;
+}
+
+/** Number of unlocked achievements that still exist in the current definitions. */
+export function countUnlocked(unlocked: UnlockedAchievements = getUnlockedAchievements()): number {
+  return ACHIEVEMENT_DEFINITIONS.filter((a) => unlocked[a.id]).length;
+}
+
+/**
+ * Merge cloud achievements into the local ones (union, earliest date wins).
+ * Returns the merged map and whether the cloud copy is missing anything.
+ */
+export function mergeAchievements(cloud: UnlockedAchievements): {
+  merged: UnlockedAchievements;
+  cloudOutdated: boolean;
+} {
+  const local = getUnlockedAchievements();
+  const merged: UnlockedAchievements = { ...cloud };
+  let cloudOutdated = false;
+  for (const [id, date] of Object.entries(local)) {
+    if (!merged[id] || date < merged[id]) {
+      merged[id] = date;
+      cloudOutdated = true;
+    }
+  }
+  cache = merged;
+  persist(merged);
+  return { merged, cloudOutdated };
 }
 
 export function unlockAchievement(
@@ -60,13 +91,7 @@ export function unlockAchievement(
   const now = new Date();
   const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   current[id] = dateStr;
-  memoryAchievements[id] = dateStr;
-
-  try {
-    localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(current));
-  } catch {
-    // ignore
-  }
+  persist(current);
 
   const def = ACHIEVEMENT_DEFINITIONS.find((a) => a.id === id);
   if (def && onUnlocked) {
@@ -86,7 +111,7 @@ export function unlockAchievement(
 }
 
 export function resetAchievements(): void {
-  memoryAchievements = {};
+  cache = {};
   try {
     localStorage.removeItem(ACHIEVEMENTS_KEY);
   } catch {

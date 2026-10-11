@@ -1,157 +1,80 @@
 import { User } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
-import { UserGameData, UserStatistics, GameSettings, UnlockedAchievements } from '../types';
+import { doc, getDoc, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../firestore';
+import { GameResult, GameSettings, UnlockedAchievements, UserStatistics } from '../types';
+import { EMPTY_STATS, applyResult, mergeStats, sameStats } from './progress';
 
-export const DEFAULT_SETTINGS: GameSettings = {
-  sfxEnabled: true,
-  volume: 70,
-  animEnabled: true,
-  comboEffect: true,
-  particleEffect: true,
-  shakeEffect: true,
-  celebrateEffect: true,
-  highContrast: false,
-  cardScale: 100,
-};
+/** Raw cloud values; the app merges them with what this device already has. */
+export interface CloudData {
+  statistics: Partial<UserStatistics>;
+  achievements: UnlockedAchievements;
+  settings: Partial<GameSettings>;
+}
 
-export const DEFAULT_STATISTICS: UserStatistics = {
-  totalPlayCount: 0,
-  totalPlayTime: 0,
-  memoryPlayCount: 0,
-  suikaPlayCount: 0,
-  stockPlayCount: 0,
-  dashPlayCount: 0,
-  memoryHighScore: 0,
-  suikaHighScore: 0,
-  stockHighScore: 0,
-  dashHighScore: 0,
-  lastPlayedAt: new Date().toISOString(),
-};
+const userRef = (uid: string) => doc(db, 'users', uid);
 
-/**
- * Load or initialize user game data from Firestore
- */
-export async function loadUserData(user: User): Promise<UserGameData> {
-  const userRef = doc(db, 'users', user.uid);
-  const snap = await getDoc(userRef);
+/** Load the user's document, creating it on first login. */
+export async function loadUserData(user: User): Promise<CloudData> {
+  const ref = userRef(user.uid);
+  const snap = await getDoc(ref);
+  const now = new Date().toISOString();
+  const displayName = user.displayName || '게이머';
 
   if (snap.exists()) {
-    const data = snap.data() as Partial<UserGameData>;
-    const profile = {
-      uid: user.uid,
-      displayName: user.displayName || '게이머',
-      email: user.email,
-      photoURL: user.photoURL,
-      createdAt: data.profile?.createdAt || new Date().toISOString(),
-      lastLoginAt: new Date().toISOString(),
-    };
-
-    const statistics: UserStatistics = {
-      ...DEFAULT_STATISTICS,
-      ...(data.statistics || {}),
-    };
-
-    const achievements: UnlockedAchievements = data.achievements || {};
-    const settings: GameSettings = {
-      ...DEFAULT_SETTINGS,
-      ...(data.settings || {}),
-    };
-
-    // Update lastLoginAt
-    await updateDoc(userRef, {
-      'profile.lastLoginAt': profile.lastLoginAt,
-      'profile.displayName': profile.displayName,
-      'profile.photoURL': profile.photoURL,
+    const data = snap.data();
+    updateDoc(ref, {
+      'profile.lastLoginAt': now,
+      'profile.displayName': displayName,
+      'profile.photoURL': user.photoURL,
     }).catch(() => {});
-
-    return { profile, statistics, achievements, settings };
-  } else {
-    // Initialize new user document
-    const now = new Date().toISOString();
-    const newUserData: UserGameData = {
-      profile: {
-        uid: user.uid,
-        displayName: user.displayName || '게이머',
-        email: user.email,
-        photoURL: user.photoURL,
-        createdAt: now,
-        lastLoginAt: now,
-      },
-      statistics: DEFAULT_STATISTICS,
-      achievements: {},
-      settings: DEFAULT_SETTINGS,
+    return {
+      statistics: data.statistics || {},
+      achievements: data.achievements || {},
+      settings: data.settings || {},
     };
-
-    await setDoc(userRef, newUserData);
-    return newUserData;
-  }
-}
-
-/**
- * Save user game progress & stats safely with high-score check
- */
-export async function saveGameResult(
-  uid: string,
-  gameType: 'memory' | 'suika' | 'stock' | 'dash',
-  score: number,
-  playTimeSeconds: number,
-  currentStats: UserStatistics
-): Promise<UserStatistics> {
-  const userRef = doc(db, 'users', uid);
-
-  const updatedStats: UserStatistics = {
-    ...currentStats,
-    totalPlayCount: currentStats.totalPlayCount + 1,
-    totalPlayTime: currentStats.totalPlayTime + Math.max(0, Math.round(playTimeSeconds)),
-    lastPlayedAt: new Date().toISOString(),
-  };
-
-  if (gameType === 'memory') {
-    updatedStats.memoryPlayCount += 1;
-    if (score > updatedStats.memoryHighScore) {
-      updatedStats.memoryHighScore = score;
-    }
-  } else if (gameType === 'suika') {
-    updatedStats.suikaPlayCount += 1;
-    if (score > updatedStats.suikaHighScore) {
-      updatedStats.suikaHighScore = score;
-    }
-  } else if (gameType === 'stock') {
-    updatedStats.stockPlayCount += 1;
-    if (score > updatedStats.stockHighScore) {
-      updatedStats.stockHighScore = score;
-    }
-  } else if (gameType === 'dash') {
-    updatedStats.dashPlayCount += 1;
-    if (score > updatedStats.dashHighScore) {
-      updatedStats.dashHighScore = score;
-    }
   }
 
-  await updateDoc(userRef, {
-    statistics: updatedStats,
+  await setDoc(ref, {
+    profile: { uid: user.uid, displayName, email: user.email, photoURL: user.photoURL, createdAt: now, lastLoginAt: now },
+    statistics: EMPTY_STATS,
+    achievements: {},
+    settings: {},
   });
-
-  return updatedStats;
+  return { statistics: {}, achievements: {}, settings: {} };
 }
 
-/**
- * Sync unlocked achievements to Firestore
- */
+/** Atomically add one finished round to the cloud stats (safe with several devices). */
+export function recordCloudResult(uid: string, result: GameResult, stamp: boolean): Promise<UserStatistics> {
+  const ref = userRef(uid);
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const current = { ...EMPTY_STATS, ...(snap.data()?.statistics || {}) };
+    const next = applyResult(current, result, stamp);
+    tx.update(ref, { statistics: next });
+    return next;
+  });
+}
+
+/** Push this device's stats up without ever lowering what the cloud already has. */
+export function pushMergedStats(uid: string, local: UserStatistics): Promise<UserStatistics> {
+  const ref = userRef(uid);
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const cloud = { ...EMPTY_STATS, ...(snap.data()?.statistics || {}) };
+    const merged = mergeStats(cloud, local);
+    if (!sameStats(merged, cloud)) tx.update(ref, { statistics: merged });
+    return merged;
+  });
+}
+
+export async function resetCloudStats(uid: string): Promise<void> {
+  await updateDoc(userRef(uid), { statistics: EMPTY_STATS });
+}
+
 export async function saveAchievements(uid: string, achievements: UnlockedAchievements): Promise<void> {
-  const userRef = doc(db, 'users', uid);
-  await updateDoc(userRef, {
-    achievements,
-  });
+  await updateDoc(userRef(uid), { achievements });
 }
 
-/**
- * Sync game settings to Firestore
- */
 export async function saveUserSettings(uid: string, settings: GameSettings): Promise<void> {
-  const userRef = doc(db, 'users', uid);
-  await updateDoc(userRef, {
-    settings,
-  });
+  await updateDoc(userRef(uid), { settings });
 }

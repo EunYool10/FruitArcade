@@ -2,7 +2,7 @@
  * Background music: small chiptune loops played by a Web Audio step sequencer.
  * Songs are written as "NOTE:sixteenths" tokens ("-" is a rest).
  */
-import { getAudioContext } from './audio';
+import { getAudioContext, whenAudioUnlocked } from './audio';
 
 export type TrackName = 'lobby' | 'memory' | 'suika' | 'dash' | 'puzzle';
 
@@ -129,6 +129,14 @@ class MusicPlayer {
   private volume = 0.4;
   private enabled = true;
   private ducked = false;
+  private ctx: AudioContext | null = null;
+
+  constructor() {
+    // Music asked for before the first tap starts as soon as audio is allowed
+    whenAudioUnlocked(() => {
+      if (this.track && this.enabled && !this.timer) this.start();
+    });
+  }
 
   configure(enabled: boolean, volume0to100: number) {
     this.enabled = enabled && volume0to100 > 0;
@@ -161,6 +169,7 @@ class MusicPlayer {
   private start() {
     const ctx = getAudioContext();
     if (!ctx || !this.track) return;
+    this.ctx = ctx;
     if (!this.master) {
       this.master = ctx.createGain();
       this.master.gain.value = 0;
@@ -184,8 +193,9 @@ class MusicPlayer {
   }
 
   private tick() {
-    const ctx = getAudioContext();
-    if (!ctx || !this.song || !this.compiled || !this.master) return;
+    // Reads the context directly: asking it to resume 30 times a second spams warnings while locked
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== 'running' || !this.song || !this.compiled || !this.master) return;
     if (document.hidden) return;
     const sixteenth = 60 / this.song.bpm / 4;
     // Fell behind (tab was hidden, audio was locked): restart from now

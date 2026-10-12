@@ -3,26 +3,45 @@
  */
 
 let audioCtx: AudioContext | null = null;
+const unlockWaiters: (() => void)[] = [];
 
+// Starting audio outside a tap or key press only makes the browser log a warning.
+// Browsers without navigator.userActivation just try.
+const canStartAudio = () => (navigator as { userActivation?: { isActive: boolean } }).userActivation?.isActive ?? true;
+
+/** The shared audio context, or null until the first tap or key press (browsers block audio before that). */
 export function getAudioContext(): AudioContext | null {
-  if (typeof window === 'undefined') return null;
-  if (!audioCtx) {
-    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (AudioContextClass) audioCtx = new AudioContextClass();
-  }
-  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  if (audioCtx?.state === 'suspended' && canStartAudio()) audioCtx.resume().catch(() => {});
   return audioCtx;
 }
 
-// Browsers keep audio locked until the first tap/key press
+/** Runs `fn` once audio is allowed to play */
+export function whenAudioUnlocked(fn: () => void): void {
+  if (audioCtx?.state === 'running') fn();
+  else unlockWaiters.push(fn);
+}
+
+// Browsers keep audio locked until the first tap/key press. A touch only counts when the
+// finger lifts, so listen to both pointer events and keep listening until audio runs.
 if (typeof window !== 'undefined') {
+  const EVENTS = ['pointerdown', 'pointerup', 'keydown'] as const;
   const unlock = () => {
-    getAudioContext();
-    window.removeEventListener('pointerdown', unlock);
-    window.removeEventListener('keydown', unlock);
+    if (!canStartAudio()) return;
+    if (!audioCtx) {
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+      audioCtx = new AudioContextClass();
+    }
+    audioCtx
+      .resume()
+      .then(() => {
+        if (audioCtx?.state !== 'running') return;
+        EVENTS.forEach((e) => window.removeEventListener(e, unlock, true));
+        unlockWaiters.splice(0).forEach((fn) => fn());
+      })
+      .catch(() => {});
   };
-  window.addEventListener('pointerdown', unlock);
-  window.addEventListener('keydown', unlock);
+  EVENTS.forEach((e) => window.addEventListener(e, unlock, true));
 }
 
 export type SoundType =

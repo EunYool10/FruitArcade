@@ -22,6 +22,7 @@ export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
   { id: 'dash_survivor_30', title: '질주의 생존자', desc: 'FRUIT DASH에서 30초 이상 생존 달성', icon: '🏃', game: 'dash' },
   { id: 'dash_survivor_60', title: '빛의 회피 장인', desc: 'FRUIT DASH에서 60초 이상 생존 달성', icon: '🌪️', game: 'dash' },
   { id: 'dash_dodge_master', title: '회피의 신', desc: 'FRUIT DASH에서 500점 이상 득점 돌파', icon: '🎯', game: 'dash' },
+  { id: 'dash_shield_save', title: '위기 탈출', desc: 'FRUIT DASH에서 방패로 과일을 막아내기', icon: '🛡️', game: 'dash' },
   { id: 'dash_star_collector', title: '별빛 과일 채집가', desc: 'FRUIT DASH에서 황금 보너스 스타 5회 획득', icon: '⭐', game: 'dash' },
 
   // Suika Achievements
@@ -29,6 +30,8 @@ export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
   { id: 'suika_10000', title: '수박 부자', desc: '수박 게임에서 10,000점 이상 기록', icon: '🤑', game: 'suika' },
   { id: 'puzzle_combo_5', title: '연쇄 반응', desc: '과일 퍼즐에서 한 번에 5연쇄 터뜨리기', icon: '⛓️', game: 'puzzle' },
   { id: 'puzzle_bomb', title: '과일 폭탄', desc: '과일 퍼즐에서 큰 폭탄 만들기', icon: '💣', game: 'puzzle' },
+  { id: 'puzzle_stage_10', title: '스테이지 탐험가', desc: '과일 퍼즐 스테이지 10 클리어', icon: '🗺️', game: 'puzzle' },
+  { id: 'puzzle_stage_all', title: '퍼즐 정복자', desc: '과일 퍼즐 스테이지 30개 모두 클리어', icon: '🏁', game: 'puzzle' },
   { id: 'puzzle_3000', title: '퍼즐 고수', desc: '과일 퍼즐에서 3,000점 이상 기록', icon: '🧩', game: 'puzzle' },
   { id: 'dash_hard_30', title: '매운맛 생존자', desc: 'FRUIT DASH 어려움 난이도에서 30초 이상 생존', icon: '🌶️', game: 'dash' },
 

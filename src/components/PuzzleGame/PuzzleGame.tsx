@@ -9,7 +9,9 @@ import { formatNumber, formatTime } from '../../utils/format';
 import { Rng, randomSeed, seededRandom } from '../../utils/rng';
 import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
 import { StartCard } from '../game/StartCard';
-import { ResultCard } from '../game/ResultCard';
+import { ResultCard, appUrl } from '../game/ResultCard';
+import { Segmented } from '../ui/Segmented';
+import { STAGES, STAGE_COUNT, Stage, StageProgress, goalProgress, goalTarget, goalText, isUnlocked, nextStage, starsFor } from './stages';
 import {
   FRUIT,
   FRUIT_COLOR,
@@ -51,6 +53,9 @@ interface Props {
   onExit: () => void;
   onHelp?: () => void;
   onRoundSeed?: (seed: string) => void;
+  /** Best stars per stage (stage mode) */
+  stageProgress?: StageProgress;
+  onStageClear?: (no: number, stars: number) => void;
 }
 
 export const PuzzleGame: React.FC<Props> = ({
@@ -65,6 +70,8 @@ export const PuzzleGame: React.FC<Props> = ({
   onExit,
   onHelp,
   onRoundSeed,
+  stageProgress = {},
+  onStageClear,
 }) => {
   const rngRef = useRef<Rng>(seededRandom(randomSeed()));
   const [grid, setGrid] = useState<Grid>(() => generate(rngRef.current));
@@ -82,6 +89,15 @@ export const PuzzleGame: React.FC<Props> = ({
   const [hint, setHint] = useState<[number, number] | null>(null);
   const [banner, setBanner] = useState<{ id: number; text: string } | null>(null);
   const [reward, setReward] = useState<GameReward | null>(null);
+
+  // Stage mode: the stage being played, progress toward its goal, and how it ended
+  const [mode, setMode] = useState<'classic' | 'stage'>('classic');
+  const [stage, setStage] = useState<Stage | null>(null);
+  const stageRef = useRef<Stage | null>(null);
+  const [goalValue, setGoalValue] = useState(0);
+  const goalRef = useRef(0);
+  const [outcome, setOutcome] = useState<{ won: boolean; stars: number } | null>(null);
+  const outcomeRef = useRef<{ won: boolean; stars: number } | null>(null);
 
   const scoreRef = useRef(0);
   const movesRef = useRef(MOVES);
@@ -110,8 +126,20 @@ export const PuzzleGame: React.FC<Props> = ({
   // Report the finished round once
   useEffect(() => {
     if (gameState !== 'OVER') return;
-    if (scoreRef.current >= 3000) onUnlockAchieve('puzzle_3000');
-    const r = onGameComplete({ game: 'puzzle', score: scoreRef.current, seconds: elapsed });
+    const st = stageRef.current;
+    const out = outcomeRef.current;
+    if (!st && scoreRef.current >= 3000) onUnlockAchieve('puzzle_3000');
+    if (st && out?.won) {
+      onStageClear?.(st.no, out.stars);
+      if (st.no >= 10) onUnlockAchieve('puzzle_stage_10');
+      if (st.no >= STAGE_COUNT) onUnlockAchieve('puzzle_stage_all');
+    }
+    const r = onGameComplete({
+      game: 'puzzle',
+      score: scoreRef.current,
+      seconds: elapsed,
+      ...(st ? { stage: st.no, won: !!out?.won } : {}),
+    });
     setReward(r);
     if (r.newBest && settings.celebrateEffect) celebrate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,15 +167,23 @@ export const PuzzleGame: React.FC<Props> = ({
     setTimeout(() => setBanner((b) => (b?.id === id ? null : b)), 900);
   };
 
-  const handleStartGame = () => {
-    const s = seed ?? randomSeed();
+  /** null = classic (30 moves, leaderboard); a stage = its own moves and goal */
+  const handleStartGame = (st: Stage | null = null) => {
+    const s = st ? randomSeed() : seed ?? randomSeed();
     rngRef.current = seededRandom(s);
-    onRoundSeed?.(s);
+    if (!st) onRoundSeed?.(s);
+    stageRef.current = st;
+    setStage(st);
+    goalRef.current = 0;
+    setGoalValue(0);
+    outcomeRef.current = null;
+    setOutcome(null);
+    const total = st ? st.moves : MOVES;
     commit(generate(rngRef.current));
     scoreRef.current = 0;
-    movesRef.current = MOVES;
+    movesRef.current = total;
     setScore(0);
-    setMoves(MOVES);
+    setMoves(total);
     setMaxCombo(0);
     setSpecials(0);
     setPopped(0);
@@ -185,6 +221,14 @@ export const PuzzleGame: React.FC<Props> = ({
       scoreRef.current += gained;
       setScore(scoreRef.current);
       setPopped((p) => p + step.cleared.length);
+      const st = stageRef.current;
+      if (st) {
+        const goal = st.goal;
+        if (goal.type === 'collect') goalRef.current += step.cleared.filter((c) => g[c]?.kind === goal.kind).length;
+        else if (goal.type === 'specials') goalRef.current += step.created.length;
+        else if (goal.type === 'combo') goalRef.current = Math.max(goalRef.current, cascade);
+        setGoalValue(goal.type === 'score' ? scoreRef.current : goalRef.current);
+      }
       setSpecials((n) => n + step.created.length);
       setMaxCombo((m) => Math.max(m, cascade));
 
@@ -204,8 +248,26 @@ export const PuzzleGame: React.FC<Props> = ({
       commit(g);
       await wait(FALL_MS);
     }
-    if (movesRef.current <= 0 && aliveRef.current) {
-      playSound('victory', live.current.settings);
+    if (!aliveRef.current) return;
+    const st = stageRef.current;
+    if (st) {
+      const value = st.goal.type === 'score' ? scoreRef.current : goalRef.current;
+      if (value >= goalTarget(st.goal)) {
+        outcomeRef.current = { won: true, stars: starsFor(st, movesRef.current) };
+        setOutcome(outcomeRef.current);
+        playSound('victory', live.current.settings);
+        setGameState('OVER');
+        return;
+      }
+    }
+    if (movesRef.current <= 0) {
+      if (st) {
+        outcomeRef.current = { won: false, stars: 0 };
+        setOutcome(outcomeRef.current);
+        playSound('over', live.current.settings);
+      } else {
+        playSound('victory', live.current.settings);
+      }
       setGameState('OVER');
     }
   };
@@ -299,8 +361,21 @@ export const PuzzleGame: React.FC<Props> = ({
           <Hud>
             <HudStat label="점수" value={formatNumber(score)} />
             <HudStat label="남은 이동" value={moves} tone={gameState === 'PLAYING' && moves <= 5 ? 'warn' : 'default'} />
-            <HudStat label="최대 연쇄" value={maxCombo > 1 ? `${maxCombo}🔥` : '–'} tone={maxCombo >= 3 ? 'hot' : 'default'} />
-            <HudStat label="최고" value={formatNumber(Math.max(best, score))} tone={best > 0 && score > best ? 'hot' : 'default'} />
+            {stage ? (
+              <>
+                <HudStat
+                  label="목표"
+                  value={goalProgress(stage.goal, goalValue)}
+                  tone={goalValue >= goalTarget(stage.goal) ? 'hot' : 'default'}
+                />
+                <HudStat label="스테이지" value={stage.no} />
+              </>
+            ) : (
+              <>
+                <HudStat label="최대 연쇄" value={maxCombo > 1 ? `${maxCombo}🔥` : '–'} tone={maxCombo >= 3 ? 'hot' : 'default'} />
+                <HudStat label="최고" value={formatNumber(Math.max(best, score))} tone={best > 0 && score > best ? 'hot' : 'default'} />
+              </>
+            )}
           </Hud>
         }
         board={
@@ -359,7 +434,50 @@ export const PuzzleGame: React.FC<Props> = ({
 
               {gameState === 'IDLE' && (
                 <BoardOverlay>
-                  <StartCard meta={GAMES.puzzle} best={best} onStart={handleStartGame} onHelp={onHelp} />
+                  <StartCard
+                    meta={GAMES.puzzle}
+                    best={best}
+                    onStart={() => handleStartGame(mode === 'stage' ? STAGES[nextStage(stageProgress) - 1] : null)}
+                    onHelp={onHelp}
+                  >
+                    {!seed && (
+                      <>
+                        <Segmented<'classic' | 'stage'>
+                          ariaLabel="모드"
+                          columns={2}
+                          value={mode}
+                          onChange={setMode}
+                          options={[
+                            { value: 'classic', label: '클래식', sub: '30번 · 랭킹' },
+                            { value: 'stage', label: '스테이지', sub: `${Object.keys(stageProgress).length}/${STAGE_COUNT} 클리어` },
+                          ]}
+                        />
+                        {mode === 'stage' && (
+                          <div className="mt-2.5 grid max-h-40 grid-cols-6 gap-1.5 overflow-y-auto p-0.5" role="group" aria-label="스테이지 고르기">
+                            {STAGES.map((st) => {
+                              const stars = stageProgress[st.no] || 0;
+                              const open = isUnlocked(stageProgress, st.no);
+                              return (
+                                <button
+                                  key={st.no}
+                                  type="button"
+                                  disabled={!open}
+                                  onClick={() => handleStartGame(st)}
+                                  aria-label={`스테이지 ${st.no}${stars ? ` 별 ${stars}개` : ''}${open ? '' : ' 잠김'}`}
+                                  className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-line ${
+                                    stars ? 'bg-grape-soft' : open ? 'bg-surface hover:bg-surface-3' : 'bg-surface-3 opacity-50'
+                                  }`}
+                                >
+                                  <span className="font-display text-sm leading-none">{open ? st.no : '🔒'}</span>
+                                  <span className="h-2 text-[8px] leading-none text-mango-ink">{'★'.repeat(stars)}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </StartCard>
                 </BoardOverlay>
               )}
             </div>
@@ -367,6 +485,13 @@ export const PuzzleGame: React.FC<Props> = ({
         }
         panel={
           <div className="panel space-y-3 p-4">
+            {stage && gameState === 'PLAYING' && (
+              <div className="rounded-2xl border-2 border-line bg-grape-soft p-3">
+                <p className="text-[11px] font-bold text-ink-3">스테이지 {stage.no} 목표</p>
+                <p className="font-display text-lg leading-tight">{goalText(stage.goal)}</p>
+                <p className="mt-0.5 text-xs text-ink-2">이동 {stage.moves}번 안에 · 남은 이동이 많을수록 별이 많아요</p>
+              </div>
+            )}
             <h3 className="font-display text-lg">특수 과일</h3>
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2.5">
@@ -391,7 +516,7 @@ export const PuzzleGame: React.FC<Props> = ({
                 className="btn btn-sm flex-1"
                 onClick={(e) => {
                   e.currentTarget.blur();
-                  handleStartGame();
+                  handleStartGame(stageRef.current);
                 }}
                 disabled={gameState === 'IDLE' || busy}
               >
@@ -402,7 +527,51 @@ export const PuzzleGame: React.FC<Props> = ({
         }
       />
 
-      {gameState === 'OVER' && (
+      {gameState === 'OVER' && stage && (
+        <ScreenOverlay>
+          <ResultCard
+            game="puzzle"
+            emoji={outcome?.won ? '🌟' : '😢'}
+            title={outcome?.won ? '스테이지 클리어!' : '아쉬워요'}
+            subtitle={
+              outcome?.won
+                ? `스테이지 ${stage.no} · ${'★'.repeat(outcome.stars)}${'☆'.repeat(3 - outcome.stars)}`
+                : `스테이지 ${stage.no} · ${goalText(stage.goal)}`
+            }
+            tone={outcome?.won ? 'grape' : 'berry'}
+            score={score}
+            stats={[
+              { label: '목표', value: goalProgress(stage.goal, goalValue) },
+              { label: '남은 이동', value: `${moves}번` },
+              { label: '최대 연쇄', value: `${maxCombo}연쇄` },
+              { label: '플레이 시간', value: formatTime(elapsed) },
+            ]}
+            reward={reward}
+            shareText={
+              outcome?.won
+                ? `🧩 과일 퍼즐 스테이지 ${stage.no} 클리어! ${'★'.repeat(outcome.stars)}`
+                : `🧩 과일 퍼즐 스테이지 ${stage.no}에 도전 중!`
+            }
+            shareUrl={appUrl()}
+            ranked={false}
+            onRetry={() => handleStartGame(stage)}
+            onExit={onExit}
+            extraAction={
+              outcome?.won && stage.no < STAGE_COUNT
+                ? { label: '다음 스테이지 ▶', onClick: () => handleStartGame(STAGES[stage.no]) }
+                : {
+                    label: '스테이지 고르기',
+                    onClick: () => {
+                      setMode('stage');
+                      setGameState('IDLE');
+                    },
+                  }
+            }
+          />
+        </ScreenOverlay>
+      )}
+
+      {gameState === 'OVER' && !stage && (
         <ScreenOverlay>
           <ResultCard
             game="puzzle"
@@ -419,7 +588,7 @@ export const PuzzleGame: React.FC<Props> = ({
             ]}
             reward={reward}
             shareText={`🧩 과일 퍼즐 ${formatNumber(score)}점! 최대 ${maxCombo}연쇄`}
-            onRetry={handleStartGame}
+            onRetry={() => handleStartGame(null)}
             onExit={onExit}
           />
         </ScreenOverlay>

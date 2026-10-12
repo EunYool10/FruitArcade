@@ -1,6 +1,6 @@
 import { GameSettings, GameType, ScreenType } from './types';
 
-export const APP_VERSION = '3.5.0';
+export const APP_VERSION = '3.6.0';
 
 export const DEFAULT_SETTINGS: GameSettings = {
   theme: 'light',
@@ -90,11 +90,12 @@ export const GAMES: Record<GameType, GameMeta> = {
     screen: 'dash',
     tag: 'ACTION',
     desc: '쏟아지는 과일을 피하고 황금 별을 모아 최고 기록에 도전!',
-    how: ['좌우로 움직여 떨어지는 과일을 피해요', '⭐ 황금 별을 먹으면 +50점', '시간이 지날수록 빨라져요'],
+    how: ['좌우로 움직여 떨어지는 과일을 피해요', '⭐ 황금 별을 먹으면 +50점', '🛡️ 🧲 🐢 ✨ 아이템으로 위기를 넘겨요'],
     startHint: '← → 또는 A D 로 이동 · Space 시작',
     tutorial: [
       { emoji: '↔️', title: '좌우로 피하기', text: '마우스나 손가락을 따라 움직이고, 키보드는 ← → 또는 A D 를 써요.' },
       { emoji: '⭐', title: '황금 별은 먹기', text: '과일에 닿으면 끝! 대신 황금 별을 먹으면 보너스 점수를 받아요.' },
+      { emoji: '🛡️', title: '아이템', text: '방패는 과일 한 번을 막고, 자석은 별을 끌어오고, 거북이는 과일을 느리게, 반짝이는 점수를 2배로 만들어요.' },
       { emoji: '🌶️', title: '점점 빨라져요', text: '10초마다 레벨이 올라요. 시작 전에 쉬움 · 보통 · 어려움을 고를 수 있어요.' },
     ],
   },

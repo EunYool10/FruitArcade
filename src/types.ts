@@ -70,6 +70,8 @@ export interface GameResult {
   score: number;
   seconds: number;
   won?: boolean;
+  /** Puzzle stage number: stage rounds skip best scores and the leaderboard */
+  stage?: number;
 }
 
 /** What the app hands back so the result screen can celebrate. */
@@ -170,6 +172,8 @@ export interface DashFallingFruit {
   isHazard: boolean;
   isBonus?: boolean;
   bonusPoints?: number;
+  /** Power-up item instead of a fruit */
+  power?: 'shield' | 'magnet' | 'slow' | 'double';
   rot: number;
   rotSpeed: number;
 }

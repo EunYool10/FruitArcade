@@ -13,6 +13,7 @@ export const HistoryRow: React.FC<{ entry: HistoryEntry }> = ({ entry }) => {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold">
           {meta.name}
+          {entry.stage && <span className="text-grape-ink"> · 스테이지 {entry.stage}{entry.won ? ' 클리어' : ''}</span>}
           {entry.game === 'memory' && entry.won !== undefined && (
             <span className={entry.won ? 'text-melon-ink' : 'text-ink-3'}>{entry.won ? ' · 클리어' : ' · 실패'}</span>
           )}

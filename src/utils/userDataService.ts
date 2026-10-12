@@ -14,6 +14,8 @@ export interface CloudData {
   custom: PlayerProfile;
   /** Shop items bought (item id → purchase date) */
   inventory: Record<string, string>;
+  /** Puzzle stage → best stars */
+  stages: Record<string, number>;
 }
 
 const userRef = (uid: string) => doc(db, 'users', uid);
@@ -39,6 +41,7 @@ export async function loadUserData(user: User): Promise<CloudData> {
       settings: data.settings || {},
       custom: { nickname: data.profile?.nickname || '', avatar: data.profile?.avatar || '', title: data.profile?.title || '', frame: data.profile?.frame || '' },
       inventory: data.inventory && typeof data.inventory === 'object' ? data.inventory : {},
+      stages: data.stages && typeof data.stages === 'object' ? data.stages : {},
     };
   }
 
@@ -48,7 +51,7 @@ export async function loadUserData(user: User): Promise<CloudData> {
     achievements: {},
     settings: {},
   });
-  return { statistics: {}, achievements: {}, settings: {}, custom: { nickname: '', avatar: '', title: '', frame: '' }, inventory: {} };
+  return { statistics: {}, achievements: {}, settings: {}, custom: { nickname: '', avatar: '', title: '', frame: '' }, inventory: {}, stages: {} };
 }
 
 /** Atomically add one finished round to the cloud stats (safe with several devices). */
@@ -89,6 +92,10 @@ export async function saveUserSettings(uid: string, settings: GameSettings): Pro
 
 export async function saveProfileCustom(uid: string, p: PlayerProfile): Promise<void> {
   await updateDoc(userRef(uid), { 'profile.nickname': p.nickname, 'profile.avatar': p.avatar, 'profile.title': p.title, 'profile.frame': p.frame });
+}
+
+export async function saveStages(uid: string, stages: Record<string, number>): Promise<void> {
+  await updateDoc(userRef(uid), { stages });
 }
 
 export async function saveInventory(uid: string, inventory: Record<string, string>): Promise<void> {

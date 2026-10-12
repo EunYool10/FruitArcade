@@ -32,6 +32,19 @@ const FRUIT_TYPES = [
   { emoji: '⭐', color: '#fadb14', r: 15, hazard: false, isBonus: true, bonusPoints: 50 },
 ];
 
+type PowerKind = 'shield' | 'magnet' | 'slow' | 'double';
+
+// Items that fall now and then: frames are 60 per second
+const POWERS: Record<PowerKind, { emoji: string; color: string; label: string; frames: number }> = {
+  shield: { emoji: '🛡️', color: '#2ea9ff', label: '방패', frames: 900 },
+  magnet: { emoji: '🧲', color: '#ff4778', label: '자석', frames: 420 },
+  slow: { emoji: '🐢', color: '#2ec27e', label: '느림', frames: 360 },
+  double: { emoji: '✨', color: '#ffb627', label: '점수 2배', frames: 480 },
+};
+const POWER_KINDS = Object.keys(POWERS) as PowerKind[];
+/** Frames between power-ups (about 13 to 20 seconds) */
+const POWER_GAP = [780, 1200];
+
 const PALETTE = {
   light: {
     skyTop: '#bfe8ff',
@@ -136,6 +149,25 @@ export const FruitDashGame: React.FC<Props> = ({
   const starsRef = useRef(0);
   const timeRef = useRef(0);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Power-ups: frames left on each effect, and frames until the next item falls
+  const effectsRef = useRef<Record<PowerKind, number>>({ shield: 0, magnet: 0, slow: 0, double: 0 });
+  const powerTimerRef = useRef(0);
+  const powersTakenRef = useRef(0);
+  const [powersTaken, setPowersTaken] = useState(0);
+  const dodgedRef = useRef(0);
+  const [dodged, setDodged] = useState(0);
+
+  // Dev server only (compiled out of real builds): lets browser tests hand out power-ups
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    (window as unknown as Record<string, unknown>).__dashTest = {
+      give: (k: PowerKind) => (effectsRef.current[k] = POWERS[k].frames),
+      drop: () => (powerTimerRef.current = 0),
+      effects: () => ({ ...effectsRef.current }),
+      powers: () => powersTakenRef.current,
+      items: () => fruitsRef.current.filter((x) => x.power).map((x) => ({ x: x.x / CW, y: x.y / CH, power: x.power })),
+    };
+  }, []);
 
   // Latest callbacks/values for code running inside the animation loop
   const live = useRef({ onUnlockAchieve, onGameComplete, settings });
@@ -193,6 +225,12 @@ export const FruitDashGame: React.FC<Props> = ({
     starsRef.current = 0;
     timeRef.current = 0;
     crashedRef.current = false;
+    effectsRef.current = { shield: 0, magnet: 0, slow: 0, double: 0 };
+    powerTimerRef.current = POWER_GAP[0];
+    powersTakenRef.current = 0;
+    setPowersTaken(0);
+    dodgedRef.current = 0;
+    setDodged(0);
 
     setScore(0);
     setElapsedTime(0);
@@ -220,6 +258,7 @@ export const FruitDashGame: React.FC<Props> = ({
     playSound('over', s);
     vibrate(HAPTIC.crash, s);
 
+    setDodged(dodgedRef.current);
     if (finalScore >= 500) unlock('dash_dodge_master');
     if (starsRef.current >= 5) unlock('dash_star_collector');
 
@@ -337,6 +376,35 @@ export const FruitDashGame: React.FC<Props> = ({
           });
         }
 
+        // Power-up items on their own timer
+        powerTimerRef.current -= dt;
+        if (powerTimerRef.current <= 0) {
+          const rand = rngRef.current;
+          powerTimerRef.current = POWER_GAP[0] + rand() * (POWER_GAP[1] - POWER_GAP[0]);
+          const kind = POWER_KINDS[Math.floor(rand() * POWER_KINDS.length)];
+          const r = 17;
+          fruitsRef.current.push({
+            id: Math.random().toString(36).slice(2),
+            x: rand() * (CW - r * 2 - 20) + r + 10,
+            y: -r,
+            vx: 0,
+            vy: (2.4 + lvl * 0.2) * diff.speed,
+            r,
+            emoji: POWERS[kind].emoji,
+            color: POWERS[kind].color,
+            isHazard: false,
+            power: kind,
+            rot: 0,
+            rotSpeed: 0,
+          });
+        }
+
+        // Effects wear off
+        const fx = effectsRef.current;
+        for (const k of POWER_KINDS) if (fx[k] > 0) fx[k] = Math.max(0, fx[k] - dt);
+        const pace = fx.slow > 0 ? 0.5 : 1;
+        const gain = fx.double > 0 ? 2 : 1;
+
         // 3. Update fruits position & collisions
         const currentPx = playerXRef.current;
         const currentPy = PLAYER_Y;
@@ -344,9 +412,19 @@ export const FruitDashGame: React.FC<Props> = ({
 
         for (let i = fruitsRef.current.length - 1; i >= 0; i--) {
           const f = fruitsRef.current[i];
-          f.x += f.vx * dt;
-          f.y += f.vy * dt;
+          f.x += f.vx * dt * pace;
+          f.y += f.vy * dt * pace;
           f.rot += f.rotSpeed * dt;
+
+          // Magnet pulls stars (and items) toward the player
+          if (fx.magnet > 0 && (f.isBonus || f.power)) {
+            const mx = currentPx - f.x;
+            const my = currentPy - f.y;
+            if (mx * mx + my * my < 220 * 220) {
+              f.x += mx * 0.09 * dt;
+              f.y += my * 0.09 * dt;
+            }
+          }
 
           // Bounce off side walls
           if (f.x - f.r < 10) {
@@ -361,13 +439,62 @@ export const FruitDashGame: React.FC<Props> = ({
           const dx = f.x - currentPx;
           const dy = f.y - currentPy;
           const distSq = dx * dx + dy * dy;
-          const minDist = f.isBonus ? f.r + pR : f.r * HIT_SCALE + pR * 0.85;
+          const minDist = f.isBonus || f.power ? f.r + pR : f.r * HIT_SCALE + pR * 0.85;
 
           // Collision detected!
           if (distSq < minDist * minDist) {
+            if (f.power) {
+              const def = POWERS[f.power];
+              fx[f.power] = def.frames;
+              powersTakenRef.current += 1;
+              setPowersTaken(powersTakenRef.current);
+              playSound('combo', settings);
+              vibrate(HAPTIC.match, settings);
+              floatsRef.current.push({ x: f.x, y: f.y - 10, text: def.label, life: 0 });
+              for (let p = 0; p < 10; p++) {
+                const angle = Math.random() * Math.PI * 2;
+                particlesRef.current.push({
+                  x: f.x,
+                  y: f.y,
+                  vx: Math.cos(angle) * (2 + Math.random() * 3),
+                  vy: Math.sin(angle) * (2 + Math.random() * 3),
+                  r: 3 + Math.random() * 2,
+                  color: def.color,
+                  alpha: 1,
+                  life: 0,
+                  maxLife: 22,
+                });
+              }
+              fruitsRef.current.splice(i, 1);
+              continue;
+            }
+            if (f.isHazard && fx.shield > 0) {
+              // The shield takes the hit
+              fx.shield = 0;
+              live.current.onUnlockAchieve('dash_shield_save');
+              playSound('merge', settings, { level: 6 });
+              vibrate(HAPTIC.crash, settings);
+              floatsRef.current.push({ x: f.x, y: f.y - 10, text: '막았다!', life: 0 });
+              for (let p = 0; p < 14; p++) {
+                const angle = Math.random() * Math.PI * 2;
+                particlesRef.current.push({
+                  x: f.x,
+                  y: f.y,
+                  vx: Math.cos(angle) * (2.5 + Math.random() * 3),
+                  vy: Math.sin(angle) * (2.5 + Math.random() * 3),
+                  r: 3 + Math.random() * 2.5,
+                  color: POWERS.shield.color,
+                  alpha: 1,
+                  life: 0,
+                  maxLife: 24,
+                });
+              }
+              fruitsRef.current.splice(i, 1);
+              continue;
+            }
             if (f.isBonus) {
               // Collect bonus star
-              const bonus = diff.star;
+              const bonus = diff.star * gain;
               scoreRef.current += bonus;
               starsRef.current += 1;
               setScore(scoreRef.current);
@@ -404,7 +531,8 @@ export const FruitDashGame: React.FC<Props> = ({
           // Landed on the grass: dodged (+2) with a little splash
           if (f.y + f.r * 0.45 >= GROUND_Y) {
             if (f.isHazard) {
-              scoreRef.current += diff.dodge;
+              scoreRef.current += diff.dodge * gain;
+              dodgedRef.current += 1;
               setScore(scoreRef.current);
             }
             for (let p = 0; p < 6; p++) {
@@ -501,6 +629,13 @@ export const FruitDashGame: React.FC<Props> = ({
         ctx.save();
         ctx.translate(f.x, f.y);
 
+        if (f.power) {
+          const pulse = 1 + Math.sin(time * 0.015) * 0.15;
+          ctx.fillStyle = `${f.color}55`;
+          ctx.beginPath();
+          ctx.arc(0, 0, (f.r + 9) * pulse, 0, Math.PI * 2);
+          ctx.fill();
+        }
         if (f.isBonus) {
           const pulse = 1 + Math.sin(time * 0.012) * 0.12;
           ctx.fillStyle = 'rgba(255, 210, 63, 0.35)';
@@ -636,6 +771,58 @@ export const FruitDashGame: React.FC<Props> = ({
       }
       ctx.restore();
 
+      // Shield bubble and magnet ring around the player
+      const fxNow = effectsRef.current;
+      if (fxNow.shield > 0) {
+        ctx.save();
+        ctx.globalAlpha = fxNow.shield < 120 ? 0.35 + 0.35 * Math.abs(Math.sin(time * 0.02)) : 0.55;
+        ctx.fillStyle = 'rgba(46, 169, 255, 0.25)';
+        ctx.strokeStyle = '#2ea9ff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(px, PLAYER_Y, PLAYER_R + 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      if (fxNow.magnet > 0) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 71, 120, 0.45)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 7]);
+        ctx.lineDashOffset = -time * 0.03;
+        ctx.beginPath();
+        ctx.arc(px, PLAYER_Y, 60 + Math.sin(time * 0.01) * 6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Active effects, top right: icon with a draining bar
+      let badgeX = CW - 14;
+      for (const k of POWER_KINDS) {
+        const left = fxNow[k];
+        if (left <= 0) continue;
+        const def = POWERS[k];
+        badgeX -= 40;
+        ctx.save();
+        ctx.fillStyle = dark ? 'rgba(20, 15, 48, 0.75)' : 'rgba(255, 255, 255, 0.85)';
+        ctx.strokeStyle = P.outline;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(badgeX, 12, 36, 36, 10);
+        else ctx.rect(badgeX, 12, 36, 36);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#000';
+        ctx.font = `20px ${EMOJI_FONT}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(def.emoji, badgeX + 18, 29);
+        ctx.fillStyle = def.color;
+        ctx.fillRect(badgeX + 4, 41, 28 * Math.min(1, left / def.frames), 4);
+        ctx.restore();
+      }
+
       // 7. "+50" popups
       for (const t of floatsRef.current) {
         ctx.save();
@@ -669,7 +856,6 @@ export const FruitDashGame: React.FC<Props> = ({
   };
 
   const diffInfo = DASH_DIFFICULTY[gameState === 'IDLE' ? difficulty : diffRef.current];
-  const dodged = Math.max(0, Math.round((score - bonusStarsCollected * diffInfo.star) / diffInfo.dodge));
 
   return (
     <>
@@ -738,6 +924,14 @@ export const FruitDashGame: React.FC<Props> = ({
                 </span>
               </li>
               <li className="flex items-center gap-2.5">
+                <span className="sticker h-8 w-8 shrink-0 bg-grape-soft text-base shadow-none" aria-hidden="true">
+                  🛡️
+                </span>
+                <span>
+                  아이템: <b>방패</b> 한 번 막기 · <b>자석</b> 별 끌어오기 · <b>느림</b> · <b>점수 2배</b>
+                </span>
+              </li>
+              <li className="flex items-center gap-2.5">
                 <span className="sticker h-8 w-8 shrink-0 bg-soda-soft text-base shadow-none" aria-hidden="true">
                   ⏫
                 </span>
@@ -775,7 +969,7 @@ export const FruitDashGame: React.FC<Props> = ({
               { label: '생존 시간', value: formatTime(elapsedTime) },
               { label: '도달 레벨', value: `Lv.${level}` },
               { label: '피한 과일', value: `${dodged}개` },
-              { label: '황금 별', value: `${bonusStarsCollected}개` },
+              { label: '황금 별 · 아이템', value: `${bonusStarsCollected}개 · ${powersTaken}개` },
             ]}
             reward={reward}
             shareText={`🏃 FRUIT DASH(${diffInfo.label}) ${formatNumber(score)}점! ${elapsedTime}초 동안 살아남았어요`}

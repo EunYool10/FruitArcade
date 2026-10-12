@@ -9,6 +9,15 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.6.0',
+    title: '대시 아이템 · 퍼즐 스테이지',
+    items: [
+      ['🛡️ 대시 아이템', '방패(한 번 막기), 자석(별 끌어오기), 느림, 점수 2배 아이템이 가끔 떨어져요.'],
+      ['🧩 퍼즐 스테이지', '목표가 있는 스테이지 30개! 점수 · 과일 모으기 · 특수 과일 · 연쇄 목표를 남은 이동이 많을수록 별 3개로 깨요.'],
+      ['🏅 새 업적', '위기 탈출, 스테이지 탐험가, 퍼즐 정복자'],
+    ],
+  },
+  {
     version: '3.5.0',
     title: '코인 · 상점',
     items: [

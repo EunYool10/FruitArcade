@@ -37,6 +37,7 @@ import { RankContext } from './components/RankContext';
 import { RankResult, kstWeek, publicName } from './utils/ranking';
 import { earnedTitles, wornTitle } from './utils/titles';
 import { josa } from './utils/format';
+import { StageProgress, clearStageProgress, loadStageProgress, mergeStageProgress, saveStageProgress } from './components/PuzzleGame/stages';
 import { DayStats, clearDays, loadDays, recordDay } from './utils/dailyStats';
 import { Challenge, challengeLink, takeChallengeFromUrl } from './utils/challenge';
 import { randomSeed } from './utils/rng';
@@ -148,6 +149,8 @@ export default function App() {
   const [profile, setProfile] = useState<PlayerProfile>(loadProfile);
   const [days, setDays] = useState<DayStats>(loadDays);
   const [inventory, setInventory] = useState<Inventory>(loadInventory);
+  const [stageProgress, setStageProgress] = useState<StageProgress>(loadStageProgress);
+  const stageProgressRef = useRef(stageProgress);
   const inventoryRef = useRef(inventory);
   const daysRef = useRef(days);
 
@@ -316,6 +319,18 @@ export default function App() {
     }
   };
 
+  // ───────── puzzle stages ─────────
+
+  const handleStageClear = (no: number, stars: number) => {
+    const next = mergeStageProgress(stageProgressRef.current, { [no]: stars });
+    if (next[no] === stageProgressRef.current[no]) return;
+    stageProgressRef.current = next;
+    setStageProgress(next);
+    saveStageProgress(next);
+    const u = userRef.current;
+    if (u) cloudWrite((api) => api.saveStages(u.uid, next)).catch(() => {});
+  };
+
   // ───────── shop ─────────
 
   const buyItem = (item: ShopItem) => {
@@ -372,6 +387,15 @@ export default function App() {
           mergedProfile.frame !== cloud.custom.frame
         ) {
           cloudWrite((api) => api.saveProfileCustom(u.uid, mergedProfile)).catch(() => {});
+        }
+
+        // Puzzle stages: best stars from both sides
+        const mergedStages = mergeStageProgress(stageProgressRef.current, cloud.stages);
+        stageProgressRef.current = mergedStages;
+        setStageProgress(mergedStages);
+        saveStageProgress(mergedStages);
+        if (Object.entries(mergedStages).some(([k, v]) => (cloud.stages[k] || 0) < v)) {
+          cloudWrite((api) => api.saveStages(u.uid, mergedStages)).catch(() => {});
         }
 
         // Shop items: union of both sides
@@ -495,6 +519,9 @@ export default function App() {
     clearInventory();
     inventoryRef.current = {};
     setInventory({});
+    clearStageProgress();
+    stageProgressRef.current = {};
+    setStageProgress({});
     setProfile(blank);
     saveProfile(blank);
     historyRef.current = [];
@@ -555,7 +582,7 @@ export default function App() {
       const { state: nextStreak, extended } = bumpStreak(loadStreak());
       setStreak(nextStreak);
 
-      const newBest = result.score > 0 && result.score > prevBest;
+      const newBest = !result.stage && result.score > 0 && result.score > prevBest;
       const coins = coinsFor(result, { newBest, stamp: stampEarned, firstToday: extended });
       const next = applyResult(prev, result, stampEarned, nextStreak.count, coins);
       commitStats(next);
@@ -582,7 +609,7 @@ export default function App() {
       // Leaderboards: post the round, then look up today's and the all-time place
       const request = ++rankRequest.current;
       const rankScore = Math.max(0, Math.round(result.score));
-      if (u && rankScore > 0) {
+      if (u && rankScore > 0 && !result.stage) {
         const game = result.game;
         const who = rankWhoRef.current;
         setRank({ game, status: 'pending' });
@@ -894,6 +921,8 @@ export default function App() {
                     onHelp={() => setTutorialGame('puzzle')}
                     seed={activeChallenge?.g === 'puzzle' ? activeChallenge.s : undefined}
                     onRoundSeed={(seed: string) => (roundSeeds.current.puzzle = seed)}
+                    stageProgress={stageProgress}
+                    onStageClear={handleStageClear}
                   />
                 )}
               </Suspense>

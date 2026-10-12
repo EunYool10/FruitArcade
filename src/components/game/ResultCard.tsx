@@ -28,6 +28,8 @@ interface ResultCardProps {
   extraAction?: { label: string; onClick: () => void };
   /** Replaces the plain app link in shared text (e.g. a challenge link) */
   shareUrl?: string;
+  /** false for rounds that never reach the leaderboard (puzzle stages) */
+  ranked?: boolean;
 }
 
 export const ResultCard: React.FC<ResultCardProps> = ({
@@ -44,6 +46,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
   onExit,
   extraAction,
   shareUrl,
+  ranked = true,
 }) => {
   const titleId = useId();
   const player = usePlayer();
@@ -126,7 +129,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
         )}
       </div>
 
-      {reward && (rank.signedIn ? myRank && myRank.status !== 'error' : score > 0) && (
+      {ranked && reward && (rank.signedIn ? myRank && myRank.status !== 'error' : score > 0) && (
         <button
           type="button"
           className="mt-2 inline-flex items-center gap-1.5 rounded-full border-2 border-line bg-mango-soft px-3 py-1 text-sm font-bold hover:bg-mango"

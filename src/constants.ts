@@ -97,15 +97,33 @@ export const GAMES: Record<GameType, GameMeta> = {
       { emoji: '🌶️', title: '점점 빨라져요', text: '10초마다 레벨이 올라요. 시작 전에 쉬움 · 보통 · 어려움을 고를 수 있어요.' },
     ],
   },
+  puzzle: {
+    id: 'puzzle',
+    name: '과일 퍼즐',
+    short: '퍼즐',
+    emoji: '🧩',
+    tone: 'grape',
+    screen: 'puzzle',
+    tag: 'NEW',
+    desc: '같은 과일 3개를 한 줄로 맞춰 터뜨리세요. 30번 안에 최고 점수!',
+    how: ['옆 과일과 자리를 바꿔 3개를 맞춰요', '4개는 줄 폭탄, 5개는 큰 폭탄이 돼요', '연쇄로 터지면 점수가 껑충!'],
+    startHint: '밀거나 두 칸을 차례로 눌러 바꿔요',
+    tutorial: [
+      { emoji: '👉🍓', title: '자리 바꾸기', text: '과일을 옆으로 밀거나, 두 과일을 차례로 눌러 자리를 바꿔요. 같은 과일 3개가 한 줄이 되면 터져요.' },
+      { emoji: '💣', title: '특수 과일', text: '4개를 맞추면 한 줄을 지우는 줄 폭탄, 5개나 ㄱ자로 맞추면 주변을 지우는 큰 폭탄이 생겨요.' },
+      { emoji: '🔥', title: '연쇄와 이동 횟수', text: '떨어진 과일이 또 맞춰지면 연쇄 보너스! 이동은 30번이에요. 막히면 💡 힌트를 눌러요.' },
+    ],
+  },
 };
 
-export const GAME_ORDER: GameType[] = ['memory', 'suika', 'dash'];
+export const GAME_ORDER: GameType[] = ['memory', 'suika', 'dash', 'puzzle'];
 
 export const SCREEN_GAME: Partial<Record<ScreenType, GameType>> = {
   'memory-setup': 'memory',
   'memory-play': 'memory',
   suika: 'suika',
   dash: 'dash',
+  puzzle: 'puzzle',
 };
 
-export const PLAY_SCREENS: ScreenType[] = ['memory-play', 'suika', 'dash'];
+export const PLAY_SCREENS: ScreenType[] = ['memory-play', 'suika', 'dash', 'puzzle'];

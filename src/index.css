@@ -81,6 +81,8 @@
   --animate-sheet-up: sheet-up 0.3s cubic-bezier(0.2, 0.9, 0.25, 1) both;
   --animate-shake: shake 0.45s ease-in-out;
   --animate-bounce-in: bounce-in 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  --animate-tile-drop: tile-drop 0.3s cubic-bezier(0.3, 0.9, 0.4, 1.15) both;
+  --animate-wiggle: wiggle 0.7s ease-in-out infinite;
 
   @keyframes float {
     0%, 100% { transform: translateY(0) rotate(var(--tilt, 0deg)); }
@@ -104,6 +106,15 @@
     40% { transform: translateX(6px) rotate(2deg); }
     60% { transform: translateX(-4px); }
     80% { transform: translateX(4px); }
+  }
+  @keyframes tile-drop {
+    from { transform: translateY(var(--from, -100%)); }
+    to { transform: none; }
+  }
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-9deg) scale(1.06); }
+    75% { transform: rotate(9deg) scale(1.06); }
   }
   @keyframes bounce-in {
     0% { opacity: 0; transform: scale(0.3) rotate(-12deg); }

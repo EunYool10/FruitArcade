@@ -96,7 +96,7 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
         <h2 id="games-title" className="mb-3 font-display text-2xl">
           게임 고르기
         </h2>
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {GAME_ORDER.map((g) => (
             <GameCard key={g} meta={GAMES[g]} best={stats[bestKey(g)]} plays={stats[playsKey(g)]} onPlay={() => onPlay(g)} />
           ))}

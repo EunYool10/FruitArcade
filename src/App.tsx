@@ -61,6 +61,7 @@ import { TrackName, music } from './utils/music';
 const MemoryGameBoard = lazy(() =>
   import('./components/MemoryGame/MemoryGameBoard').then((m) => ({ default: m.MemoryGameBoard }))
 );
+const PuzzleGame = lazy(() => import('./components/PuzzleGame/PuzzleGame').then((m) => ({ default: m.PuzzleGame })));
 const SuikaGame = lazy(() => import('./components/SuikaGame/SuikaGame').then((m) => ({ default: m.SuikaGame })));
 const FruitDashGame = lazy(() =>
   import('./components/FruitDashGame/FruitDashGame').then((m) => ({ default: m.FruitDashGame }))
@@ -197,7 +198,7 @@ export default function App() {
 
   useEffect(() => {
     const track: TrackName =
-      screen === 'memory-play' ? 'memory' : screen === 'suika' ? 'suika' : screen === 'dash' ? 'dash' : 'lobby';
+      screen === 'memory-play' ? 'memory' : screen === 'suika' ? 'suika' : screen === 'dash' ? 'dash' : screen === 'puzzle' ? 'puzzle' : 'lobby';
     music.play(track);
   }, [screen]);
 
@@ -622,6 +623,15 @@ export default function App() {
                     best={stats.dashHighScore}
                     onChangeDifficulty={(d) => updateSettings({ ...settings, dashDifficulty: d })}
                     onHelp={() => setTutorialGame('dash')}
+                  />
+                )}
+                {screen === 'puzzle' && (
+                  <PuzzleGame
+                    key={gameKey}
+                    {...gameCommon}
+                    autoStart={autoStart}
+                    best={stats.puzzleHighScore}
+                    onHelp={() => setTutorialGame('puzzle')}
                   />
                 )}
               </Suspense>

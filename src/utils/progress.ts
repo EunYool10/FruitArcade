@@ -1,12 +1,12 @@
 import { GameResult, GameType, HistoryEntry, UserStatistics } from '../types';
 
-export const GAME_TYPES: GameType[] = ['memory', 'suika', 'dash'];
+export const GAME_TYPES: GameType[] = ['memory', 'suika', 'dash', 'puzzle'];
 
 const STATS_KEY = 'fruit_arcade_stats';
 const HISTORY_KEY = 'fruit_arcade_history';
 const HISTORY_LIMIT = 30;
 // v2 kept per-game best scores under these keys
-const LEGACY_BEST_KEYS: Record<GameType, string> = { memory: 'memory_hs', suika: 'suika_hs', dash: 'dash_hs' };
+const LEGACY_BEST_KEYS: Record<GameType, string> = { memory: 'memory_hs', suika: 'suika_hs', dash: 'dash_hs', puzzle: 'puzzle_hs' };
 
 export const EMPTY_STATS: UserStatistics = {
   totalPlayCount: 0,
@@ -14,9 +14,11 @@ export const EMPTY_STATS: UserStatistics = {
   memoryPlayCount: 0,
   suikaPlayCount: 0,
   dashPlayCount: 0,
+  puzzlePlayCount: 0,
   memoryHighScore: 0,
   suikaHighScore: 0,
   dashHighScore: 0,
+  puzzleHighScore: 0,
   missionStamps: 0,
   bestStreak: 0,
   lastPlayedAt: '',

@@ -25,6 +25,12 @@
             },
             "lastLoginAt": {
               "type": "string"
+            },
+            "nickname": {
+              "type": "string"
+            },
+            "avatar": {
+              "type": "string"
             }
           },
           "required": [
@@ -49,6 +55,9 @@
             "dashPlayCount": {
               "type": "number"
             },
+            "puzzlePlayCount": {
+              "type": "number"
+            },
             "memoryHighScore": {
               "type": "number"
             },
@@ -58,7 +67,13 @@
             "dashHighScore": {
               "type": "number"
             },
+            "puzzleHighScore": {
+              "type": "number"
+            },
             "missionStamps": {
+              "type": "number"
+            },
+            "bestStreak": {
               "type": "number"
             },
             "lastPlayedAt": {

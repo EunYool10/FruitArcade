@@ -1,4 +1,5 @@
 import { GameResult, GameType } from '../types';
+import { seededRandom } from './rng';
 
 export type MissionKind = 'play' | 'win' | 'score' | 'survive' | 'time';
 
@@ -38,6 +39,11 @@ const POOLS: Record<GameType | 'any', Mission[]> = {
     { id: 'dash-survive-45', game: 'dash', kind: 'survive', target: 45, icon: '🌪️', text: 'FRUIT DASH 45초 버티기' },
     { id: 'dash-score-150', game: 'dash', kind: 'score', target: 150, icon: '⭐', text: 'FRUIT DASH 150점 이상' },
   ],
+  puzzle: [
+    { id: 'puzzle-play-2', game: 'puzzle', kind: 'play', target: 2, icon: '🧩', text: '과일 퍼즐 2판 하기' },
+    { id: 'puzzle-score-1500', game: 'puzzle', kind: 'score', target: 1500, icon: '🍋', text: '과일 퍼즐 1,500점 이상' },
+    { id: 'puzzle-score-3000', game: 'puzzle', kind: 'score', target: 3000, icon: '💣', text: '과일 퍼즐 3,000점 이상' },
+  ],
   any: [
     { id: 'any-play-5', kind: 'play', target: 5, icon: '🎮', text: '아무 게임이나 5판 하기' },
     { id: 'any-time-300', kind: 'time', target: 300, icon: '⌛', text: '오늘 5분 이상 플레이' },
@@ -48,26 +54,17 @@ export function todayKey(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// Small seeded PRNG (mulberry32) so everyone gets the same missions on the same day
-function seededRandom(seed: string): () => number {
-  let a = 2166136261;
-  for (let i = 0; i < seed.length; i++) {
-    a ^= seed.charCodeAt(i);
-    a = Math.imul(a, 16777619);
-  }
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/** One mission per game, sometimes swapping one for an "any game" mission. */
+/** One mission for three of the four games, sometimes swapping one for an "any game" mission. */
 export function missionsFor(date: string): Mission[] {
   const rand = seededRandom(date);
   const pick = <T,>(list: T[]) => list[Math.floor(rand() * list.length)];
-  const list = (['memory', 'suika', 'dash'] as GameType[]).map((g) => pick(POOLS[g]));
+  const games: GameType[] = ['memory', 'suika', 'dash', 'puzzle'];
+  for (let i = games.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [games[i], games[j]] = [games[j], games[i]];
+  }
+  games.length = 3;
+  const list = games.map((g) => pick(POOLS[g]));
   if (rand() < 0.4) list[Math.floor(rand() * list.length)] = pick(POOLS.any);
   return list;
 }

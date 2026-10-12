@@ -27,6 +27,9 @@ export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
   // Suika Achievements
   { id: 'suika_watermelon', title: '전설의 수박 탄생', desc: '수박 게임에서 거대 수박(🍉) 합성 성공', icon: '🍉', game: 'suika' },
   { id: 'suika_10000', title: '수박 부자', desc: '수박 게임에서 10,000점 이상 기록', icon: '🤑', game: 'suika' },
+  { id: 'puzzle_combo_5', title: '연쇄 반응', desc: '과일 퍼즐에서 한 번에 5연쇄 터뜨리기', icon: '⛓️', game: 'puzzle' },
+  { id: 'puzzle_bomb', title: '과일 폭탄', desc: '과일 퍼즐에서 큰 폭탄 만들기', icon: '💣', game: 'puzzle' },
+  { id: 'puzzle_3000', title: '퍼즐 고수', desc: '과일 퍼즐에서 3,000점 이상 기록', icon: '🧩', game: 'puzzle' },
   { id: 'dash_hard_30', title: '매운맛 생존자', desc: 'FRUIT DASH 어려움 난이도에서 30초 이상 생존', icon: '🌶️', game: 'dash' },
 
   // Progress

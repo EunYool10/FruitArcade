@@ -179,7 +179,7 @@ export const ProfileModal: React.FC<Props> = ({
             ))}
           </dl>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {GAME_ORDER.map((g) => (
               <div key={g} className={`rounded-xl border-2 border-line px-2 py-2 text-center ${TONE[GAMES[g].tone].soft}`}>
                 <p className="text-lg" aria-hidden="true">

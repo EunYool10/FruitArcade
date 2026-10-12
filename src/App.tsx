@@ -78,6 +78,7 @@ const FruitDashGame = lazy(() =>
 const loadAuthApi = () => import('./authApi');
 type AuthApi = Awaited<ReturnType<typeof loadAuthApi>>;
 const cloudApi = () => import('./utils/userDataService');
+type CloudApi = Awaited<ReturnType<typeof cloudApi>>;
 const rankApi = () => import('./utils/leaderboardService');
 
 const SETTINGS_KEY = 'fruit_arcade_settings';
@@ -124,6 +125,8 @@ export default function App() {
   const [memoryCfg, setMemoryCfg] = useState<MemoryConfig>(() => readJSON(MEMORY_CFG_KEY, DEFAULT_MEMORY));
 
   const [user, setUser] = useState<User | null>(null);
+  /** On the admin list (config/admins); the server rules check this again for every admin action */
+  const [isAdmin, setIsAdmin] = useState(false);
   const userRef = useRef<User | null>(null);
   userRef.current = user;
 
@@ -175,11 +178,19 @@ export default function App() {
   };
   /** How the player appears on public boards (nickname only, never the Google name) */
   const rankWhoRef = useRef({ name: '', avatar: '' });
-  rankWhoRef.current = { name: publicName(profile.nickname, user?.uid ?? ''), avatar: profile.avatar || level.emoji };
+  rankWhoRef.current = { name: publicName(profile.nickname, user?.uid ?? '', isAdmin), avatar: profile.avatar || level.emoji };
 
   // ───────── helpers ─────────
 
   const bumpAchievements = () => setAchieveTick((t) => t + 1);
+
+  // Writes to the user's cloud doc run one after another, so the stats transaction never collides with them
+  const cloudQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const cloudWrite = useCallback(<T,>(op: (api: CloudApi) => Promise<T>): Promise<T> => {
+    const run = cloudQueue.current.then(() => cloudApi().then(op));
+    cloudQueue.current = run.catch(() => {});
+    return run;
+  }, []);
 
   const commitStats = useCallback((next: UserStatistics) => {
     statsRef.current = next;
@@ -246,7 +257,7 @@ export default function App() {
     setSettings(next);
     writeJSON(SETTINGS_KEY, next);
     const u = userRef.current;
-    if (u) cloudApi().then((api) => api.saveUserSettings(u.uid, next)).catch(() => {});
+    if (u) cloudWrite((api) => api.saveUserSettings(u.uid, next)).catch(() => {});
   };
 
   // The top-bar button mutes or unmutes effects and music together
@@ -260,7 +271,7 @@ export default function App() {
     setProfile(next);
     saveProfile(next);
     const u = userRef.current;
-    if (u) cloudApi().then((api) => api.saveProfileCustom(u.uid, next)).catch(() => {});
+    if (u) cloudWrite((api) => api.saveProfileCustom(u.uid, next)).catch(() => {});
   };
 
   // ───────── auth & cloud sync ─────────
@@ -269,17 +280,13 @@ export default function App() {
   const syncCloud = useCallback(
     async (u: User) => {
       try {
-        const api = await cloudApi();
-        const cloud = await api.loadUserData(u);
-
-        // Plain writes finish before the stats transaction so they never collide with it
-        const writes: Promise<unknown>[] = [];
+        const cloud = await cloudWrite((api) => api.loadUserData(u));
 
         // Settings: values saved in the cloud win, local ones fill the gaps
         const nextSettings = { ...settingsRef.current, ...cloud.settings };
         setSettings(nextSettings);
         writeJSON(SETTINGS_KEY, nextSettings);
-        if (Object.keys(cloud.settings).length === 0) writes.push(api.saveUserSettings(u.uid, nextSettings));
+        if (Object.keys(cloud.settings).length === 0) cloudWrite((api) => api.saveUserSettings(u.uid, nextSettings)).catch(() => {});
 
         // Nickname / avatar: the cloud wins when set, otherwise keep this device's choice
         const local = loadProfile();
@@ -290,19 +297,17 @@ export default function App() {
         setProfile(mergedProfile);
         saveProfile(mergedProfile);
         if (mergedProfile.nickname !== cloud.custom.nickname || mergedProfile.avatar !== cloud.custom.avatar) {
-          writes.push(api.saveProfileCustom(u.uid, mergedProfile));
+          cloudWrite((api) => api.saveProfileCustom(u.uid, mergedProfile)).catch(() => {});
         }
 
         // Achievements: union of both sides
         const { merged, cloudOutdated } = mergeAchievements(cloud.achievements);
-        if (cloudOutdated) writes.push(api.saveAchievements(u.uid, merged));
+        if (cloudOutdated) cloudWrite((api) => api.saveAchievements(u.uid, merged)).catch(() => {});
         bumpAchievements();
 
         // Stats: field-wise max, pushed back up atomically
         commitStats(mergeStats(statsRef.current, cloud.statistics));
-        await Promise.allSettled(writes);
-        api
-          .pushMergedStats(u.uid, statsRef.current)
+        cloudWrite((api) => api.pushMergedStats(u.uid, statsRef.current))
           .then((s) => commitStats(mergeStats(statsRef.current, s)))
           .catch((err) => console.warn('Failed to merge stats:', err));
       } catch (err) {
@@ -310,7 +315,7 @@ export default function App() {
         pushToast({ icon: '⚠️', title: '클라우드 동기화에 실패했어요', tone: 'berry' });
       }
     },
-    [commitStats, pushToast]
+    [commitStats, pushToast, cloudWrite]
   );
 
   // Kept once loaded so the Google popup opens straight from the click (no await before it)
@@ -324,7 +329,15 @@ export default function App() {
       authApiRef.current = authApi;
       unsubscribe = authApi.onAuthStateChanged(authApi.auth, (u) => {
         setUser(u);
-        if (u) syncCloud(u);
+        setIsAdmin(false);
+        if (!u) return;
+        syncCloud(u);
+        rankApi()
+          .then((api) => api.checkAdmin())
+          .then((ok) => {
+            if (authApi.auth.currentUser?.uid === u.uid) setIsAdmin(ok);
+          })
+          .catch(() => {});
       });
     });
     return () => {
@@ -402,11 +415,11 @@ export default function App() {
         roundAchRef.current.push(`${ach.icon} ${ach.title}`);
         if (pendingAchRef.current.length === 1) setTimeout(flushAchievementToasts, 60);
         const u = userRef.current;
-        if (u) cloudApi().then((api) => api.saveAchievements(u.uid, getUnlockedAchievements())).catch(() => {});
+        if (u) cloudWrite((api) => api.saveAchievements(u.uid, getUnlockedAchievements())).catch(() => {});
         bumpAchievements();
       });
     },
-    [flushAchievementToasts]
+    [flushAchievementToasts, cloudWrite]
   );
 
   const handleRoundChange = useCallback((active: boolean) => {
@@ -440,8 +453,7 @@ export default function App() {
 
       const u = userRef.current;
       if (u) {
-        cloudApi()
-          .then((api) => api.recordCloudResult(u.uid, result, stampEarned, nextStreak.count))
+        cloudWrite((api) => api.recordCloudResult(u.uid, result, stampEarned, nextStreak.count))
           .then((cloud) => commitStats(mergeStats(statsRef.current, cloud)))
           .catch((err) => console.warn('Failed to save game result:', err));
       }
@@ -495,7 +507,7 @@ export default function App() {
         challenge,
       };
     },
-    [commitStats, handleUnlockAchieve]
+    [commitStats, handleUnlockAchieve, cloudWrite]
   );
 
   // ───────── navigation ─────────
@@ -628,7 +640,7 @@ export default function App() {
     resetAchievements();
     bumpAchievements();
     const u = userRef.current;
-    if (u) cloudApi().then((api) => api.saveAchievements(u.uid, {})).catch(() => {});
+    if (u) cloudWrite((api) => api.saveAchievements(u.uid, {})).catch(() => {});
   };
 
   const resetAllRecords = () => {
@@ -637,7 +649,7 @@ export default function App() {
     historyRef.current = [];
     setHistory([]);
     const u = userRef.current;
-    if (u) cloudApi().then((api) => api.resetCloudStats(u.uid)).catch(() => {});
+    if (u) cloudWrite((api) => api.resetCloudStats(u.uid)).catch(() => {});
   };
 
   // ───────── render ─────────
@@ -767,6 +779,7 @@ export default function App() {
         isOpen={modal === 'profile'}
         onClose={() => setModal(null)}
         user={user}
+        isAdmin={isAdmin}
         player={player}
         profile={profile}
         onUpdateProfile={updateProfile}
@@ -793,6 +806,7 @@ export default function App() {
         onClose={() => setModal(null)}
         game={rankGame}
         uid={user?.uid ?? null}
+        isAdmin={isAdmin}
         onLogin={() => setModal('profile')}
       />
       <PatchNotesModal isOpen={modal === 'patch'} onClose={() => setModal(null)} />

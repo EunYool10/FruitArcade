@@ -1,4 +1,5 @@
 import { GameType } from '../types';
+import { isReservedNickname } from './profile';
 
 // Leaderboard ids and labels. Kept free of Firebase so the lobby can import it.
 
@@ -36,8 +37,16 @@ export interface RankResult {
   all?: number;
 }
 
-/** Name shown on public boards: the in-app nickname, never the Google account name */
-export const publicName = (nickname: string, uid: string) => nickname || `과일러 ${uid.slice(0, 4).toUpperCase()}`;
+/**
+ * Name shown on public boards: the in-app nickname, never the Google account name.
+ * Without a usable nickname it's "과일러 0421" (digits only, so it can never spell a staff word).
+ */
+export function publicName(nickname: string, uid: string, allowReserved = false): string {
+  if (nickname && (allowReserved || !isReservedNickname(nickname))) return nickname;
+  let tag = 7;
+  for (const c of uid) tag = (tag * 31 + c.charCodeAt(0)) % 10000;
+  return `과일러 ${String(tag).padStart(4, '0')}`;
+}
 
 /** Firestore error → what the leaderboard window should say */
 export function rankErrorKind(err: unknown): 'denied' | 'offline' | 'other' {

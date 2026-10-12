@@ -1,6 +1,7 @@
 import {
   DocumentData,
   collection,
+  deleteDoc,
   doc,
   getCountFromServer,
   getDoc,
@@ -11,9 +12,11 @@ import {
   runTransaction,
   serverTimestamp,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firestore';
 import { GameType } from '../types';
+import { GAME_ORDER } from '../constants';
 import { RANK_PERIODS, RankEntry, RankPeriod, boardId } from './ranking';
 
 // Public boards: leaderboards/{game}_{period}/scores/{uid}, one best score per player
@@ -65,4 +68,47 @@ export async function topScores(game: GameType, period: RankPeriod, n = 50): Pro
 export async function myEntry(game: GameType, period: RankPeriod, uid: string): Promise<RankEntry | null> {
   const snap = await getDoc(doc(scores(boardId(game, period)), uid));
   return snap.exists() ? toEntry(uid, snap.data()) : null;
+}
+
+// ───────── admin (firestore.rules only lets accounts on config/admins do these) ─────────
+
+/** True when the signed-in Google account is on the admin list (only admins can read it) */
+export async function checkAdmin(): Promise<boolean> {
+  try {
+    return (await getDoc(doc(db, 'config', 'admins'))).exists();
+  } catch {
+    return false;
+  }
+}
+
+/** Admin: remove one entry from a board */
+export function deleteEntry(game: GameType, period: RankPeriod, uid: string): Promise<void> {
+  return deleteDoc(doc(scores(boardId(game, period)), uid));
+}
+
+/** Admin: block a player from the leaderboards and clear their entries on every current board */
+export async function banPlayer(adminUid: string, uid: string, name: string): Promise<void> {
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'bans', uid), { by: adminUid, name: name.slice(0, 40) || '???', at: serverTimestamp() });
+  const now = Date.now();
+  for (const g of GAME_ORDER) for (const p of RANK_PERIODS) batch.delete(doc(scores(boardId(g, p, now)), uid));
+  await batch.commit();
+}
+
+export interface BanEntry {
+  uid: string;
+  name: string;
+  at: number;
+}
+
+export async function listBans(): Promise<BanEntry[]> {
+  const snap = await getDocs(query(collection(db, 'bans'), orderBy('at', 'desc'), limit(50)));
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return { uid: d.id, name: typeof data.name === 'string' ? data.name : '???', at: data.at?.toMillis?.() ?? 0 };
+  });
+}
+
+export function unban(uid: string): Promise<void> {
+  return deleteDoc(doc(db, 'bans', uid));
 }

@@ -30,3 +30,13 @@ export function saveProfile(p: PlayerProfile): void {
 }
 
 export const cleanNickname = (s: string) => s.replace(/\s+/g, ' ').trim().slice(0, NICKNAME_MAX);
+
+// Names that would pass as staff: "Tester", "QA", "관리자", "운영자" ...
+// firestore.rules (isReservedName) checks the same list for leaderboard names.
+const RESERVED_ANYWHERE = /(tester|admin|moderator|developer|official|operator|gamemaster|staff|관리자|운영자|운영진|운영팀|개발자|개발팀|테스터|테스트|공식계정|스태프|큐에이|지엠)/;
+const RESERVED_WORD = /(^|[^a-z])(qa|gm|dev|mod|test)([^a-z]|$)/;
+
+export function isReservedNickname(name: string): boolean {
+  const lowered = name.toLowerCase();
+  return RESERVED_ANYWHERE.test(lowered.replace(/[^a-z가-힣]/g, '')) || RESERVED_WORD.test(lowered);
+}

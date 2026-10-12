@@ -8,7 +8,7 @@ import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
 import { formatNumber, formatTime } from '../../utils/format';
 import { Modal } from '../ui/Modal';
 import { Avatar, PlayerView } from '../ui/Avatar';
-import { AVATARS, NICKNAME_MAX, PlayerProfile, cleanNickname } from '../../utils/profile';
+import { AVATARS, NICKNAME_MAX, PlayerProfile, cleanNickname, isReservedNickname } from '../../utils/profile';
 import { Meter } from '../ui/Meter';
 import { ConfirmButton } from '../ui/ConfirmButton';
 
@@ -16,6 +16,8 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
+  /** Admins may use staff-like nicknames and get a badge */
+  isAdmin?: boolean;
   player: PlayerView;
   profile: PlayerProfile;
   onUpdateProfile: (p: PlayerProfile) => void;
@@ -45,6 +47,7 @@ export const ProfileModal: React.FC<Props> = ({
   isOpen,
   onClose,
   user,
+  isAdmin = false,
   player,
   profile,
   onUpdateProfile,
@@ -57,13 +60,24 @@ export const ProfileModal: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nickDraft, setNickDraft] = useState(profile.nickname);
+  const [nickError, setNickError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen) setNickDraft(profile.nickname);
+    if (isOpen) {
+      setNickDraft(profile.nickname);
+      setNickError(null);
+    }
   }, [isOpen, profile.nickname]);
 
   const commitNickname = () => {
     const nickname = cleanNickname(nickDraft);
+    // Names like "Tester", "QA", "관리자" would look like staff, so only admins may use them
+    if (nickname && !isAdmin && isReservedNickname(nickname)) {
+      setNickError('Tester, QA, 관리자처럼 운영진으로 보이는 이름은 쓸 수 없어요.');
+      setNickDraft(profile.nickname);
+      return;
+    }
+    setNickError(null);
     setNickDraft(nickname);
     if (nickname !== profile.nickname) onUpdateProfile({ ...profile, nickname });
   };
@@ -119,7 +133,17 @@ export const ProfileModal: React.FC<Props> = ({
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
               className="mt-0.5 h-10 w-full select-text rounded-xl border-2 border-line bg-surface px-3 font-display text-lg outline-none focus:border-soda"
             />
-            {user?.email && <p className="mt-1 truncate text-xs text-ink-3">{user.email}</p>}
+            {nickError && (
+              <p role="alert" className="mt-1 text-xs font-bold text-berry-ink">
+                {nickError}
+              </p>
+            )}
+            {user?.email && (
+              <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-ink-3">
+                {isAdmin && <span className="chip h-5 shrink-0 bg-grape-deep px-2 text-[10px] text-white">🛡️ 관리자</span>}
+                <span className="truncate">{user.email}</span>
+              </p>
+            )}
             {user && <p className="mt-0.5 text-[11px] text-ink-3">🏆 랭킹에는 닉네임과 아바타만 보여요 (다음 기록부터 반영)</p>}
           </div>
         </div>

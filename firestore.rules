@@ -4,27 +4,39 @@ rules_version = '2';
 // Assumed Data Model
 // ===============================================================
 //
-// Collection: users
+// Collection: users  (private: holds the Google email)
 // Document ID: Firebase Auth uid
-// Fields (private to the owner — contains the Google email):
-//   - profile: map (uid, displayName, email, photoURL, createdAt, lastLoginAt, nickname, avatar)
-//   - statistics: map - play counts / high scores per game
-//   - achievements: map - unlocked achievement ids
-//   - settings: map - game settings
+// Fields:
+//   - profile: map (required)
+//       uid (== document id, immutable), email (string|null, immutable),
+//       createdAt (string, immutable), displayName, photoURL, lastLoginAt,
+//       nickname, avatar (strings or null, size-limited). No other keys.
+//   - statistics: map (<= 40 keys) - play counts / high scores (older versions left extra keys)
+//   - achievements: map (<= 100 keys) - unlocked achievement id -> date
+//   - settings: map (<= 40 keys) - game settings
+//   No other top-level fields and no subcollections.
 //
-// Collection: leaderboards/{boardId}/scores
+// Collection: leaderboards/{boardId}/scores  (public)
 // Board ID: <game>_<period>
 //   - game:   memory | suika | dash | puzzle
-//   - period: all            → all-time board
-//             d<dayIndex>    → daily board, days since 1970-01-01 in KST (UTC+9)
-//             w<weekIndex>   → weekly board, Monday-start weeks since 1969-12-29 in KST
+//   - period: all            -> all-time board
+//             d<dayIndex>    -> daily board, days since 1970-01-01 in KST (UTC+9)
+//             w<weekIndex>   -> weekly board, Monday-start weeks since 1969-12-29 in KST
 // Document ID: Firebase Auth uid (one entry per player per board)
-// Fields (public — no email or Google profile data):
-//   - uid: string (required, == document id == request.auth.uid, immutable)
-//   - name: string (required, 1–40 chars) - in-app nickname shown on the board
-//   - avatar: string (required, 1–16 chars) - fruit emoji
-//   - score: int (required, 0 ≤ score ≤ per-game cap, may only go up)
-//   - at: timestamp (required, == request.time) - server time of the last best
+// Fields (public, no email or Google profile data):
+//   - uid: string (== document id == request.auth.uid, immutable)
+//   - name: string (1-40 chars, no control characters, may not pose as staff
+//           like "Tester", "QA", "관리자" unless written by an admin)
+//   - avatar: string (1-16 chars)
+//   - score: int (0 <= score <= per-game cap, may only go up, at most every 3 s)
+//   - at: timestamp (== request.time)
+//
+// Collection: bans  (moderation)
+// Document ID: uid of a player blocked from the leaderboards
+// Fields: by (admin uid), name (1-40 chars), at (timestamp == request.time)
+//
+// Document: config/admins  (edited only in the Firebase console)
+// Fields: emails - list of Google account emails with admin rights
 //
 // ===============================================================
 
@@ -53,6 +65,17 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.firebase.sign_in_provider == 'google.com';
     }
 
+    // Admins are listed by verified Google email in config/admins, so no email lives in this public file
+    function isAdmin() {
+      return isGoogleUser()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails;
+    }
+
+    function isBanned() {
+      return exists(/databases/$(database)/documents/bans/$(request.auth.uid));
+    }
+
     function hasOnlyAllowedFields(fields) {
       return request.resource.data.keys().hasOnly(fields);
     }
@@ -61,8 +84,25 @@ service cloud.firestore {
       return request.resource.data.keys().hasAll(fields);
     }
 
-    function validStringLength(value, minLen, maxLen) {
-      return value is string && value.size() >= minLen && value.size() <= maxLen;
+    // A string of a limited length without control characters (newlines, etc.)
+    function isPlainText(value, minLen, maxLen) {
+      return value is string
+        && value.size() >= minLen
+        && value.size() <= maxLen
+        && !value.matches('(?s).*[\\x00-\\x1f\\x7f].*');
+    }
+
+    // Missing, null, or a string up to maxLen
+    function isOptionalText(m, key, maxLen) {
+      return !(key in m) || m[key] == null || (m[key] is string && m[key].size() <= maxLen);
+    }
+
+    // Names that would pass as staff: "Tester", "QA", "관리자", "운영자" ...
+    // Same list as isReservedNickname in src/utils/profile.ts
+    function isReservedName(name) {
+      let lowered = name.lower();
+      return lowered.replace('[^a-z가-힣]', '').matches('.*(tester|admin|moderator|developer|official|operator|gamemaster|staff|관리자|운영자|운영진|운영팀|개발자|개발팀|테스터|테스트|공식계정|스태프|큐에이|지엠).*')
+        || lowered.matches('(?s)(.*[^a-z])?(qa|gm|dev|mod|test)([^a-z].*)?');
     }
 
     // ───────── leaderboard period helpers (KST, UTC+9) ─────────
@@ -101,25 +141,65 @@ service cloud.firestore {
         && isOpenPeriod(boardId.split('_')[1]);
     }
 
-    // Sanity caps well above anything reachable in normal play
+    // Caps well above anything reachable in normal play
     function maxScore(game) {
-      return {'memory': 2000, 'suika': 500000, 'dash': 500000, 'puzzle': 500000}[game];
+      return {'memory': 2000, 'suika': 100000, 'dash': 100000, 'puzzle': 100000}[game];
     }
 
     // ===============================================================
     // Domain Validators (used on both create and update)
     // ===============================================================
 
+    function isValidProfile(userId, p) {
+      return p is map
+        && p.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'createdAt', 'lastLoginAt', 'nickname', 'avatar'])
+        && p.get('uid', '') == userId
+        && isOptionalText(p, 'displayName', 100)
+        && isOptionalText(p, 'email', 320)
+        && isOptionalText(p, 'photoURL', 2048)
+        && isOptionalText(p, 'createdAt', 40)
+        && isOptionalText(p, 'lastLoginAt', 40)
+        && isOptionalText(p, 'nickname', 40)
+        && isOptionalText(p, 'avatar', 16);
+    }
+
+    function isValidUserDoc(userId, data) {
+      return data.keys().hasOnly(['profile', 'statistics', 'achievements', 'settings'])
+        && 'profile' in data
+        && isValidProfile(userId, data.profile)
+        && (!('statistics' in data) || (data.statistics is map && data.statistics.size() <= 40))
+        && (!('achievements' in data) || (data.achievements is map && data.achievements.size() <= 100))
+        && (!('settings' in data) || (data.settings is map && data.settings.size() <= 40));
+    }
+
+    // Who the account belongs to can't be rewritten after sign-up
+    function profileIdentityUnchanged() {
+      let before = resource.data.get('profile', {});
+      let after = request.resource.data.profile;
+      return after.get('uid', null) == before.get('uid', null)
+        && after.get('email', null) == before.get('email', null)
+        && after.get('createdAt', null) == before.get('createdAt', null);
+    }
+
     function isValidScoreEntry(boardId, uid, data) {
       return hasRequiredFields(['uid', 'name', 'avatar', 'score', 'at'])
         && hasOnlyAllowedFields(['uid', 'name', 'avatar', 'score', 'at'])
         && data.uid == uid
         && data.uid == request.auth.uid
-        && validStringLength(data.name, 1, 40)
-        && validStringLength(data.avatar, 1, 16)
+        && isPlainText(data.name, 1, 40)
+        && isPlainText(data.avatar, 1, 16)
+        && (!isReservedName(data.name) || isAdmin())
         && data.score is int
         && data.score >= 0
         && data.score <= maxScore(boardGame(boardId))
+        && data.at == request.time;
+    }
+
+    function isValidBan(data) {
+      return data.keys().hasAll(['by', 'name', 'at'])
+        && data.keys().hasOnly(['by', 'name', 'at'])
+        && data.by == request.auth.uid
+        && isPlainText(data.name, 1, 40)
         && data.at == request.time;
     }
 
@@ -127,36 +207,54 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
-    // User personal game data: profile, statistics, achievements, settings
-    // Enforces that authenticated users can only read and write documents within their specific /users/{userId}/ path
+    // User personal game data: profile, statistics, achievements, settings (owner only)
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
-
-      // Recursive match for any subcollections under user document
-      match /{allPaths=**} {
-        allow read, write: if isOwner(userId);
-      }
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserDoc(userId, request.resource.data);
+      allow update: if isOwner(userId)
+        && isValidUserDoc(userId, request.resource.data)
+        && profileIdentityUnchanged();
+      allow delete: if isOwner(userId);
     }
 
     // Public leaderboards: anyone can view, players can only post their own best
     match /leaderboards/{boardId}/scores/{uid} {
-      // Public by design — entries hold only a nickname, emoji avatar and score
+      // Public by design: entries hold only a nickname, emoji avatar and score
       allow read: if true;
 
       allow create: if isGoogleUser()
         && isOwner(uid)
         && isValidBoardId(boardId)
-        && isValidScoreEntry(boardId, uid, request.resource.data);
+        && isValidScoreEntry(boardId, uid, request.resource.data)
+        && !isBanned();
 
-      // Only a higher score replaces the entry; uid can never change
+      // Only a higher score replaces the entry, at most every 3 seconds; uid can never change
       allow update: if isGoogleUser()
         && isOwner(uid)
         && resource.data.uid == uid
         && isValidBoardId(boardId)
         && isValidScoreEntry(boardId, uid, request.resource.data)
-        && request.resource.data.score > resource.data.score;
+        && request.resource.data.score > resource.data.score
+        && request.time > resource.data.at + duration.value(3, 's')
+        && !isBanned();
 
-      allow delete: if false;
+      // Moderation: admins remove cheated scores or bad names
+      allow delete: if isAdmin();
+    }
+
+    // Players blocked from the leaderboards (admins manage, players can see their own)
+    match /bans/{uid} {
+      allow get: if isOwner(uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin() && isValidId(uid) && isValidBan(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Admin list: admins can see that they are admins; nobody edits it from the app
+    match /config/admins {
+      allow get: if isGoogleUser()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in resource.data.emails;
     }
 
     // Default deny all other paths to prevent unauthorized access

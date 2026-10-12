@@ -2,6 +2,7 @@ import React from 'react';
 import { Play } from 'lucide-react';
 import { GameMeta, TONE } from '../../constants';
 import { formatNumber } from '../../utils/format';
+import { useChallenge } from '../ChallengeContext';
 
 interface StartCardProps {
   meta: GameMeta;
@@ -12,7 +13,10 @@ interface StartCardProps {
   onHelp?: () => void;
 }
 
-export const StartCard: React.FC<StartCardProps> = ({ meta, best, onStart, children, onHelp }) => (
+export const StartCard: React.FC<StartCardProps> = ({ meta, best, onStart, children, onHelp }) => {
+  const { active } = useChallenge();
+  const challenge = active?.g === meta.id ? active : null;
+  return (
   <div className="panel w-full max-w-[300px] p-5 text-center animate-pop-in">
     <span className={`sticker h-20 w-20 -rotate-6 text-5xl ${TONE[meta.tone].bg}`} aria-hidden="true">
       {meta.emoji}
@@ -28,6 +32,11 @@ export const StartCard: React.FC<StartCardProps> = ({ meta, best, onStart, child
         </li>
       ))}
     </ol>
+    {challenge && (
+      <p className="mt-3 rounded-xl border-2 border-line bg-berry-soft px-3 py-2 text-sm font-bold">
+        🥊 {challenge.n}님의 <span className="font-display">{formatNumber(challenge.sc)}점</span>을 넘어 보세요!
+      </p>
+    )}
     <p className="mt-3 text-xs font-bold text-ink-3">🏆 최고 기록 {best > 0 ? `${formatNumber(best)}점` : '없음'}</p>
     {children && <div className="mt-3">{children}</div>}
     <button type="button" className={`btn btn-lg mt-4 w-full ${TONE[meta.tone].btn}`} onClick={onStart}>
@@ -40,4 +49,5 @@ export const StartCard: React.FC<StartCardProps> = ({ meta, best, onStart, child
       </button>
     )}
   </div>
-);
+  );
+};

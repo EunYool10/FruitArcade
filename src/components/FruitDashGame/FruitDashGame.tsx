@@ -5,6 +5,7 @@ import { GAMES } from '../../constants';
 import { playSound } from '../../utils/audio';
 import { HAPTIC, vibrate } from '../../utils/haptics';
 import { celebrate } from '../../utils/fx';
+import { Rng, randomSeed, seededRandom } from '../../utils/rng';
 import { formatNumber, formatTime } from '../../utils/format';
 import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
 import { StartCard } from '../game/StartCard';
@@ -82,6 +83,11 @@ interface Props {
   onExit: () => void;
   onChangeDifficulty: (d: DashDifficulty) => void;
   onHelp?: () => void;
+  /** Same seed → same falling pattern (friend challenges) */
+  seed?: string;
+  onRoundSeed?: (seed: string) => void;
+  /** A challenge fixes the difficulty */
+  lockedDifficulty?: DashDifficulty;
 }
 
 export const FruitDashGame: React.FC<Props> = ({
@@ -96,7 +102,12 @@ export const FruitDashGame: React.FC<Props> = ({
   onExit,
   onChangeDifficulty,
   onHelp,
+  seed,
+  onRoundSeed,
+  lockedDifficulty,
 }) => {
+  const rngRef = useRef<Rng>(Math.random);
+  const difficulty = lockedDifficulty ?? settings.dashDifficulty;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [gameState, setGameState] = useState<'IDLE' | 'PLAYING' | 'OVER'>('IDLE');
@@ -112,7 +123,7 @@ export const FruitDashGame: React.FC<Props> = ({
   const playerXRef = useRef<number>(CW / 2);
   const targetXRef = useRef<number>(CW / 2);
   const facingRef = useRef(1);
-  const diffRef = useRef<DashDifficulty>(settings.dashDifficulty);
+  const diffRef = useRef<DashDifficulty>(difficulty);
   const levelRef = useRef(1);
   const floatsRef = useRef<{ x: number; y: number; text: string; life: number }[]>([]);
   const crashedRef = useRef(false);
@@ -166,7 +177,10 @@ export const FruitDashGame: React.FC<Props> = ({
   }, [gameState, isPaused]);
 
   const handleStartGame = () => {
-    diffRef.current = settings.dashDifficulty;
+    diffRef.current = difficulty;
+    const roundSeed = seed ?? randomSeed();
+    rngRef.current = seededRandom(roundSeed);
+    onRoundSeed?.(roundSeed);
     fruitsRef.current = [];
     particlesRef.current = [];
     playerXRef.current = CW / 2;
@@ -297,20 +311,21 @@ export const FruitDashGame: React.FC<Props> = ({
           spawnTimerRef.current = 0;
 
           // 12% chance for bonus golden star
-          const isStar = Math.random() < 0.12;
+          const rand = rngRef.current;
+          const isStar = rand() < 0.12;
           const chosenDef = isStar
             ? FRUIT_TYPES[FRUIT_TYPES.length - 1]
-            : FRUIT_TYPES[Math.floor(Math.random() * (FRUIT_TYPES.length - 1))];
+            : FRUIT_TYPES[Math.floor(rand() * (FRUIT_TYPES.length - 1))];
 
           const speedBase = (2.6 + lvl * 0.38) * diff.speed;
-          const spawnX = Math.random() * (CW - chosenDef.r * 2 - 20) + chosenDef.r + 10;
+          const spawnX = rand() * (CW - chosenDef.r * 2 - 20) + chosenDef.r + 10;
 
           fruitsRef.current.push({
             id: Math.random().toString(36).slice(2),
             x: spawnX,
             y: -chosenDef.r,
-            vx: (Math.random() - 0.5) * (lvl > 3 ? 1.4 : 0.4),
-            vy: speedBase + Math.random() * 1.5,
+            vx: (rand() - 0.5) * (lvl > 3 ? 1.4 : 0.4),
+            vy: speedBase + rand() * 1.5,
             r: chosenDef.r,
             emoji: chosenDef.emoji,
             color: chosenDef.color,
@@ -318,7 +333,7 @@ export const FruitDashGame: React.FC<Props> = ({
             isBonus: chosenDef.isBonus,
             bonusPoints: chosenDef.bonusPoints,
             rot: 0,
-            rotSpeed: (Math.random() - 0.5) * 0.08,
+            rotSpeed: (rand() - 0.5) * 0.08,
           });
         }
 
@@ -653,7 +668,7 @@ export const FruitDashGame: React.FC<Props> = ({
     targetXRef.current = (clientX - rect.left) * (CW / rect.width);
   };
 
-  const diffInfo = DASH_DIFFICULTY[gameState === 'IDLE' ? settings.dashDifficulty : diffRef.current];
+  const diffInfo = DASH_DIFFICULTY[gameState === 'IDLE' ? difficulty : diffRef.current];
   const dodged = Math.max(0, Math.round((score - bonusStarsCollected * diffInfo.star) / diffInfo.dodge));
 
   return (
@@ -688,8 +703,8 @@ export const FruitDashGame: React.FC<Props> = ({
                     <Segmented<DashDifficulty>
                       ariaLabel="난이도"
                       columns={3}
-                      value={settings.dashDifficulty}
-                      onChange={onChangeDifficulty}
+                      value={difficulty}
+                      onChange={(d) => !lockedDifficulty && onChangeDifficulty(d)}
                       options={(Object.keys(DASH_DIFFICULTY) as DashDifficulty[]).map((d) => ({
                         value: d,
                         label: DASH_DIFFICULTY[d].label,

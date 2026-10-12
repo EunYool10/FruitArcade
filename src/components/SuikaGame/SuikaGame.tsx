@@ -5,6 +5,7 @@ import { GAMES } from '../../constants';
 import { playSound } from '../../utils/audio';
 import { HAPTIC, vibrate } from '../../utils/haptics';
 import { celebrate } from '../../utils/fx';
+import { Rng, randomSeed, seededRandom } from '../../utils/rng';
 import { formatNumber, formatTime } from '../../utils/format';
 import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
 import { StartCard } from '../game/StartCard';
@@ -109,6 +110,9 @@ interface Props {
   onRoundChange: (active: boolean) => void;
   onExit: () => void;
   onHelp?: () => void;
+  /** Same seed → same fruit order (friend challenges) */
+  seed?: string;
+  onRoundSeed?: (seed: string) => void;
 }
 
 export const SuikaGame: React.FC<Props> = ({
@@ -122,7 +126,10 @@ export const SuikaGame: React.FC<Props> = ({
   onRoundChange,
   onExit,
   onHelp,
+  seed,
+  onRoundSeed,
 }) => {
+  const rngRef = useRef<Rng>(Math.random);
   // Kept in a ref so the physics loop is not restarted when the callback identity changes
   const onUnlockRef = useRef(onUnlockAchieve);
   onUnlockRef.current = onUnlockAchieve;
@@ -181,7 +188,7 @@ export const SuikaGame: React.FC<Props> = ({
   );
 
   const randLevel = () => {
-    let roll = Math.random();
+    let roll = rngRef.current();
     for (let lv = 0; lv < DROP_WEIGHTS.length; lv++) {
       roll -= DROP_WEIGHTS[lv];
       if (roll < 0) return lv;
@@ -205,6 +212,9 @@ export const SuikaGame: React.FC<Props> = ({
 
   // Start / Restart game
   const handleStartGame = () => {
+    const roundSeed = seed ?? randomSeed();
+    rngRef.current = seededRandom(roundSeed);
+    onRoundSeed?.(roundSeed);
     bodiesRef.current = [];
     particlesRef.current = [];
     floatTextsRef.current = [];

@@ -33,6 +33,7 @@ export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
   { id: 'dash_hard_30', title: '매운맛 생존자', desc: 'FRUIT DASH 어려움 난이도에서 30초 이상 생존', icon: '🌶️', game: 'dash' },
 
   // Progress
+  { id: 'challenge_win', title: '도전 성공', desc: '친구의 도전장에서 이기기', icon: '🥊', game: 'all' },
   { id: 'level_5', title: '어엿한 딸기', desc: '레벨 5 달성', icon: '🍓', game: 'all' },
   { id: 'level_10', title: '과일 장인', desc: '레벨 10 달성', icon: '🍑', game: 'all' },
   { id: 'stamp_1', title: '첫 도장', desc: '오늘의 미션 3개를 모두 깨고 도장 받기', icon: '🏅', game: 'all' },

@@ -79,6 +79,8 @@ export interface GameReward {
   /** Achievements unlocked during this round, e.g. "🔥 콤보 폭발 폭주족" */
   achievements: string[];
   stamp: boolean;
+  /** Outcome when this round was a friend challenge */
+  challenge: { name: string; target: number; won: boolean } | null;
 }
 
 export interface HistoryEntry extends GameResult {

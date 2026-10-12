@@ -12,7 +12,7 @@ import {
   ScreenType,
   UserStatistics,
 } from './types';
-import { DEFAULT_SETTINGS, GAMES, PLAY_SCREENS } from './constants';
+import { DEFAULT_SETTINGS, GAMES, PLAY_SCREENS, SCREEN_GAME } from './constants';
 import { Navbar, NavTarget } from './components/Navbar';
 import { Lobby, LobbyTarget } from './components/lobby/Lobby';
 import { MemorySetup } from './components/MemoryGame/MemorySetup';
@@ -26,6 +26,10 @@ import { RecordsModal } from './components/Modals/RecordsModal';
 import { Toast, ToastHost } from './components/ui/Toast';
 import { PlayerView } from './components/ui/Avatar';
 import { PlayerContext } from './components/PlayerContext';
+import { ChallengeContext } from './components/ChallengeContext';
+import { ChallengeModal } from './components/Modals/ChallengeModal';
+import { Challenge, challengeLink, takeChallengeFromUrl } from './utils/challenge';
+import { randomSeed } from './utils/rng';
 import { Tutorial, markSeen, tutorialSeen } from './components/game/Tutorial';
 import {
   countUnlocked,
@@ -126,6 +130,14 @@ export default function App() {
   const [daily, setDaily] = useState<DailyState>(loadDaily);
   const [streak, setStreak] = useState<StreakState>(loadStreak);
   const [profile, setProfile] = useState<PlayerProfile>(loadProfile);
+
+  // Friend challenges: one arriving by link, and the one being played
+  const [incomingChallenge, setIncomingChallenge] = useState<Challenge | null>(null);
+  const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
+  const activeChallengeRef = useRef<Challenge | null>(null);
+  activeChallengeRef.current = activeChallenge;
+  /** Seed of the last round of each game, for share links */
+  const roundSeeds = useRef<Partial<Record<GameType, string>>>({});
   const [, setAchieveTick] = useState(0);
 
   const [modal, setModal] = useState<ModalId | null>(null);
@@ -189,6 +201,16 @@ export default function App() {
     document.documentElement.dataset.theme = resolvedTheme;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolvedTheme === 'dark' ? '#151020' : '#fff5e6');
   }, [resolvedTheme]);
+
+  useEffect(() => {
+    const check = () => {
+      const c = takeChallengeFromUrl();
+      if (c) setIncomingChallenge(c);
+    };
+    check();
+    window.addEventListener('hashchange', check);
+    return () => window.removeEventListener('hashchange', check);
+  }, []);
 
   // ───────── music ─────────
 
@@ -408,6 +430,11 @@ export default function App() {
           .catch((err) => console.warn('Failed to save game result:', err));
       }
 
+      // Friend challenge outcome
+      const ch = activeChallengeRef.current;
+      const challenge = ch && ch.g === result.game ? { name: ch.n, target: ch.sc, won: result.score > ch.sc } : null;
+      if (challenge?.won) handleUnlockAchieve('challenge_win');
+
       // Progress achievements (shown on this round's result card)
       const unlockIf = (cond: boolean, id: string) => cond && handleUnlockAchieve(id);
       unlockIf(after.level >= 5, 'level_5');
@@ -428,6 +455,7 @@ export default function App() {
         streak: extended && nextStreak.count > 1 ? nextStreak.count : null,
         achievements: [...roundAchRef.current],
         stamp: stampEarned,
+        challenge,
       };
     },
     [commitStats, handleUnlockAchieve]
@@ -436,6 +464,7 @@ export default function App() {
   // ───────── navigation ─────────
 
   const goTo = (next: ScreenType) => {
+    if (next === 'lobby' || next === 'memory-setup') setActiveChallenge(null);
     setIsPaused(false);
     setRoundActive(false);
     setScreen(next);
@@ -457,10 +486,43 @@ export default function App() {
 
   /** quick = skip the start card ("한 판 더") */
   const playGame = (g: GameType, quick = false) => {
+    setActiveChallenge(null);
     setAutoStart(quick);
     setGameKey((k) => k + 1);
     goTo(GAMES[g].screen);
     if (!tutorialSeen(g)) setTutorialGame(g);
+  };
+
+  const acceptChallenge = () => {
+    const c = incomingChallenge;
+    if (!c) return;
+    setIncomingChallenge(null);
+    setModal(null);
+    setAutoStart(false);
+    setGameKey((k) => k + 1);
+    if (c.g === 'memory') {
+      if (c.m) setMemoryCfg(c.m);
+      setScreen('memory-play');
+    } else {
+      setScreen(GAMES[c.g].screen);
+    }
+    setIsPaused(false);
+    setRoundActive(false);
+    setActiveChallenge(c);
+    if (!tutorialSeen(c.g)) setTutorialGame(c.g);
+  };
+
+  const challengeApi = {
+    active: activeChallenge,
+    linkFor: (game: GameType, score: number) =>
+      challengeLink({
+        g: game,
+        s: roundSeeds.current[game] ?? randomSeed(),
+        sc: Math.round(score),
+        n: player.name,
+        m: game === 'memory' ? memoryCfg : undefined,
+        d: game === 'dash' ? (activeChallenge?.d ?? settings.dashDifficulty) : undefined,
+      }),
   };
 
   const openModal = (id: ModalId) => {
@@ -480,7 +542,9 @@ export default function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (tutorialGame) {
+      if (incomingChallenge) {
+        setIncomingChallenge(null);
+      } else if (tutorialGame) {
         markSeen(tutorialGame);
         setTutorialGame(null);
       } else if (modal) setModal(null);
@@ -488,7 +552,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [modal, isPlaying, tutorialGame]);
+  }, [modal, isPlaying, tutorialGame, incomingChallenge]);
 
   // Pause when the tab is hidden mid-round
   useEffect(() => {
@@ -542,6 +606,7 @@ export default function App() {
 
   return (
     <PlayerContext.Provider value={player}>
+    <ChallengeContext.Provider value={challengeApi}>
     <div className="flex h-dvh w-full flex-col overflow-hidden">
       <ToastHost toast={toasts[0]} />
 
@@ -551,6 +616,7 @@ export default function App() {
         settings={settings}
         player={player}
         level={level}
+        challenge={activeChallenge && SCREEN_GAME[screen] === activeChallenge.g ? activeChallenge : null}
         onHome={() => goTo(screen === 'memory-play' ? 'memory-setup' : 'lobby')}
         onPause={() => setIsPaused(true)}
         onToggleSound={handleToggleSound}
@@ -600,6 +666,8 @@ export default function App() {
                     {...gameCommon}
                     onRetry={restartGame}
                     onChangeSetup={() => goTo('memory-setup')}
+                    seed={activeChallenge?.g === 'memory' ? activeChallenge.s : undefined}
+                    onRoundSeed={(seed: string) => (roundSeeds.current.memory = seed)}
                   />
                 )}
 
@@ -611,6 +679,8 @@ export default function App() {
                     dark={resolvedTheme === 'dark'}
                     best={stats.suikaHighScore}
                     onHelp={() => setTutorialGame('suika')}
+                    seed={activeChallenge?.g === 'suika' ? activeChallenge.s : undefined}
+                    onRoundSeed={(seed: string) => (roundSeeds.current.suika = seed)}
                   />
                 )}
 
@@ -623,6 +693,9 @@ export default function App() {
                     best={stats.dashHighScore}
                     onChangeDifficulty={(d) => updateSettings({ ...settings, dashDifficulty: d })}
                     onHelp={() => setTutorialGame('dash')}
+                    seed={activeChallenge?.g === 'dash' ? activeChallenge.s : undefined}
+                    onRoundSeed={(seed: string) => (roundSeeds.current.dash = seed)}
+                    lockedDifficulty={activeChallenge?.g === 'dash' ? activeChallenge.d : undefined}
                   />
                 )}
                 {screen === 'puzzle' && (
@@ -632,6 +705,8 @@ export default function App() {
                     autoStart={autoStart}
                     best={stats.puzzleHighScore}
                     onHelp={() => setTutorialGame('puzzle')}
+                    seed={activeChallenge?.g === 'puzzle' ? activeChallenge.s : undefined}
+                    onRoundSeed={(seed: string) => (roundSeeds.current.puzzle = seed)}
                   />
                 )}
               </Suspense>
@@ -667,6 +742,7 @@ export default function App() {
       />
       <PatchNotesModal isOpen={modal === 'patch'} onClose={() => setModal(null)} />
       <CreditsModal isOpen={modal === 'credits'} onClose={() => setModal(null)} />
+      <ChallengeModal challenge={incomingChallenge} onAccept={acceptChallenge} onDismiss={() => setIncomingChallenge(null)} />
       <Tutorial game={tutorialGame} onClose={() => setTutorialGame(null)} />
       <PauseModal
         isOpen={isPaused && isPlaying && modal === null && tutorialGame === null}
@@ -675,6 +751,7 @@ export default function App() {
         onExit={() => goTo('lobby')}
       />
     </div>
+    </ChallengeContext.Provider>
     </PlayerContext.Provider>
   );
 }

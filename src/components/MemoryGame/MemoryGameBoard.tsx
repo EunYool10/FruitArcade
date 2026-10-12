@@ -5,6 +5,7 @@ import { Tone } from '../../constants';
 import { playSound } from '../../utils/audio';
 import { HAPTIC, vibrate } from '../../utils/haptics';
 import { celebrate } from '../../utils/fx';
+import { Rng, randomSeed, seededRandom } from '../../utils/rng';
 import { formatTime } from '../../utils/format';
 import { GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
 import { ResultCard } from '../game/ResultCard';
@@ -41,10 +42,10 @@ export const MODE_LABEL: Record<MemoryMode, string> = {
   '8-joker': '8×8 조커',
 };
 
-function shuffle<T>(arr: T[]): T[] {
+function shuffle<T>(arr: T[], rand: Rng = Math.random): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rand() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
@@ -62,6 +63,9 @@ interface Props {
   onRetry: () => void;
   onChangeSetup: () => void;
   onExit: () => void;
+  /** Same seed → same card layout (friend challenges) */
+  seed?: string;
+  onRoundSeed?: (seed: string) => void;
 }
 
 export const MemoryGameBoard: React.FC<Props> = ({
@@ -76,6 +80,8 @@ export const MemoryGameBoard: React.FC<Props> = ({
   onRetry,
   onChangeSetup,
   onExit,
+  seed,
+  onRoundSeed,
 }) => {
   const [cards, setCards] = useState<MemoryCard[]>([]);
   const [flippedCards, setFlippedCards] = useState<number[]>([]);
@@ -147,20 +153,23 @@ export const MemoryGameBoard: React.FC<Props> = ({
 
   // Init game board
   useEffect(() => {
+    const roundSeed = seed ?? randomSeed();
+    onRoundSeed?.(roundSeed);
+    const rand = seededRandom(roundSeed);
     let cardValues: string[] = [];
     if (mode === '8-joker') {
       const selectedFruits = FRUITS.slice(0, 28);
       const jokers = Array(8).fill('🃏');
-      cardValues = shuffle([...selectedFruits, ...selectedFruits, ...jokers]);
+      cardValues = shuffle([...selectedFruits, ...selectedFruits, ...jokers], rand);
     } else if (mode === '8') {
       const selectedFruits = FRUITS.slice(0, 30);
-      const base = shuffle([...selectedFruits, ...selectedFruits]);
-      cardValues = shuffle([...base, '🃏HINT', '🃏HINT', '💡FLASH', '💡FLASH']);
+      const base = shuffle([...selectedFruits, ...selectedFruits], rand);
+      cardValues = shuffle([...base, '🃏HINT', '🃏HINT', '💡FLASH', '💡FLASH'], rand);
     } else {
       const num = parseInt(mode);
       const total = (num * num) / 2;
       const selectedFruits = FRUITS.slice(0, total);
-      cardValues = shuffle([...selectedFruits, ...selectedFruits]);
+      cardValues = shuffle([...selectedFruits, ...selectedFruits], rand);
     }
 
     const initialCards: MemoryCard[] = cardValues.map((val, idx) => ({

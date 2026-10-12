@@ -5,6 +5,7 @@ import { GAMES, TONE, Tone } from '../../constants';
 import { formatNumber } from '../../utils/format';
 import { downloadBlob, renderResultImage } from '../../utils/shareImage';
 import { usePlayer } from '../PlayerContext';
+import { useChallenge } from '../ChallengeContext';
 
 const TONE_HEX: Record<Tone, string> = { berry: '#ff4778', melon: '#2ec27e', mango: '#ffb627', grape: '#7a5cff', soda: '#2ea9ff' };
 
@@ -45,6 +46,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
 }) => {
   const titleId = useId();
   const player = usePlayer();
+  const { linkFor } = useChallenge();
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState<'share' | 'image' | null>(null);
 
@@ -69,7 +71,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
 
   // Phones: share sheet with the score image; elsewhere: copy the text
   const share = async () => {
-    const text = `${shareText}\n${shareUrl ?? appUrl()}`;
+    const text = `${shareText}\n같은 판으로 내 점수를 넘어 봐! 🥊\n${shareUrl ?? linkFor(game, score)}`;
     if (navigator.share) {
       setBusy('share');
       const blob = await makeImage();
@@ -101,6 +103,14 @@ export const ResultCard: React.FC<ResultCardProps> = ({
         {title}
       </h2>
       {subtitle && <p className="text-sm text-ink-2">{subtitle}</p>}
+
+      {reward?.challenge && (
+        <p className={`mt-3 rounded-2xl border-2 border-line px-3 py-2 text-sm font-bold ${reward.challenge.won ? 'bg-melon-soft' : 'bg-berry-soft'}`}>
+          {reward.challenge.won
+            ? `🥊 도전 성공! ${reward.challenge.name}님의 ${formatNumber(reward.challenge.target)}점을 넘었어요`
+            : `😤 아깝다! ${reward.challenge.name}님까지 ${formatNumber(reward.challenge.target - score + 1)}점 남았어요`}
+        </p>
+      )}
 
       <div className="well relative mt-4 px-4 py-3">
         <p className="text-xs font-bold text-ink-3">최종 점수</p>

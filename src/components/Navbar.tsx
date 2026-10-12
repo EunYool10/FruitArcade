@@ -4,6 +4,8 @@ import { GameSettings, ScreenType } from '../types';
 import { GAMES, SCREEN_GAME } from '../constants';
 import { LevelInfo } from '../utils/progress';
 import { Avatar, PlayerView } from './ui/Avatar';
+import { Challenge } from '../utils/challenge';
+import { formatNumber } from '../utils/format';
 
 export type NavTarget = 'settings' | 'profile' | 'achievements' | 'records';
 
@@ -13,6 +15,8 @@ interface Props {
   settings: GameSettings;
   player: PlayerView;
   level: LevelInfo;
+  /** Friend challenge being played on this screen */
+  challenge: Challenge | null;
   onHome: () => void;
   onPause: () => void;
   onToggleSound: () => void;
@@ -27,6 +31,7 @@ export const Navbar: React.FC<Props> = ({
   settings,
   player,
   level,
+  challenge,
   onHome,
   onPause,
   onToggleSound,
@@ -62,7 +67,13 @@ export const Navbar: React.FC<Props> = ({
                 <span className="text-2xl" aria-hidden="true">
                   {GAMES[game].emoji}
                 </span>
-                <span className="truncate font-display text-lg">{GAMES[game].name}</span>
+                {challenge ? (
+                  <span className="chip truncate bg-berry-soft text-sm">
+                    🥊 {challenge.n} {formatNumber(challenge.sc)}점
+                  </span>
+                ) : (
+                  <span className="truncate font-display text-lg">{GAMES[game].name}</span>
+                )}
               </span>
             )}
           </div>

@@ -35,7 +35,7 @@ export async function loadUserData(user: User): Promise<CloudData> {
       statistics: data.statistics || {},
       achievements: data.achievements || {},
       settings: data.settings || {},
-      custom: { nickname: data.profile?.nickname || '', avatar: data.profile?.avatar || '' },
+      custom: { nickname: data.profile?.nickname || '', avatar: data.profile?.avatar || '', title: data.profile?.title || '' },
     };
   }
 
@@ -45,7 +45,7 @@ export async function loadUserData(user: User): Promise<CloudData> {
     achievements: {},
     settings: {},
   });
-  return { statistics: {}, achievements: {}, settings: {}, custom: { nickname: '', avatar: '' } };
+  return { statistics: {}, achievements: {}, settings: {}, custom: { nickname: '', avatar: '', title: '' } };
 }
 
 /** Atomically add one finished round to the cloud stats (safe with several devices). */
@@ -85,5 +85,5 @@ export async function saveUserSettings(uid: string, settings: GameSettings): Pro
 }
 
 export async function saveProfileCustom(uid: string, p: PlayerProfile): Promise<void> {
-  await updateDoc(userRef(uid), { 'profile.nickname': p.nickname, 'profile.avatar': p.avatar });
+  await updateDoc(userRef(uid), { 'profile.nickname': p.nickname, 'profile.avatar': p.avatar, 'profile.title': p.title });
 }

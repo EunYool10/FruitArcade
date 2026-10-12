@@ -10,7 +10,7 @@ rules_version = '2';
 //   - profile: map (required)
 //       uid (== document id, immutable), email (string|null, immutable),
 //       createdAt (string, immutable), displayName, photoURL, lastLoginAt,
-//       nickname, avatar (strings or null, size-limited). No other keys.
+//       nickname, avatar, title, frame (strings or null, size-limited). No other keys.
 //   - statistics: map (<= 40 keys) - play counts / high scores (older versions left extra keys)
 //   - achievements: map (<= 100 keys) - unlocked achievement id -> date
 //   - settings: map (<= 40 keys) - game settings
@@ -30,6 +30,7 @@ rules_version = '2';
 //   - avatar: string (1-16 chars)
 //   - score: int (0 <= score <= per-game cap, may only go up, at most every 3 s)
 //   - at: timestamp (== request.time)
+//   - title, frame: optional ids ([a-z0-9_], 1-32) of the worn title and avatar frame
 //
 // Collection: bans  (moderation)
 // Document ID: uid of a player blocked from the leaderboards
@@ -117,6 +118,11 @@ service cloud.firestore {
         && !value.matches('(?s).*[\\x00-\\x09\\x0b-\\x1f\\x7f].*');
     }
 
+    // Missing, or an id like "suika_10000" (titles, frames)
+    function isOptionalId(m, key) {
+      return !(key in m) || (m[key] is string && m[key].matches('^[a-z0-9_]{1,32}$'));
+    }
+
     // Missing, null, or a string up to maxLen
     function isOptionalText(m, key, maxLen) {
       return !(key in m) || m[key] == null || (m[key] is string && m[key].size() <= maxLen);
@@ -188,7 +194,7 @@ service cloud.firestore {
 
     function isValidProfile(userId, p) {
       return p is map
-        && p.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'createdAt', 'lastLoginAt', 'nickname', 'avatar'])
+        && p.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'createdAt', 'lastLoginAt', 'nickname', 'avatar', 'title', 'frame'])
         && p.get('uid', '') == userId
         && isOptionalText(p, 'displayName', 100)
         && isOptionalText(p, 'email', 320)
@@ -196,7 +202,9 @@ service cloud.firestore {
         && isOptionalText(p, 'createdAt', 40)
         && isOptionalText(p, 'lastLoginAt', 40)
         && isOptionalText(p, 'nickname', 40)
-        && isOptionalText(p, 'avatar', 16);
+        && isOptionalText(p, 'avatar', 16)
+        && isOptionalText(p, 'title', 40)
+        && isOptionalText(p, 'frame', 40);
     }
 
     function isValidUserDoc(userId, data) {
@@ -219,11 +227,13 @@ service cloud.firestore {
 
     function isValidScoreEntry(boardId, uid, data) {
       return hasRequiredFields(['uid', 'name', 'avatar', 'score', 'at'])
-        && hasOnlyAllowedFields(['uid', 'name', 'avatar', 'score', 'at'])
+        && hasOnlyAllowedFields(['uid', 'name', 'avatar', 'score', 'at', 'title', 'frame'])
         && data.uid == uid
         && data.uid == request.auth.uid
         && isPlainText(data.name, 1, 40)
         && isPlainText(data.avatar, 1, 16)
+        && isOptionalId(data, 'title')
+        && isOptionalId(data, 'frame')
         && (!isReservedName(data.name) || isAdmin())
         && data.score is int
         && data.score >= 0

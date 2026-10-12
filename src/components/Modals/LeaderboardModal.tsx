@@ -3,7 +3,8 @@ import { Ban, Flag, Loader2, LogIn, RotateCcw, Shield, Trash2 } from 'lucide-rea
 import { GameType } from '../../types';
 import { GAMES, GAME_ORDER } from '../../constants';
 import { formatNumber } from '../../utils/format';
-import { PERIOD_LABEL, RANK_PERIODS, RankEntry, RankPeriod, boardId, rankErrorKind } from '../../utils/ranking';
+import { PERIOD_LABEL, RANK_PERIODS, RankEntry, RankPeriod, boardId, kstWeek, rankErrorKind, weekRangeLabel } from '../../utils/ranking';
+import { titleDef } from '../../utils/titles';
 import type { ReportReason } from '../../utils/communityService';
 import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
@@ -57,13 +58,38 @@ interface RowProps {
   entry: RankEntry;
   place: number;
   mine: boolean;
+  /** Won this game's weekly board last week */
+  champion?: boolean;
   /** Small button at the end of the row (admin tools or report) */
   action?: React.ReactNode;
   /** Opens under the row */
   panel?: React.ReactNode;
 }
 
-const Row: React.FC<RowProps> = ({ entry, place, mine, action, panel }) => (
+/** Name with the 👑 for last week's winner and the worn title underneath */
+const NameBlock: React.FC<{ entry: RankEntry; mine?: boolean; champion?: boolean }> = ({ entry, mine, champion }) => {
+  const t = titleDef(entry.title);
+  return (
+    <span className="min-w-0 flex-1">
+      <span className="flex min-w-0 items-center gap-1 font-bold">
+        {champion && (
+          <span role="img" aria-label="지난주 1위" title="지난주 1위">
+            👑
+          </span>
+        )}
+        <span className="truncate">{entry.name}</span>
+        {mine && <span className="shrink-0 text-xs text-ink-3">(나)</span>}
+      </span>
+      {t && (
+        <span className="block truncate text-[11px] font-semibold text-grape-ink">
+          {t.icon} {t.label}
+        </span>
+      )}
+    </span>
+  );
+};
+
+const Row: React.FC<RowProps> = ({ entry, place, mine, champion, action, panel }) => (
   <li
     className={`rounded-2xl border-2 px-3 py-2 ${mine ? 'border-line bg-mango-soft shadow-hard-sm' : 'border-transparent bg-surface-2'}`}
     aria-current={mine ? 'true' : undefined}
@@ -75,10 +101,7 @@ const Row: React.FC<RowProps> = ({ entry, place, mine, action, panel }) => (
       <span className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" aria-hidden="true">
         {entry.avatar}
       </span>
-      <span className="min-w-0 flex-1 truncate font-bold">
-        {entry.name}
-        {mine && <span className="ml-1.5 text-xs text-ink-3">(나)</span>}
-      </span>
+      <NameBlock entry={entry} mine={mine} champion={champion} />
       <span className="shrink-0 font-display text-lg tabular-nums">{formatNumber(entry.score)}</span>
       {action}
     </div>
@@ -161,6 +184,11 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
   const [reload, setReload] = useState(0);
   const request = useRef(0);
 
+  // 명예의 전당: weekly winners of the selected game; champs: last week's #1 per game (crowns)
+  const [fame, setFame] = useState(false);
+  const [hall, setHall] = useState<{ week: number; entry: RankEntry | null }[] | null>(null);
+  const [champs, setChamps] = useState<Partial<Record<GameType, RankEntry>>>({});
+
   // Row with its admin tools or report form open
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -174,7 +202,36 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
     }
   }, [isOpen, initialGame]);
 
-  useEffect(() => setOpenRow(null), [game, period, isOpen]);
+  useEffect(() => setOpenRow(null), [game, period, isOpen, fame]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let alive = true;
+    rankApi()
+      .then((api) => api.championsOfWeek(kstWeek() - 1))
+      .then((c) => alive && setChamps(c))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !fame) return;
+    let alive = true;
+    setHall(null);
+    const last = kstWeek() - 1;
+    rankApi()
+      .then((api) => api.hallOfFame(game, [...Array(8)].map((_, i) => last - i)))
+      .then((h) => alive && setHall(h))
+      .catch((err) => {
+        console.warn('Failed to load hall of fame:', err);
+        if (alive) setHall([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [isOpen, fame, game]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -310,15 +367,29 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
             key={p}
             type="button"
             role="tab"
-            aria-selected={p === period}
-            onClick={() => setPeriod(p)}
+            aria-selected={!fame && p === period}
+            onClick={() => {
+              setPeriod(p);
+              setFame(false);
+            }}
             className={`chip h-8 flex-1 justify-center text-xs transition-colors ${
-              p === period ? 'bg-grape text-white shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
+              !fame && p === period ? 'bg-grape text-white shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
             }`}
           >
             {PERIOD_LABEL[p]}
           </button>
         ))}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={fame}
+          onClick={() => setFame(true)}
+          className={`chip h-8 flex-1 justify-center whitespace-nowrap text-xs transition-colors ${
+            fame ? 'bg-mango text-on-bright shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
+          }`}
+        >
+          🏛️ 명예의 전당
+        </button>
       </div>
 
       {notice && (
@@ -330,6 +401,55 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
         </p>
       )}
 
+      {fame ? (
+        <div aria-live="polite" aria-busy={!hall}>
+          {!hall ? (
+            <div className="grid h-[200px] place-items-center text-ink-3">
+              <Loader2 className="h-7 w-7 animate-spin" aria-label="불러오는 중" />
+            </div>
+          ) : hall.every((h) => !h.entry) ? (
+            <div className="well grid min-h-[200px] place-items-center p-6 text-center">
+              <div>
+                <p className="text-4xl" aria-hidden="true">
+                  🏛️
+                </p>
+                <p className="mt-2 text-sm font-bold text-ink-2">
+                  아직 명예의 전당에 오른 사람이 없어요.
+                  <br />
+                  이번 주 1등이 첫 주인공이 돼요!
+                </p>
+              </div>
+            </div>
+          ) : (
+            <ol className="space-y-1.5">
+              {hall.map(({ week, entry }, i) => (
+                <li
+                  key={week}
+                  className={`flex items-center gap-3 rounded-2xl border-2 px-3 py-2 ${
+                    i === 0 && entry ? 'border-line bg-mango-soft shadow-hard-sm' : 'border-transparent bg-surface-2'
+                  }`}
+                >
+                  <span className="w-[4.5rem] shrink-0 text-[11px] font-bold leading-tight text-ink-3">
+                    {i === 0 ? '지난주' : weekRangeLabel(week)}
+                  </span>
+                  {entry ? (
+                    <>
+                      <span className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" aria-hidden="true">
+                        {entry.avatar}
+                      </span>
+                      <NameBlock entry={entry} mine={entry.uid === uid} champion />
+                      <span className="shrink-0 font-display text-lg tabular-nums">{formatNumber(entry.score)}</span>
+                    </>
+                  ) : (
+                    <span className="flex-1 text-sm text-ink-3">기록 없음</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+          <p className="mt-3 text-center text-[11px] text-ink-3">매주 월요일 0시(한국 시간)에 지난주 1등이 이곳에 올라요 · 1등은 '주간 챔피언' 칭호를 받아요</p>
+        </div>
+      ) : (
       <div aria-live="polite" aria-busy={status === 'loading'}>
         {status === 'loading' ? (
           <div className="grid h-[200px] place-items-center text-ink-3">
@@ -363,7 +483,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
           <>
             <ol className="space-y-1.5">
               {board.entries.map((e, i) => (
-                <Row key={e.uid} entry={e} place={places[i]} mine={e.uid === uid} {...rowProps(e)} />
+                <Row key={e.uid} entry={e} place={places[i]} mine={e.uid === uid} champion={champs[game]?.uid === e.uid} {...rowProps(e)} />
               ))}
             </ol>
             {board.me && (
@@ -372,17 +492,20 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
                   ···
                 </p>
                 <ol>
-                  <Row entry={board.me.entry} place={board.me.place} mine {...rowProps(board.me.entry)} />
+                  <Row entry={board.me.entry} place={board.me.place} mine champion={champs[game]?.uid === board.me.entry.uid} {...rowProps(board.me.entry)} />
                 </ol>
               </>
             )}
           </>
         )}
       </div>
+      )}
+      {!fame && (
       <p className="mt-3 text-center text-[11px] text-ink-3">
         한 사람당 최고 점수 하나만 올라가요 · 오늘 순위는 매일 자정, 이번 주 순위는 월요일에 새로 시작해요 (한국 시간)
         {uid && !isAdmin && ' · 이상한 기록은 깃발 버튼으로 신고해 주세요'}
       </p>
+      )}
     </Modal>
   );
 };

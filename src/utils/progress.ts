@@ -21,6 +21,7 @@ export const EMPTY_STATS: UserStatistics = {
   puzzleHighScore: 0,
   missionStamps: 0,
   bestStreak: 0,
+  lastChampionWeek: 0,
   lastPlayedAt: '',
 };
 

@@ -56,6 +56,7 @@ export interface UserStatistics {
   puzzleHighScore: number;
   missionStamps: number; // days on which every daily mission was cleared
   bestStreak: number; // longest run of consecutive play days
+  lastChampionWeek: number; // latest week (KST index) the player topped a weekly board, 0 = never
   lastPlayedAt: string;
 }
 

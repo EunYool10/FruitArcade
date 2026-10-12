@@ -15,6 +15,9 @@ const DAY = 86_400_000;
 /** Days since 1970-01-01 in KST, the same count firestore.rules uses */
 export const kstDay = (now = Date.now()) => Math.floor((now + KST) / DAY);
 
+/** Monday-start weeks in KST (1970-01-01 was a Thursday, so +3 days) */
+export const kstWeek = (now = Date.now()) => Math.floor((kstDay(now) + 3) / 7);
+
 /** Day id used by the daily boards and activity stats: d<kstDay> */
 export const dayId = (now = Date.now(), offset = 0) => `d${kstDay(now) + offset}`;
 
@@ -31,8 +34,16 @@ export function dayLabel(index: number): string {
 export function boardId(game: GameType, period: RankPeriod, now = Date.now()): string {
   if (period === 'all') return `${game}_all`;
   const day = kstDay(now);
-  // 1970-01-01 was a Thursday; +3 days makes weeks start on Monday
   return period === 'day' ? `${game}_d${day}` : `${game}_w${Math.floor((day + 3) / 7)}`;
+}
+
+/** "10/6 ~ 10/12" for a week index */
+export function weekRangeLabel(week: number): string {
+  const md = (day: number) => {
+    const d = new Date(day * DAY);
+    return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+  };
+  return `${md(week * 7 - 3)} ~ ${md(week * 7 + 3)}`;
 }
 
 /** "메모리 · 10/13 (월)" style name for a board id */
@@ -51,6 +62,8 @@ export interface RankEntry {
   name: string;
   avatar: string;
   score: number;
+  /** Worn title id (see titles.ts) */
+  title?: string;
 }
 
 /** The player's place on the boards after a round, for the result card */

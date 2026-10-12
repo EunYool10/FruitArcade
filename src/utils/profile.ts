@@ -7,6 +7,8 @@ export interface PlayerProfile {
   nickname: string;
   /** Empty = Google photo when signed in, otherwise the level fruit */
   avatar: string;
+  /** Title worn next to the name (achievement id or "weekly_champion"), empty = none */
+  title: string;
 }
 
 export const AVATARS = ['🍓', '🍉', '🍊', '🍋', '🍇', '🍑', '🍒', '🍍', '🥝', '🍎', '🫐', '🥥'];
@@ -15,9 +17,10 @@ export const NICKNAME_MAX = 12;
 export function loadProfile(): PlayerProfile {
   try {
     const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
-    return { nickname: typeof p?.nickname === 'string' ? p.nickname : '', avatar: typeof p?.avatar === 'string' ? p.avatar : '' };
+    const text = (v: unknown) => (typeof v === 'string' ? v : '');
+    return { nickname: text(p?.nickname), avatar: text(p?.avatar), title: text(p?.title) };
   } catch {
-    return { nickname: '', avatar: '' };
+    return { nickname: '', avatar: '', title: '' };
   }
 }
 

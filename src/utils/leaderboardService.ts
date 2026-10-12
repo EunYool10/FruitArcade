@@ -23,11 +23,14 @@ import { RANK_PERIODS, RankEntry, RankPeriod, boardId } from './ranking';
 
 const scores = (board: string) => collection(db, 'leaderboards', board, 'scores');
 
+const TITLE_ID = /^[a-z0-9_]{1,32}$/;
+
 const toEntry = (uid: string, d: DocumentData): RankEntry => ({
   uid,
   name: typeof d.name === 'string' ? d.name : '???',
   avatar: typeof d.avatar === 'string' ? d.avatar : '🍓',
   score: typeof d.score === 'number' ? d.score : 0,
+  ...(typeof d.title === 'string' && TITLE_ID.test(d.title) ? { title: d.title } : {}),
 });
 
 /**
@@ -37,7 +40,7 @@ const toEntry = (uid: string, d: DocumentData): RankEntry => ({
 export function submitScore(
   uid: string,
   game: GameType,
-  who: { name: string; avatar: string },
+  who: { name: string; avatar: string; title?: string },
   score: number
 ): Promise<Record<RankPeriod, number>> {
   const now = Date.now();
@@ -47,7 +50,8 @@ export function submitScore(
     const best = {} as Record<RankPeriod, number>;
     snaps.forEach((snap, i) => {
       const prev = snap.exists() ? Number(snap.data().score) || 0 : -1;
-      if (score > prev) tx.set(refs[i], { uid, name: who.name, avatar: who.avatar, score, at: serverTimestamp() });
+      const title = who.title && TITLE_ID.test(who.title) ? { title: who.title } : {};
+      if (score > prev) tx.set(refs[i], { uid, name: who.name, avatar: who.avatar, score, at: serverTimestamp(), ...title });
       best[RANK_PERIODS[i]] = Math.max(prev, score);
     });
     return best;
@@ -63,6 +67,29 @@ export async function rankOf(game: GameType, period: RankPeriod, score: number):
 export async function topScores(game: GameType, period: RankPeriod, n = 50): Promise<RankEntry[]> {
   const snap = await getDocs(query(scores(boardId(game, period)), orderBy('score', 'desc'), limit(n)));
   return snap.docs.map((d) => toEntry(d.id, d.data()));
+}
+
+/** Top entry of one board, or null when nobody played */
+async function topOne(board: string): Promise<RankEntry | null> {
+  const snap = await getDocs(query(collection(db, 'leaderboards', board, 'scores'), orderBy('score', 'desc'), limit(1)));
+  return snap.empty ? null : toEntry(snap.docs[0].id, snap.docs[0].data());
+}
+
+/** Each game's #1 for a finished week */
+export async function championsOfWeek(week: number): Promise<Partial<Record<GameType, RankEntry>>> {
+  const tops = await Promise.all(GAME_ORDER.map((g) => topOne(`${g}_w${week}`)));
+  const out: Partial<Record<GameType, RankEntry>> = {};
+  GAME_ORDER.forEach((g, i) => {
+    const e = tops[i];
+    if (e) out[g] = e;
+  });
+  return out;
+}
+
+/** One game's weekly winners, newest week first */
+export async function hallOfFame(game: GameType, weeks: number[]): Promise<{ week: number; entry: RankEntry | null }[]> {
+  const tops = await Promise.all(weeks.map((w) => topOne(`${game}_w${w}`)));
+  return weeks.map((week, i) => ({ week, entry: tops[i] }));
 }
 
 export async function myEntry(game: GameType, period: RankPeriod, uid: string): Promise<RankEntry | null> {

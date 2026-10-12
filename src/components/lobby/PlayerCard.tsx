@@ -58,9 +58,16 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         <Avatar player={player} size="lg" />
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-xl">{player.name}</p>
-          <span className="chip mt-1 bg-mango-soft">
-            {level.emoji} Lv.{level.level} {level.title}
-          </span>
+          <div className="mt-1 flex flex-wrap gap-1">
+            <span className="chip bg-mango-soft">
+              {level.emoji} Lv.{level.level} {level.title}
+            </span>
+            {player.title && (
+              <span className="chip bg-grape-soft">
+                {player.title.icon} {player.title.label}
+              </span>
+            )}
+          </div>
         </div>
         <button type="button" className="btn btn-sm" onClick={onOpenProfile}>
           {player.isGuest ? '로그인' : '프로필'}

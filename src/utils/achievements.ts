@@ -14,7 +14,7 @@ export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
   { id: 'joker_streak', title: '조커 대폭발', desc: '조커 모드에서 연속으로 조커를 3번 오픈', icon: '🎆', game: 'memory' },
   { id: 'fail_is_mother', title: '실패는 성공의 어머니', desc: '라이프 제한 모드에서 게임 오버 1회 경험', icon: '☠️', game: 'memory' },
   { id: 'lucky_seven', title: '행운의 세븐', desc: '정확히 최고 콤보 7회 달성', icon: '🍀', game: 'memory' },
-  { id: 'veteran_tester', title: '진성 테스터', desc: '크레딧(Credit) 창을 통산 3번 이상 열어 정독', icon: '🔎', game: 'all' },
+  { id: 'veteran_tester', title: '크레딧 정독가', desc: '크레딧(Credit) 창을 통산 3번 이상 열어 정독', icon: '🔎', game: 'all' },
   { id: 'score_rich', title: '자산가 스코어', desc: '최종 점수 250점 이상 초고득점 달성', icon: '💵', game: 'memory' },
   { id: 'speedy_fail', title: '초고속 광탈', desc: '하드코어 모드에서 15초 안에 광속 게임오버', icon: '💥', game: 'memory' },
   

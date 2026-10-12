@@ -11,6 +11,7 @@ import { Avatar, PlayerView } from '../ui/Avatar';
 import { AVATARS, NICKNAME_MAX, PlayerProfile, cleanNickname, isReservedNickname } from '../../utils/profile';
 import { Meter } from '../ui/Meter';
 import { ConfirmButton } from '../ui/ConfirmButton';
+import type { TitleDef } from '../../utils/titles';
 
 interface Props {
   isOpen: boolean;
@@ -24,6 +25,8 @@ interface Props {
   stats: UserStatistics;
   level: LevelInfo;
   achievementCount: number;
+  /** Titles the player has earned */
+  titles: TitleDef[];
   onLogin: () => Promise<{ success: boolean; error?: string }>;
   onLogout: () => void;
   onOpenAdmin?: () => void;
@@ -55,6 +58,7 @@ export const ProfileModal: React.FC<Props> = ({
   stats,
   level,
   achievementCount,
+  titles,
   onLogin,
   onLogout,
   onOpenAdmin,
@@ -183,6 +187,34 @@ export const ProfileModal: React.FC<Props> = ({
               </button>
             ))}
           </div>
+        </div>
+        <div>
+          <p className="mb-1.5 text-[11px] font-bold text-ink-3">칭호 · 이름 옆에 붙고 랭킹에도 보여요</p>
+          {titles.length === 0 ? (
+            <p className="rounded-xl bg-surface px-3 py-2 text-xs text-ink-3">업적을 달성하면 칭호를 달 수 있어요.</p>
+          ) : (
+            <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto p-0.5" role="group" aria-label="칭호">
+              <button
+                type="button"
+                aria-pressed={!profile.title}
+                onClick={() => onUpdateProfile({ ...profile, title: '' })}
+                className={`chip h-8 px-3 text-xs ${!profile.title ? 'bg-grape text-white shadow-hard-sm' : 'bg-surface hover:bg-surface-3'}`}
+              >
+                없음
+              </button>
+              {titles.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  aria-pressed={profile.title === t.id}
+                  onClick={() => onUpdateProfile({ ...profile, title: t.id })}
+                  className={`chip h-8 px-3 text-xs ${profile.title === t.id ? 'bg-grape text-white shadow-hard-sm' : 'bg-surface hover:bg-surface-3'}`}
+                >
+                  {t.icon} {t.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

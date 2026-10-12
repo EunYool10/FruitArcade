@@ -12,7 +12,7 @@ import {
   ScreenType,
   UserStatistics,
 } from './types';
-import { DEFAULT_SETTINGS, GAMES, PLAY_SCREENS, SCREEN_GAME } from './constants';
+import { DEFAULT_SETTINGS, GAMES, GAME_ORDER, PLAY_SCREENS, SCREEN_GAME } from './constants';
 import { Navbar, NavTarget } from './components/Navbar';
 import { Lobby, LobbyTarget } from './components/lobby/Lobby';
 import { MemorySetup } from './components/MemoryGame/MemorySetup';
@@ -32,7 +32,9 @@ import { LeaderboardModal } from './components/Modals/LeaderboardModal';
 import { AdminModal } from './components/Modals/AdminModal';
 import { FeedbackModal } from './components/Modals/FeedbackModal';
 import { RankContext } from './components/RankContext';
-import { RankResult, publicName } from './utils/ranking';
+import { RankResult, kstWeek, publicName } from './utils/ranking';
+import { earnedTitles, wornTitle } from './utils/titles';
+import { DayStats, clearDays, loadDays, recordDay } from './utils/dailyStats';
 import { Challenge, challengeLink, takeChallengeFromUrl } from './utils/challenge';
 import { randomSeed } from './utils/rng';
 import { Tutorial, markSeen, tutorialSeen } from './components/game/Tutorial';
@@ -140,6 +142,8 @@ export default function App() {
   const [daily, setDaily] = useState<DailyState>(loadDaily);
   const [streak, setStreak] = useState<StreakState>(loadStreak);
   const [profile, setProfile] = useState<PlayerProfile>(loadProfile);
+  const [days, setDays] = useState<DayStats>(loadDays);
+  const daysRef = useRef(days);
 
   // Friend challenges: one arriving by link, and the one being played
   const [incomingChallenge, setIncomingChallenge] = useState<Challenge | null>(null);
@@ -173,15 +177,25 @@ export default function App() {
   const achievementCount = countUnlocked();
   const level = levelInfo(computeXp(stats, achievementCount));
   const streakNow = currentStreak(streak);
+  // Titles: one per unlocked achievement, plus 주간 챔피언 for anyone who topped a weekly board
+  const unlocked = getUnlockedAchievements();
+  const wasChampion = stats.lastChampionWeek > 0;
+  const titles = earnedTitles(unlocked, wasChampion);
+  const title = wornTitle(profile.title, unlocked, wasChampion);
   const player: PlayerView = {
     name: profile.nickname || user?.displayName || '게스트',
     emoji: profile.avatar || level.emoji,
     photo: profile.avatar ? null : user?.photoURL ?? null,
     isGuest: !user,
+    title,
   };
   /** How the player appears on public boards (nickname only, never the Google name) */
-  const rankWhoRef = useRef({ name: '', avatar: '' });
-  rankWhoRef.current = { name: publicName(profile.nickname, user?.uid ?? '', isAdmin), avatar: profile.avatar || level.emoji };
+  const rankWhoRef = useRef<{ name: string; avatar: string; title?: string }>({ name: '', avatar: '' });
+  rankWhoRef.current = {
+    name: publicName(profile.nickname, user?.uid ?? '', isAdmin),
+    avatar: profile.avatar || level.emoji,
+    ...(title ? { title: title.id } : {}),
+  };
 
   // ───────── helpers ─────────
 
@@ -291,15 +305,20 @@ export default function App() {
         writeJSON(SETTINGS_KEY, nextSettings);
         if (Object.keys(cloud.settings).length === 0) cloudWrite((api) => api.saveUserSettings(u.uid, nextSettings)).catch(() => {});
 
-        // Nickname / avatar: the cloud wins when set, otherwise keep this device's choice
+        // Nickname / avatar / title: the cloud wins when set, otherwise keep this device's choice
         const local = loadProfile();
         const mergedProfile = {
           nickname: cloud.custom.nickname || local.nickname,
           avatar: cloud.custom.avatar || local.avatar,
+          title: cloud.custom.title || local.title,
         };
         setProfile(mergedProfile);
         saveProfile(mergedProfile);
-        if (mergedProfile.nickname !== cloud.custom.nickname || mergedProfile.avatar !== cloud.custom.avatar) {
+        if (
+          mergedProfile.nickname !== cloud.custom.nickname ||
+          mergedProfile.avatar !== cloud.custom.avatar ||
+          mergedProfile.title !== cloud.custom.title
+        ) {
           cloudWrite((api) => api.saveProfileCustom(u.uid, mergedProfile)).catch(() => {});
         }
 
@@ -319,6 +338,30 @@ export default function App() {
       }
     },
     [commitStats, pushToast, cloudWrite]
+  );
+
+  /** Last week's #1 on any game earns the 주간 챔피언 title (kept as the latest winning week) */
+  const checkChampion = useCallback(
+    (u: User) => {
+      const week = kstWeek() - 1;
+      if (statsRef.current.lastChampionWeek >= week) return;
+      rankApi()
+        .then((api) => api.championsOfWeek(week))
+        .then((champs) => {
+          const won = GAME_ORDER.filter((g) => champs[g]?.uid === u.uid);
+          if (!won.length || statsRef.current.lastChampionWeek >= week) return;
+          commitStats({ ...statsRef.current, lastChampionWeek: week });
+          cloudWrite((api) => api.pushMergedStats(u.uid, statsRef.current)).catch(() => {});
+          pushToast({
+            icon: '👑',
+            title: `지난주 ${won.map((g) => GAMES[g].short).join(' · ')} 1위!`,
+            sub: "'주간 챔피언' 칭호를 받았어요",
+            tone: 'mango',
+          });
+        })
+        .catch((err) => console.warn('Failed to check weekly champions:', err));
+    },
+    [commitStats, cloudWrite, pushToast]
   );
 
   // Kept once loaded so the Google popup opens straight from the click (no await before it)
@@ -341,13 +384,14 @@ export default function App() {
             if (authApi.auth.currentUser?.uid === u.uid) setIsAdmin(ok);
           })
           .catch(() => {});
+        checkChampion(u);
       });
     });
     return () => {
       cancelled = true;
       unsubscribe?.();
     };
-  }, [syncCloud]);
+  }, [syncCloud, checkChampion]);
 
   const handleLogin = async () => {
     try {
@@ -380,10 +424,13 @@ export default function App() {
     }
     // Don't let this account's progress leak into the next one on this device
     clearLocalProgress();
+    clearDays();
+    daysRef.current = {};
+    setDays({});
     resetAchievements();
     bumpAchievements();
     commitStats({ ...EMPTY_STATS });
-    const blank = { nickname: '', avatar: '' };
+    const blank = { nickname: '', avatar: '', title: '' };
     setProfile(blank);
     saveProfile(blank);
     historyRef.current = [];
@@ -449,6 +496,8 @@ export default function App() {
 
       const newBest = result.score > 0 && result.score > prevBest;
       historyRef.current = pushHistory(historyRef.current, { ...result, at: Date.now(), best: newBest });
+      daysRef.current = recordDay(daysRef.current, result);
+      setDays(daysRef.current);
       setHistory(historyRef.current);
 
       const before = levelInfo(computeXp(prev, achievements));
@@ -652,6 +701,9 @@ export default function App() {
 
   const resetAllRecords = () => {
     clearLocalProgress();
+    clearDays();
+    daysRef.current = {};
+    setDays({});
     commitStats({ ...EMPTY_STATS });
     historyRef.current = [];
     setHistory([]);
@@ -794,12 +846,13 @@ export default function App() {
         stats={stats}
         level={level}
         achievementCount={achievementCount}
+        titles={titles}
         onLogin={handleLogin}
         onLogout={handleLogout}
         onOpenAdmin={() => setModal('admin')}
       />
       <AchievementsModal isOpen={modal === 'achievements'} onClose={() => setModal(null)} />
-      <RecordsModal isOpen={modal === 'records'} onClose={() => setModal(null)} stats={stats} history={history} />
+      <RecordsModal isOpen={modal === 'records'} onClose={() => setModal(null)} stats={stats} history={history} days={days} />
       <SettingsModal
         isOpen={modal === 'settings'}
         onClose={() => setModal(null)}

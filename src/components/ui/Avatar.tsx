@@ -1,4 +1,5 @@
 import React from 'react';
+import type { TitleDef } from '../../utils/titles';
 
 const SIZES = {
   sm: 'h-8 w-8 text-base',
@@ -12,6 +13,8 @@ export interface PlayerView {
   emoji: string;
   photo: string | null;
   isGuest: boolean;
+  /** Worn title, shown next to the name */
+  title?: TitleDef | null;
 }
 
 export const Avatar: React.FC<{ player: PlayerView; size?: keyof typeof SIZES }> = ({ player, size = 'md' }) =>

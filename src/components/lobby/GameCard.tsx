@@ -8,13 +8,15 @@ interface GameCardProps {
   best: number;
   plays: number;
   onPlay: () => void;
+  /** Grid placement from the lobby */
+  className?: string;
 }
 
 /** Side-by-side on phones, art on top from `sm` up. */
-export const GameCard: React.FC<GameCardProps> = ({ meta, best, plays, onPlay }) => {
+export const GameCard: React.FC<GameCardProps> = ({ meta, best, plays, onPlay, className = '' }) => {
   const tone = TONE[meta.tone];
   return (
-    <article className="panel group flex overflow-hidden transition-transform duration-200 hover:-translate-y-1 sm:flex-col">
+    <article className={`panel group flex overflow-hidden transition-transform duration-200 hover:-translate-y-1 sm:flex-col ${className}`}>
       <div
         className={`dots relative grid w-28 shrink-0 place-items-center border-r-2 border-line sm:h-36 sm:w-auto sm:border-b-2 sm:border-r-0 ${tone.bg}`}
       >

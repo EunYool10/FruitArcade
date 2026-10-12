@@ -35,6 +35,11 @@ export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
   { id: 'puzzle_3000', title: '퍼즐 고수', desc: '과일 퍼즐에서 3,000점 이상 기록', icon: '🧩', game: 'puzzle' },
   { id: 'dash_hard_30', title: '매운맛 생존자', desc: 'FRUIT DASH 어려움 난이도에서 30초 이상 생존', icon: '🌶️', game: 'dash' },
 
+  // Fruit Slice
+  { id: 'slice_combo_5', title: '과일 회오리', desc: '과일 자르기에서 한 번에 과일 5개 자르기', icon: '🌀', game: 'slice' },
+  { id: 'slice_500', title: '날쌘 칼솜씨', desc: '과일 자르기에서 500점 이상 기록', icon: '🔪', game: 'slice' },
+  { id: 'slice_perfect_60', title: '하나도 안 놓쳐', desc: '과일 자르기에서 과일을 놓치지 않고 60초 버티기', icon: '🎯', game: 'slice' },
+
   // Progress
   { id: 'challenge_win', title: '도전 성공', desc: '친구의 도전장에서 이기기', icon: '🥊', game: 'all' },
   { id: 'level_5', title: '어엿한 딸기', desc: '레벨 5 달성', icon: '🍓', game: 'all' },

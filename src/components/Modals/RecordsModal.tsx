@@ -41,17 +41,20 @@ export const RecordsModal: React.FC<Props> = ({ isOpen, onClose, stats, history,
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-4">
+      <div className="grid gap-2 sm:grid-cols-5">
         {GAME_ORDER.map((g) => {
           const meta = GAMES[g];
           return (
-            <div key={g} className={`flex items-center gap-3 rounded-2xl border-2 border-line p-3 sm:flex-col sm:text-center ${TONE[meta.tone].soft}`}>
-              <span className={`sticker h-11 w-11 shrink-0 text-2xl ${TONE[meta.tone].bg}`} aria-hidden="true">
+            <div
+              key={g}
+              className={`flex items-center gap-3 rounded-2xl border-2 border-line p-3 sm:flex-col sm:gap-1.5 sm:px-1.5 sm:py-2.5 sm:text-center ${TONE[meta.tone].soft}`}
+            >
+              <span className={`sticker h-11 w-11 shrink-0 text-2xl sm:h-10 sm:w-10 sm:text-xl ${TONE[meta.tone].bg}`} aria-hidden="true">
                 {meta.emoji}
               </span>
               <div className="min-w-0">
-                <p className="text-sm font-bold">{meta.name}</p>
-                <p className="font-display text-xl tabular-nums">
+                <p className="text-sm font-bold sm:text-xs">{meta.name}</p>
+                <p className="font-display text-xl tabular-nums sm:text-base">
                   {stats[bestKey(g)] > 0 ? `${formatNumber(stats[bestKey(g)])}점` : '기록 없음'}
                 </p>
                 <p className="text-[11px] font-bold text-ink-3">{stats[playsKey(g)]}판 플레이</p>

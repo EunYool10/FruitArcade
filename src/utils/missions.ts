@@ -44,6 +44,12 @@ const POOLS: Record<GameType | 'any', Mission[]> = {
     { id: 'puzzle-score-1500', game: 'puzzle', kind: 'score', target: 1500, icon: '🍋', text: '과일 퍼즐 1,500점 이상' },
     { id: 'puzzle-score-3000', game: 'puzzle', kind: 'score', target: 3000, icon: '💣', text: '과일 퍼즐 3,000점 이상' },
   ],
+  slice: [
+    { id: 'slice-play-2', game: 'slice', kind: 'play', target: 2, icon: '🔪', text: '과일 자르기 2판 하기' },
+    { id: 'slice-score-300', game: 'slice', kind: 'score', target: 300, icon: '🍉', text: '과일 자르기 300점 이상' },
+    { id: 'slice-score-800', game: 'slice', kind: 'score', target: 800, icon: '🔥', text: '과일 자르기 800점 이상' },
+    { id: 'slice-survive-60', game: 'slice', kind: 'survive', target: 60, icon: '⏱️', text: '과일 자르기 60초 버티기' },
+  ],
   any: [
     { id: 'any-play-5', kind: 'play', target: 5, icon: '🎮', text: '아무 게임이나 5판 하기' },
     { id: 'any-time-300', kind: 'time', target: 300, icon: '⌛', text: '오늘 5분 이상 플레이' },
@@ -54,11 +60,12 @@ export function todayKey(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/** One mission for three of the four games, sometimes swapping one for an "any game" mission. */
+/** One mission for three of the games, sometimes swapping one for an "any game" mission. */
 export function missionsFor(date: string): Mission[] {
   const rand = seededRandom(date);
   const pick = <T,>(list: T[]) => list[Math.floor(rand() * list.length)];
-  const games: GameType[] = ['memory', 'suika', 'dash', 'puzzle'];
+  // 과일 자르기 joins the draw from the day after its release, so nobody's missions change mid-day
+  const games: GameType[] = date >= '2026-10-14' ? ['memory', 'suika', 'dash', 'puzzle', 'slice'] : ['memory', 'suika', 'dash', 'puzzle'];
   for (let i = games.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     [games[i], games[j]] = [games[j], games[i]];

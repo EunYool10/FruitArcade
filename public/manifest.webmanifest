@@ -1,7 +1,7 @@
 {
   "name": "상큼 과일 아케이드 존",
   "short_name": "FRUIT ARCADE",
-  "description": "과일 메모리, 수박 게임, FRUIT DASH, 과일 퍼즐 — 오늘의 미션과 업적에 도전하는 상큼한 과일 아케이드",
+  "description": "과일 메모리, 수박 게임, FRUIT DASH, 과일 퍼즐, 과일 자르기 — 오늘의 미션과 업적에 도전하는 상큼한 과일 아케이드",
   "lang": "ko",
   "start_url": "./",
   "scope": "./",

@@ -1,6 +1,6 @@
 import { GameSettings, GameType, ScreenType } from './types';
 
-export const APP_VERSION = '3.6.0';
+export const APP_VERSION = '3.7.0';
 
 export const DEFAULT_SETTINGS: GameSettings = {
   theme: 'light',
@@ -106,7 +106,7 @@ export const GAMES: Record<GameType, GameMeta> = {
     emoji: '🧩',
     tone: 'grape',
     screen: 'puzzle',
-    tag: 'NEW',
+    tag: 'PUZZLE',
     desc: '같은 과일 3개를 한 줄로 맞춰 터뜨리세요. 30번 안에 최고 점수!',
     how: ['옆 과일과 자리를 바꿔 3개를 맞춰요', '4개는 줄 폭탄, 5개는 큰 폭탄이 돼요', '연쇄로 터지면 점수가 껑충!'],
     startHint: '밀거나 두 칸을 차례로 눌러 바꿔요',
@@ -116,9 +116,26 @@ export const GAMES: Record<GameType, GameMeta> = {
       { emoji: '🔥', title: '연쇄와 이동 횟수', text: '떨어진 과일이 또 맞춰지면 연쇄 보너스! 이동은 30번이에요. 막히면 💡 힌트를 눌러요.' },
     ],
   },
+  slice: {
+    id: 'slice',
+    name: '과일 자르기',
+    short: '자르기',
+    emoji: '🔪',
+    tone: 'soda',
+    screen: 'slice',
+    tag: 'NEW',
+    desc: '날아오르는 과일을 그어서 싹둑! 폭탄은 조심하세요.',
+    how: ['화면을 그어 과일을 잘라요', '한 번에 3개 이상 자르면 콤보!', '💣 폭탄을 자르거나 3번 놓치면 끝'],
+    startHint: '마우스를 누른 채 긋거나 손가락으로 밀어요',
+    tutorial: [
+      { emoji: '👆🍉', title: '그어서 자르기', text: '마우스를 누른 채로 긋거나 손가락으로 화면을 밀어, 날아오르는 과일을 잘라요. 빠르게 그어야 잘려요.' },
+      { emoji: '🔥', title: '한 번에 여러 개', text: '한 번 그을 때 3개 이상 자르면 콤보 보너스! ⭐ 황금 별은 +50점, ❄️ 얼음을 자르면 잠깐 느려져요.' },
+      { emoji: '💣', title: '폭탄은 피하기', text: '폭탄을 자르면 바로 끝나요. 과일을 자르지 못하고 3개 떨어뜨려도 끝!' },
+    ],
+  },
 };
 
-export const GAME_ORDER: GameType[] = ['memory', 'suika', 'dash', 'puzzle'];
+export const GAME_ORDER: GameType[] = ['memory', 'suika', 'dash', 'puzzle', 'slice'];
 
 export const SCREEN_GAME: Partial<Record<ScreenType, GameType>> = {
   'memory-setup': 'memory',
@@ -126,6 +143,7 @@ export const SCREEN_GAME: Partial<Record<ScreenType, GameType>> = {
   suika: 'suika',
   dash: 'dash',
   puzzle: 'puzzle',
+  slice: 'slice',
 };
 
-export const PLAY_SCREENS: ScreenType[] = ['memory-play', 'suika', 'dash', 'puzzle'];
+export const PLAY_SCREENS: ScreenType[] = ['memory-play', 'suika', 'dash', 'puzzle', 'slice'];

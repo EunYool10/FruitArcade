@@ -18,6 +18,7 @@ const TABS: { id: Filter; label: string }[] = [
   { id: 'suika', label: '🍉 수박' },
   { id: 'dash', label: '🏃 대시' },
   { id: 'puzzle', label: '🧩 퍼즐' },
+  { id: 'slice', label: '🔪 자르기' },
   { id: 'all', label: '🏅 기타' },
 ];
 

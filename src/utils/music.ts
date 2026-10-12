@@ -4,7 +4,7 @@
  */
 import { getAudioContext, whenAudioUnlocked } from './audio';
 
-export type TrackName = 'lobby' | 'memory' | 'suika' | 'dash' | 'puzzle';
+export type TrackName = 'lobby' | 'memory' | 'suika' | 'dash' | 'puzzle' | 'slice';
 
 interface Song {
   bpm: number;
@@ -61,6 +61,20 @@ const SONGS: Record<TrackName, Song> = {
     bass: `G2:4 D3:4 G2:4 D3:4 | C3:4 G3:4 C3:4 G3:4 | E2:4 B2:4 E2:4 B2:4 | D3:4 A3:4 D3:4 A3:4 |
            G2:4 D3:4 G2:4 D3:4 | C3:4 G3:4 C3:4 G3:4 | C3:4 G3:4 D3:4 A3:4 | D3:4 A2:4 G2:8`,
     drums: 'k-h-s-hhk-h-s-h-',
+  },
+  slice: {
+    bpm: 136,
+    leadWave: 'square',
+    leadGain: 0.24,
+    lead: `A5:2 C6:2 D6:2 E6:2 D6:2 C6:2 A5:4 | G5:2 A5:2 C6:2 A5:2 G5:2 E5:2 D5:4 |
+           E5:2 G5:2 A5:2 C6:2 D6:2 E6:2 G6:4 | E6:2 D6:2 C6:2 D6:2 A5:4 -:4 |
+           A5:2 A5:2 C6:2 A5:2 D6:2 C6:2 A5:2 G5:2 | E5:2 G5:2 A5:2 G5:2 E5:4 D5:4 |
+           C6:2 D6:2 E6:2 G6:2 E6:2 D6:2 C6:2 D6:2 | E6:4 D6:2 C6:2 A5:6 -:2`,
+    bass: `A2:2 A3:2 A2:2 A3:2 A2:2 A3:2 A2:2 A3:2 | G2:2 G3:2 G2:2 G3:2 G2:2 G3:2 G2:2 G3:2 |
+           C3:2 C4:2 C3:2 C4:2 C3:2 C4:2 C3:2 C4:2 | D3:2 D4:2 D3:2 D4:2 E3:2 E4:2 E3:2 E4:2 |
+           A2:2 A3:2 A2:2 A3:2 A2:2 A3:2 A2:2 A3:2 | E2:2 E3:2 E2:2 E3:2 E2:2 E3:2 E2:2 E3:2 |
+           C3:2 C4:2 C3:2 C4:2 D3:2 D4:2 D3:2 D4:2 | A2:2 A3:2 A2:2 A3:2 A2:4 -:4`,
+    drums: 'k-hhs-h-k-hhs-hh',
   },
   dash: {
     bpm: 150,

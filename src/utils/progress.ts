@@ -1,12 +1,12 @@
 import { GameResult, GameType, HistoryEntry, UserStatistics } from '../types';
 
-export const GAME_TYPES: GameType[] = ['memory', 'suika', 'dash', 'puzzle'];
+export const GAME_TYPES: GameType[] = ['memory', 'suika', 'dash', 'puzzle', 'slice'];
 
 const STATS_KEY = 'fruit_arcade_stats';
 const HISTORY_KEY = 'fruit_arcade_history';
 const HISTORY_LIMIT = 30;
 // v2 kept per-game best scores under these keys
-const LEGACY_BEST_KEYS: Record<GameType, string> = { memory: 'memory_hs', suika: 'suika_hs', dash: 'dash_hs', puzzle: 'puzzle_hs' };
+const LEGACY_BEST_KEYS: Partial<Record<GameType, string>> = { memory: 'memory_hs', suika: 'suika_hs', dash: 'dash_hs', puzzle: 'puzzle_hs' };
 
 export const EMPTY_STATS: UserStatistics = {
   totalPlayCount: 0,
@@ -15,10 +15,12 @@ export const EMPTY_STATS: UserStatistics = {
   suikaPlayCount: 0,
   dashPlayCount: 0,
   puzzlePlayCount: 0,
+  slicePlayCount: 0,
   memoryHighScore: 0,
   suikaHighScore: 0,
   dashHighScore: 0,
   puzzleHighScore: 0,
+  sliceHighScore: 0,
   missionStamps: 0,
   bestStreak: 0,
   lastChampionWeek: 0,
@@ -59,7 +61,9 @@ export function loadLocalStats(): UserStatistics {
   const stats: UserStatistics = { ...EMPTY_STATS, ...(saved || {}) };
   if (!saved) {
     for (const g of GAME_TYPES) {
-      const legacy = read<number>(LEGACY_BEST_KEYS[g], 0);
+      const key = LEGACY_BEST_KEYS[g];
+      if (!key) continue;
+      const legacy = read<number>(key, 0);
       stats[bestKey(g)] = Math.max(stats[bestKey(g)], Number(legacy) || 0);
     }
   }

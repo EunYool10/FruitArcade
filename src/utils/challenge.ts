@@ -17,7 +17,7 @@ export interface Challenge {
   d?: DashDifficulty;
 }
 
-const GAMES: GameType[] = ['memory', 'suika', 'dash', 'puzzle'];
+const GAMES: GameType[] = ['memory', 'suika', 'dash', 'puzzle', 'slice'];
 
 function toBase64Url(text: string): string {
   const bytes = new TextEncoder().encode(text);

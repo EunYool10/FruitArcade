@@ -1,6 +1,6 @@
 # 🍓 상큼 과일 아케이드 존 (Fruit Arcade)
 
-과일 미니게임 4종에 레벨, 오늘의 미션, 업적, 랭킹, 친구 대결을 더한 웹 아케이드입니다. 밝은 테마와 다크 테마를 지원하고, 휴대폰 홈 화면에 앱으로 설치해 오프라인에서도 플레이할 수 있습니다.
+과일 미니게임 5종에 레벨, 오늘의 미션, 업적, 랭킹, 친구 대결을 더한 웹 아케이드입니다. 밝은 테마와 다크 테마를 지원하고, 휴대폰 홈 화면에 앱으로 설치해 오프라인에서도 플레이할 수 있습니다.
 
 | 게임 | 설명 | 조작 |
 |---|---|---|
@@ -8,6 +8,7 @@
 | 🍉 수박 게임 | 같은 과일끼리 합쳐 수박 만들기 (물리 엔진 직접 구현) | `←` `→` / `A` `D` 이동, `Space` · `↓` 낙하, 마우스 · 터치 |
 | 🏃 FRUIT DASH | 떨어지는 과일 피하며 황금 별 모으기. 쉬움 · 보통 · 어려움, 방패 · 자석 · 느림 · 점수 2배 아이템 | `←` `→` / `A` `D`, 마우스 · 터치 |
 | 🧩 과일 퍼즐 | 같은 과일 3개를 한 줄로 맞추는 매치-3. 클래식(이동 30번 · 랭킹)과 목표가 있는 스테이지 30개, 줄 폭탄 · 큰 폭탄, 연쇄 보너스 | 밀기 · 두 칸 차례로 누르기, 방향키로 이동 후 `Enter`로 고르고 방향키로 바꾸기 |
+| 🔪 과일 자르기 | 날아오르는 과일을 그어서 자르기. 한 번에 3개 이상 콤보, ⭐ 황금 별, ❄️ 얼음(느린 시간), 💣 폭탄을 자르거나 과일을 3개 놓치면 끝 | 마우스를 누른 채 긋기 · 손가락으로 밀기 |
 
 공통: `ESC` 일시정지 · 창 닫기, `Space` · `Enter` 게임 시작
 
@@ -86,6 +87,7 @@ src/
     SuikaGame/           수박 게임
     FruitDashGame/       FRUIT DASH
     PuzzleGame/          과일 퍼즐 (engine.ts: 판 생성 · 매치 · 폭탄 · 연쇄, 화면과 분리)
+    FruitSliceGame/      과일 자르기
     Modals/              프로필 · 업적 · 기록 · 랭킹 · 설정 · 패치노트 · 크레딧 · 일시정지 · 도전장
     ui/                  모달, 스위치, 선택 버튼, 진행 막대, 확인 버튼, 토스트
     PlayerContext · ChallengeContext · RankContext   결과 카드 등에서 쓰는 플레이어 · 대결 · 순위 정보
@@ -121,10 +123,10 @@ server.mjs               npm start용 정적 서버 (Render)
 
 ## 새 게임 추가하기
 
-1. `types.ts`의 `ScreenType`, `GameType`, `UserStatistics`(`<게임>PlayCount`, `<게임>HighScore`)에 추가하고 `progress.ts`의 `EMPTY_STATS`도 채우기
+1. `types.ts`의 `ScreenType`, `GameType`, `UserStatistics`(`<게임>PlayCount`, `<게임>HighScore`)에 추가하고 `progress.ts`의 `GAME_TYPES`, `EMPTY_STATS`도 채우기
 2. `constants.ts`의 `GAMES`, `GAME_ORDER`, `SCREEN_GAME`, `PLAY_SCREENS`에 추가
 3. `components/<게임>/`에 컴포넌트 작성. `game/GameFrame`, `StartCard`, `ResultCard`를 쓰고, props로 `settings`, `isPaused`, `onUnlockAchieve`, `onGameComplete`, `onRoundChange`, `onExit`를 받기
    - 판이 시작되면 `onRoundChange(true)`, 끝나면 `false`
    - 판이 끝나면 `onGameComplete({ game, score, seconds })`를 **한 번** 호출하고, 돌려받은 보상을 `ResultCard`에 넘기기
-4. `App.tsx`에 lazy import와 화면 분기, 필요하면 `missions.ts`에 미션 추가
+4. `App.tsx`에 lazy import와 화면 분기. `missions.ts`(미션), `challenge.ts`(대결 링크), `shop.ts`(코인 비율), `music.ts`(배경음악), `achievements.ts`와 업적 창 탭도 채우기
 5. 랭킹: `firestore.rules`의 `isValidBoardId` 정규식과 `maxScore`에 게임 추가 후 규칙 게시

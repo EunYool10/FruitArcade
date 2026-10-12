@@ -82,6 +82,9 @@ const SuikaGame = lazy(() => import('./components/SuikaGame/SuikaGame').then((m)
 const FruitDashGame = lazy(() =>
   import('./components/FruitDashGame/FruitDashGame').then((m) => ({ default: m.FruitDashGame }))
 );
+const FruitSliceGame = lazy(() =>
+  import('./components/FruitSliceGame/FruitSliceGame').then((m) => ({ default: m.FruitSliceGame }))
+);
 
 // Firebase loads after the first paint; Firestore only once someone signs in
 const loadAuthApi = () => import('./authApi');
@@ -270,8 +273,7 @@ export default function App() {
   }, [settings.bgmEnabled, settings.bgmVolume]);
 
   useEffect(() => {
-    const track: TrackName =
-      screen === 'memory-play' ? 'memory' : screen === 'suika' ? 'suika' : screen === 'dash' ? 'dash' : screen === 'puzzle' ? 'puzzle' : 'lobby';
+    const track: TrackName = screen === 'memory-play' ? 'memory' : screen === 'lobby' || screen === 'memory-setup' ? 'lobby' : screen;
     music.play(track);
   }, [screen]);
 
@@ -923,6 +925,18 @@ export default function App() {
                     onRoundSeed={(seed: string) => (roundSeeds.current.puzzle = seed)}
                     stageProgress={stageProgress}
                     onStageClear={handleStageClear}
+                  />
+                )}
+                {screen === 'slice' && (
+                  <FruitSliceGame
+                    key={gameKey}
+                    {...gameCommon}
+                    autoStart={autoStart}
+                    dark={resolvedTheme === 'dark'}
+                    best={stats.sliceHighScore}
+                    onHelp={() => setTutorialGame('slice')}
+                    seed={activeChallenge?.g === 'slice' ? activeChallenge.s : undefined}
+                    onRoundSeed={(seed: string) => (roundSeeds.current.slice = seed)}
                   />
                 )}
               </Suspense>

@@ -56,7 +56,10 @@ export type SoundType =
   | 'over'
   | 'victory'
   | 'star'
-  | 'levelup';
+  | 'levelup'
+  | 'slice'
+  | 'bomb'
+  | 'freeze';
 
 interface ToneOpts {
   type?: OscillatorType;
@@ -83,10 +86,30 @@ function tone(ctx: AudioContext, out: AudioNode, { type = 'triangle', gain, star
   osc.stop(t + dur + 0.02);
 }
 
+/** Filtered white noise: swooshes and explosions */
+function noise(ctx: AudioContext, out: AudioNode, { gain, start = 0, dur, from, to }: { gain: number; start?: number; dur: number; from: number; to: number }) {
+  const t = ctx.currentTime + start;
+  const buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(from, t);
+  filter.frequency.exponentialRampToValueAtTime(to, t + dur);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(gain, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(filter).connect(g).connect(out);
+  src.start(t);
+  src.stop(t + dur + 0.02);
+}
+
 const NOTE = (n: number) => 440 * Math.pow(2, (n - 69) / 12); // MIDI → Hz
 
 /**
- * @param opts.level  For "merge": bigger fruit sound lower and rounder.
+ * @param opts.level  For "merge": bigger fruit sound lower and rounder. For "slice": the combo so far, each cut a little higher.
  */
 export function playSound(type: SoundType, settings: { sfxEnabled: boolean; volume: number }, opts: { level?: number } = {}) {
   if (!settings.sfxEnabled || settings.volume <= 0) return;
@@ -137,6 +160,19 @@ export function playSound(type: SoundType, settings: { sfxEnabled: boolean; volu
       case 'victory':
         [72, 76, 79, 84].forEach((n, i) => tone(ctx, out, { gain: v * 0.6, start: i * 0.09, dur: 0.18, freq: NOTE(n) }));
         tone(ctx, out, { type: 'sine', gain: v * 0.35, start: 0.36, dur: 0.5, freq: NOTE(96) });
+        break;
+      case 'slice': {
+        const up = Math.pow(1.06, opts.level ?? 0);
+        noise(ctx, out, { gain: v * 0.35, dur: 0.08, from: 7000, to: 1500 });
+        tone(ctx, out, { type: 'sine', gain: v * 0.55, start: 0.015, dur: 0.1, freq: 560 * up, to: 200 * up });
+        break;
+      }
+      case 'bomb':
+        noise(ctx, out, { gain: v * 1.1, dur: 0.7, from: 2600, to: 60 });
+        tone(ctx, out, { type: 'sine', gain: v * 0.9, dur: 0.55, freq: 150, to: 38 });
+        break;
+      case 'freeze':
+        [100, 96, 93, 88].forEach((n, i) => tone(ctx, out, { type: 'sine', gain: v * 0.35, start: i * 0.06, dur: 0.22, freq: NOTE(n) }));
         break;
       case 'levelup':
         [79, 84, 88].forEach((n, i) => tone(ctx, out, { type: 'square', gain: v * 0.18, start: i * 0.08, dur: 0.12, freq: NOTE(n) }));

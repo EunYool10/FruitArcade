@@ -247,14 +247,15 @@ export const ProfileModal: React.FC<Props> = ({
             ))}
           </dl>
 
-          <div className="grid grid-cols-4 gap-2">
+          <p className="-mb-1 text-xs font-bold text-ink-3">게임별 최고 기록</p>
+          <div className="grid grid-cols-5 gap-1.5">
             {GAME_ORDER.map((g) => (
-              <div key={g} className={`rounded-xl border-2 border-line px-2 py-2 text-center ${TONE[GAMES[g].tone].soft}`}>
+              <div key={g} className={`min-w-0 rounded-xl border-2 border-line px-1 py-2 text-center ${TONE[GAMES[g].tone].soft}`}>
                 <p className="text-lg" aria-hidden="true">
                   {GAMES[g].emoji}
                 </p>
-                <p className="text-[11px] font-bold text-ink-2">{GAMES[g].short} 최고</p>
-                <p className="font-display text-base tabular-nums">{stats[bestKey(g)] > 0 ? formatNumber(stats[bestKey(g)]) : '–'}</p>
+                <p className="truncate text-[11px] font-bold text-ink-2">{GAMES[g].short}</p>
+                <p className="truncate font-display text-sm tabular-nums">{stats[bestKey(g)] > 0 ? formatNumber(stats[bestKey(g)]) : '–'}</p>
               </div>
             ))}
           </div>

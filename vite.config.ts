@@ -22,7 +22,8 @@ function serviceWorker(): Plugin {
     name: 'fruit-arcade-sw',
     apply: 'build',
     generateBundle(_, bundle) {
-      const built = Object.keys(bundle).filter((f) => !f.endsWith('.map') && !f.includes('userDataService'));
+      // Firestore (cloud sync, leaderboards) only loads online, so it isn't precached
+      const built = Object.keys(bundle).filter((f) => !f.endsWith('.map') && !/userDataService|leaderboardService|firestore-/.test(f));
       const files = ['./', ...built.filter((f) => f !== 'index.html'), ...publicFiles(path.resolve(__dirname, 'public'))];
       const version = createHash('sha1').update(files.join('|')).digest('hex').slice(0, 10);
       const source = readFileSync(path.resolve(__dirname, 'pwa/sw.js'), 'utf8')

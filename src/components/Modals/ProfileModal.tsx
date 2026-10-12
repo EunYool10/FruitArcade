@@ -120,6 +120,7 @@ export const ProfileModal: React.FC<Props> = ({
               className="mt-0.5 h-10 w-full select-text rounded-xl border-2 border-line bg-surface px-3 font-display text-lg outline-none focus:border-soda"
             />
             {user?.email && <p className="mt-1 truncate text-xs text-ink-3">{user.email}</p>}
+            {user && <p className="mt-0.5 text-[11px] text-ink-3">🏆 랭킹에는 닉네임과 아바타만 보여요 (다음 기록부터 반영)</p>}
           </div>
         </div>
         <div>

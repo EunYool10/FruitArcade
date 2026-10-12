@@ -25,7 +25,8 @@ export async function loadUserData(user: User): Promise<CloudData> {
 
   if (snap.exists()) {
     const data = snap.data();
-    updateDoc(ref, {
+    // Awaited so it can't collide with the stats transaction that runs right after
+    await updateDoc(ref, {
       'profile.lastLoginAt': now,
       'profile.displayName': displayName,
       'profile.photoURL': user.photoURL,

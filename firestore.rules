@@ -1,9 +1,41 @@
 rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: Firebase Auth uid
+// Fields (private to the owner — contains the Google email):
+//   - profile: map (uid, displayName, email, photoURL, createdAt, lastLoginAt, nickname, avatar)
+//   - statistics: map - play counts / high scores per game
+//   - achievements: map - unlocked achievement ids
+//   - settings: map - game settings
+//
+// Collection: leaderboards/{boardId}/scores
+// Board ID: <game>_<period>
+//   - game:   memory | suika | dash | puzzle
+//   - period: all            → all-time board
+//             d<dayIndex>    → daily board, days since 1970-01-01 in KST (UTC+9)
+//             w<weekIndex>   → weekly board, Monday-start weeks since 1969-12-29 in KST
+// Document ID: Firebase Auth uid (one entry per player per board)
+// Fields (public — no email or Google profile data):
+//   - uid: string (required, == document id == request.auth.uid, immutable)
+//   - name: string (required, 1–40 chars) - in-app nickname shown on the board
+//   - avatar: string (required, 1–16 chars) - fruit emoji
+//   - score: int (required, 0 ≤ score ≤ per-game cap, may only go up)
+//   - at: timestamp (required, == request.time) - server time of the last best
+//
+// ===============================================================
+
 service cloud.firestore {
   // Configured access for 'ai-studio-9fb7cc09-52d2-4de4-9866-b3ecaf99c200' database instance
   match /databases/{database}/documents {
 
-    // Helper functions for authentication & ownership verification
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -16,6 +48,85 @@ service cloud.firestore {
       return isAuthenticated() && isValidId(userId) && request.auth.uid == userId;
     }
 
+    // Signed in with Google (not anonymous or another provider)
+    function isGoogleUser() {
+      return isAuthenticated() && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function validStringLength(value, minLen, maxLen) {
+      return value is string && value.size() >= minLen && value.size() <= maxLen;
+    }
+
+    // ───────── leaderboard period helpers (KST, UTC+9) ─────────
+
+    function kstMillis() {
+      return request.time.toMillis() + 32400000;
+    }
+
+    // int / int is integer division here (math.floor would turn it into a float)
+    function dayIndex() {
+      return kstMillis() / 86400000;
+    }
+
+    // 1970-01-01 was a Thursday; +3 days makes weeks start on Monday
+    function weekIndex() {
+      return (dayIndex() + 3) / 7;
+    }
+
+    // Only the all-time board, today/yesterday or this/last week can be written
+    // (yesterday/last week cover rounds that end right at midnight)
+    function isOpenPeriod(period) {
+      return period == 'all'
+        || period == 'd' + string(dayIndex())
+        || period == 'd' + string(dayIndex() - 1)
+        || period == 'w' + string(weekIndex())
+        || period == 'w' + string(weekIndex() - 1);
+    }
+
+    function boardGame(boardId) {
+      return boardId.split('_')[0];
+    }
+
+    function isValidBoardId(boardId) {
+      return boardId is string
+        && boardId.matches('^(memory|suika|dash|puzzle)_(all|d[0-9]{1,6}|w[0-9]{1,6})$')
+        && isOpenPeriod(boardId.split('_')[1]);
+    }
+
+    // Sanity caps well above anything reachable in normal play
+    function maxScore(game) {
+      return {'memory': 2000, 'suika': 500000, 'dash': 500000, 'puzzle': 500000}[game];
+    }
+
+    // ===============================================================
+    // Domain Validators (used on both create and update)
+    // ===============================================================
+
+    function isValidScoreEntry(boardId, uid, data) {
+      return hasRequiredFields(['uid', 'name', 'avatar', 'score', 'at'])
+        && hasOnlyAllowedFields(['uid', 'name', 'avatar', 'score', 'at'])
+        && data.uid == uid
+        && data.uid == request.auth.uid
+        && validStringLength(data.name, 1, 40)
+        && validStringLength(data.avatar, 1, 16)
+        && data.score is int
+        && data.score >= 0
+        && data.score <= maxScore(boardGame(boardId))
+        && data.at == request.time;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
     // User personal game data: profile, statistics, achievements, settings
     // Enforces that authenticated users can only read and write documents within their specific /users/{userId}/ path
     match /users/{userId} {
@@ -25,6 +136,27 @@ service cloud.firestore {
       match /{allPaths=**} {
         allow read, write: if isOwner(userId);
       }
+    }
+
+    // Public leaderboards: anyone can view, players can only post their own best
+    match /leaderboards/{boardId}/scores/{uid} {
+      // Public by design — entries hold only a nickname, emoji avatar and score
+      allow read: if true;
+
+      allow create: if isGoogleUser()
+        && isOwner(uid)
+        && isValidBoardId(boardId)
+        && isValidScoreEntry(boardId, uid, request.resource.data);
+
+      // Only a higher score replaces the entry; uid can never change
+      allow update: if isGoogleUser()
+        && isOwner(uid)
+        && resource.data.uid == uid
+        && isValidBoardId(boardId)
+        && isValidScoreEntry(boardId, uid, request.resource.data)
+        && request.resource.data.score > resource.data.score;
+
+      allow delete: if false;
     }
 
     // Default deny all other paths to prevent unauthorized access

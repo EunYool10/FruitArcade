@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, Play } from 'lucide-react';
+import { BarChart3, Crown, Play } from 'lucide-react';
 import { PlayerView } from '../ui/Avatar';
 import { GameType, HistoryEntry, UserStatistics } from '../../types';
 import { APP_VERSION, GAMES, GAME_ORDER } from '../../constants';
@@ -11,7 +11,7 @@ import { MissionsCard } from './MissionsCard';
 import { RecentPlays } from './RecentPlays';
 import { applyUpdate, promptInstall, usePwa } from '../../utils/pwa';
 
-export type LobbyTarget = 'profile' | 'achievements' | 'records' | 'patch' | 'credits' | 'settings';
+export type LobbyTarget = 'profile' | 'achievements' | 'records' | 'patch' | 'credits' | 'settings' | 'leaderboard';
 
 interface LobbyProps {
   player: PlayerView;
@@ -73,6 +73,9 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
             <button type="button" className="btn btn-lg btn-primary" onClick={() => onPlay(quick, true)}>
               <Play className="h-5 w-5 fill-current" />
               {lastGame ? `${GAMES[quick].short} 한 판 더` : '바로 시작'}
+            </button>
+            <button type="button" className="btn btn-lg btn-mango" onClick={() => onOpen('leaderboard')}>
+              <Crown className="h-5 w-5" strokeWidth={2.5} /> 랭킹
             </button>
             <button type="button" className="btn btn-lg hidden sm:inline-flex" onClick={() => onOpen('records')}>
               <BarChart3 className="h-5 w-5" strokeWidth={2.5} /> 내 기록

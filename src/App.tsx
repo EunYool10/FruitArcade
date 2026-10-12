@@ -28,6 +28,9 @@ import { PlayerView } from './components/ui/Avatar';
 import { PlayerContext } from './components/PlayerContext';
 import { ChallengeContext } from './components/ChallengeContext';
 import { ChallengeModal } from './components/Modals/ChallengeModal';
+import { LeaderboardModal } from './components/Modals/LeaderboardModal';
+import { RankContext } from './components/RankContext';
+import { RankResult, publicName } from './utils/ranking';
 import { Challenge, challengeLink, takeChallengeFromUrl } from './utils/challenge';
 import { randomSeed } from './utils/rng';
 import { Tutorial, markSeen, tutorialSeen } from './components/game/Tutorial';
@@ -75,6 +78,7 @@ const FruitDashGame = lazy(() =>
 const loadAuthApi = () => import('./authApi');
 type AuthApi = Awaited<ReturnType<typeof loadAuthApi>>;
 const cloudApi = () => import('./utils/userDataService');
+const rankApi = () => import('./utils/leaderboardService');
 
 const SETTINGS_KEY = 'fruit_arcade_settings';
 const MEMORY_CFG_KEY = 'fruit_arcade_memory';
@@ -140,6 +144,11 @@ export default function App() {
   const roundSeeds = useRef<Partial<Record<GameType, string>>>({});
   const [, setAchieveTick] = useState(0);
 
+  // Leaderboard: ranks after the last round, and which game the window opens on
+  const [rank, setRank] = useState<RankResult | null>(null);
+  const [rankGame, setRankGame] = useState<GameType>('suika');
+  const rankRequest = useRef(0);
+
   const [modal, setModal] = useState<ModalId | null>(null);
   const [tutorialGame, setTutorialGame] = useState<GameType | null>(null);
   const [isPaused, setIsPaused] = useState(false);
@@ -164,6 +173,9 @@ export default function App() {
     photo: profile.avatar ? null : user?.photoURL ?? null,
     isGuest: !user,
   };
+  /** How the player appears on public boards (nickname only, never the Google name) */
+  const rankWhoRef = useRef({ name: '', avatar: '' });
+  rankWhoRef.current = { name: publicName(profile.nickname, user?.uid ?? ''), avatar: profile.avatar || level.emoji };
 
   // ───────── helpers ─────────
 
@@ -260,11 +272,14 @@ export default function App() {
         const api = await cloudApi();
         const cloud = await api.loadUserData(u);
 
+        // Plain writes finish before the stats transaction so they never collide with it
+        const writes: Promise<unknown>[] = [];
+
         // Settings: values saved in the cloud win, local ones fill the gaps
         const nextSettings = { ...settingsRef.current, ...cloud.settings };
         setSettings(nextSettings);
         writeJSON(SETTINGS_KEY, nextSettings);
-        if (Object.keys(cloud.settings).length === 0) api.saveUserSettings(u.uid, nextSettings).catch(() => {});
+        if (Object.keys(cloud.settings).length === 0) writes.push(api.saveUserSettings(u.uid, nextSettings));
 
         // Nickname / avatar: the cloud wins when set, otherwise keep this device's choice
         const local = loadProfile();
@@ -275,16 +290,17 @@ export default function App() {
         setProfile(mergedProfile);
         saveProfile(mergedProfile);
         if (mergedProfile.nickname !== cloud.custom.nickname || mergedProfile.avatar !== cloud.custom.avatar) {
-          api.saveProfileCustom(u.uid, mergedProfile).catch(() => {});
+          writes.push(api.saveProfileCustom(u.uid, mergedProfile));
         }
 
         // Achievements: union of both sides
         const { merged, cloudOutdated } = mergeAchievements(cloud.achievements);
-        if (cloudOutdated) api.saveAchievements(u.uid, merged).catch(() => {});
+        if (cloudOutdated) writes.push(api.saveAchievements(u.uid, merged));
         bumpAchievements();
 
         // Stats: field-wise max, pushed back up atomically
         commitStats(mergeStats(statsRef.current, cloud.statistics));
+        await Promise.allSettled(writes);
         api
           .pushMergedStats(u.uid, statsRef.current)
           .then((s) => commitStats(mergeStats(statsRef.current, s)))
@@ -430,6 +446,27 @@ export default function App() {
           .catch((err) => console.warn('Failed to save game result:', err));
       }
 
+      // Leaderboards: post the round, then look up today's and the all-time place
+      const request = ++rankRequest.current;
+      const rankScore = Math.max(0, Math.round(result.score));
+      if (u && rankScore > 0) {
+        const game = result.game;
+        const who = rankWhoRef.current;
+        setRank({ game, status: 'pending' });
+        rankApi()
+          .then(async (api) => {
+            const best = await api.submitScore(u.uid, game, who, rankScore);
+            const [day, all] = await Promise.all([api.rankOf(game, 'day', best.day), api.rankOf(game, 'all', best.all)]);
+            if (request === rankRequest.current) setRank({ game, status: 'done', day, all });
+          })
+          .catch((err) => {
+            console.warn('Failed to post score to the leaderboard:', err);
+            if (request === rankRequest.current) setRank({ game, status: 'error' });
+          });
+      } else {
+        setRank(null);
+      }
+
       // Friend challenge outcome
       const ch = activeChallengeRef.current;
       const challenge = ch && ch.g === result.game ? { name: ch.n, target: ch.sc, won: result.score > ch.sc } : null;
@@ -525,7 +562,17 @@ export default function App() {
       }),
   };
 
+  const rankCtx = {
+    result: rank,
+    signedIn: !!user,
+    open: (g: GameType) => {
+      setRankGame(g);
+      setModal('leaderboard');
+    },
+  };
+
   const openModal = (id: ModalId) => {
+    if (id === 'leaderboard') setRankGame(history[0]?.game ?? 'suika');
     if (id === 'credits') {
       try {
         const count = parseInt(localStorage.getItem('credit_view_count') || '0') + 1;
@@ -607,6 +654,7 @@ export default function App() {
   return (
     <PlayerContext.Provider value={player}>
     <ChallengeContext.Provider value={challengeApi}>
+    <RankContext.Provider value={rankCtx}>
     <div className="flex h-dvh w-full flex-col overflow-hidden">
       <ToastHost toast={toasts[0]} />
 
@@ -740,6 +788,13 @@ export default function App() {
         onResetRecords={resetAllRecords}
         onNotify={(msg) => pushToast({ icon: '✅', title: msg, tone: 'melon' })}
       />
+      <LeaderboardModal
+        isOpen={modal === 'leaderboard'}
+        onClose={() => setModal(null)}
+        game={rankGame}
+        uid={user?.uid ?? null}
+        onLogin={() => setModal('profile')}
+      />
       <PatchNotesModal isOpen={modal === 'patch'} onClose={() => setModal(null)} />
       <CreditsModal isOpen={modal === 'credits'} onClose={() => setModal(null)} />
       <ChallengeModal challenge={incomingChallenge} onAccept={acceptChallenge} onDismiss={() => setIncomingChallenge(null)} />
@@ -751,6 +806,7 @@ export default function App() {
         onExit={() => goTo('lobby')}
       />
     </div>
+    </RankContext.Provider>
     </ChallengeContext.Provider>
     </PlayerContext.Provider>
   );

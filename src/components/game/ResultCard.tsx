@@ -1,11 +1,12 @@
 import React, { useId, useState } from 'react';
-import { Check, Download, Home, Loader2, RotateCcw, Share2 } from 'lucide-react';
+import { Check, Crown, Download, Home, Loader2, RotateCcw, Share2 } from 'lucide-react';
 import { GameReward, GameType } from '../../types';
 import { GAMES, TONE, Tone } from '../../constants';
 import { formatNumber } from '../../utils/format';
 import { downloadBlob, renderResultImage } from '../../utils/shareImage';
 import { usePlayer } from '../PlayerContext';
 import { useChallenge } from '../ChallengeContext';
+import { useRank } from '../RankContext';
 
 const TONE_HEX: Record<Tone, string> = { berry: '#ff4778', melon: '#2ec27e', mango: '#ffb627', grape: '#7a5cff', soda: '#2ea9ff' };
 
@@ -47,6 +48,8 @@ export const ResultCard: React.FC<ResultCardProps> = ({
   const titleId = useId();
   const player = usePlayer();
   const { linkFor } = useChallenge();
+  const rank = useRank();
+  const myRank = rank.result?.game === game ? rank.result : null;
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState<'share' | 'image' | null>(null);
 
@@ -122,6 +125,27 @@ export const ResultCard: React.FC<ResultCardProps> = ({
           reward.prevBest > 0 && <p className="mt-1 text-xs text-ink-3">최고 기록 {formatNumber(reward.prevBest)}점</p>
         )}
       </div>
+
+      {reward && (rank.signedIn ? myRank && myRank.status !== 'error' : score > 0) && (
+        <button
+          type="button"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-full border-2 border-line bg-mango-soft px-3 py-1 text-sm font-bold hover:bg-mango"
+          onClick={() => rank.open(game)}
+        >
+          <Crown className="h-4 w-4" strokeWidth={2.5} />
+          {!rank.signedIn ? (
+            '로그인하면 랭킹에 올라가요'
+          ) : myRank?.status === 'pending' ? (
+            <>
+              순위 확인 중 <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            </>
+          ) : (
+            <span className="tabular-nums">
+              오늘 {formatNumber(myRank?.day ?? 0)}위 · 전체 {formatNumber(myRank?.all ?? 0)}위
+            </span>
+          )}
+        </button>
+      )}
 
       <dl className="mt-3 grid grid-cols-2 gap-2 text-left">
         {stats.map((s) => (

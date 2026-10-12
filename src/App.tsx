@@ -55,6 +55,7 @@ import {
 import { PlayerProfile, loadProfile, saveProfile } from './utils/profile';
 import { DailyState, applyDaily, loadDaily, saveDaily, todayKey } from './utils/missions';
 import { playSound } from './utils/audio';
+import { TrackName, music } from './utils/music';
 
 // Games are code-split so the lobby loads fast
 const MemoryGameBoard = lazy(() =>
@@ -187,6 +188,22 @@ export default function App() {
     document.documentElement.dataset.theme = resolvedTheme;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolvedTheme === 'dark' ? '#151020' : '#fff5e6');
   }, [resolvedTheme]);
+
+  // ───────── music ─────────
+
+  useEffect(() => {
+    music.configure(settings.bgmEnabled, settings.bgmVolume);
+  }, [settings.bgmEnabled, settings.bgmVolume]);
+
+  useEffect(() => {
+    const track: TrackName =
+      screen === 'memory-play' ? 'memory' : screen === 'suika' ? 'suika' : screen === 'dash' ? 'dash' : 'lobby';
+    music.play(track);
+  }, [screen]);
+
+  useEffect(() => {
+    music.duck(gamePaused);
+  }, [gamePaused]);
 
   // ───────── settings ─────────
 

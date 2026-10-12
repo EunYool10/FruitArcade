@@ -1,157 +1,129 @@
 /**
- * Audio synthesis helper using Web Audio API
+ * Sound effects, synthesized with the Web Audio API (no audio files).
  */
 
 let audioCtx: AudioContext | null = null;
 
-function getAudioContext(): AudioContext | null {
+export function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   if (!audioCtx) {
     const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (AudioContextClass) {
-      audioCtx = new AudioContextClass();
-    }
+    if (AudioContextClass) audioCtx = new AudioContextClass();
   }
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
-  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
   return audioCtx;
 }
 
-export function playSound(
-  type: 'flip' | 'match' | 'wrong' | 'drop' | 'merge' | 'warn' | 'over' | 'victory' | 'click' | 'combo',
-  settings: { sfxEnabled: boolean; volume: number }
-) {
+// Browsers keep audio locked until the first tap/key press
+if (typeof window !== 'undefined') {
+  const unlock = () => {
+    getAudioContext();
+    window.removeEventListener('pointerdown', unlock);
+    window.removeEventListener('keydown', unlock);
+  };
+  window.addEventListener('pointerdown', unlock);
+  window.addEventListener('keydown', unlock);
+}
+
+export type SoundType =
+  | 'click'
+  | 'flip'
+  | 'match'
+  | 'combo'
+  | 'wrong'
+  | 'drop'
+  | 'merge'
+  | 'warn'
+  | 'over'
+  | 'victory'
+  | 'star'
+  | 'levelup';
+
+interface ToneOpts {
+  type?: OscillatorType;
+  gain: number;
+  start?: number;
+  dur: number;
+  freq: number;
+  to?: number;
+  attack?: number;
+}
+
+function tone(ctx: AudioContext, out: AudioNode, { type = 'triangle', gain, start = 0, dur, freq, to, attack = 0.005 }: ToneOpts) {
+  const t = ctx.currentTime + start;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t);
+  if (to) osc.frequency.exponentialRampToValueAtTime(to, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  osc.connect(g).connect(out);
+  osc.start(t);
+  osc.stop(t + dur + 0.02);
+}
+
+const NOTE = (n: number) => 440 * Math.pow(2, (n - 69) / 12); // MIDI → Hz
+
+/**
+ * @param opts.level  For "merge": bigger fruit sound lower and rounder.
+ */
+export function playSound(type: SoundType, settings: { sfxEnabled: boolean; volume: number }, opts: { level?: number } = {}) {
   if (!settings.sfxEnabled || settings.volume <= 0) return;
   const ctx = getAudioContext();
   if (!ctx) return;
-
-  const vol = (settings.volume / 100) * 0.4;
-  const now = ctx.currentTime;
+  const v = (settings.volume / 100) * 0.35;
+  const out = ctx.destination;
 
   try {
-    if (type === 'click') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(800, now);
-      gain.gain.setValueAtTime(vol * 0.3, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-      osc.start(now);
-      osc.stop(now + 0.05);
-    } else if (type === 'flip') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(420, now);
-      osc.frequency.exponentialRampToValueAtTime(540, now + 0.05);
-      gain.gain.setValueAtTime(vol * 0.5, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-      osc.start(now);
-      osc.stop(now + 0.06);
-    } else if (type === 'match') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(523.25, now); // C5
-      osc.frequency.exponentialRampToValueAtTime(1046.5, now + 0.16); // C6
-      gain.gain.setValueAtTime(vol * 0.7, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-      osc.start(now);
-      osc.stop(now + 0.22);
-    } else if (type === 'combo') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(659.25, now); // E5
-      osc.frequency.exponentialRampToValueAtTime(1318.5, now + 0.22); // E6
-      gain.gain.setValueAtTime(vol * 0.85, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-      osc.start(now);
-      osc.stop(now + 0.26);
-    } else if (type === 'wrong') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(220, now);
-      osc.frequency.setValueAtTime(140, now + 0.08);
-      gain.gain.setValueAtTime(vol * 0.6, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-      osc.start(now);
-      osc.stop(now + 0.22);
-    } else if (type === 'drop') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(160, now);
-      osc.frequency.exponentialRampToValueAtTime(360, now + 0.08);
-      gain.gain.setValueAtTime(vol * 0.6, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-      osc.start(now);
-      osc.stop(now + 0.12);
-    } else if (type === 'merge') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(380, now);
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.14);
-      gain.gain.setValueAtTime(vol * 0.8, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-      osc.start(now);
-      osc.stop(now + 0.2);
-    } else if (type === 'warn') {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1200, now);
-      gain.gain.setValueAtTime(vol * 0.4, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-      osc.start(now);
-      osc.stop(now + 0.07);
-    } else if (type === 'over') {
-      [293.66, 261.63, 220, 174.61].forEach((freq, i) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.connect(g);
-        g.connect(ctx.destination);
-        o.type = 'sawtooth';
-        o.frequency.setValueAtTime(freq, now + i * 0.12);
-        g.gain.setValueAtTime(vol * 0.5, now + i * 0.12);
-        g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.11);
-        o.start(now + i * 0.12);
-        o.stop(now + i * 0.12 + 0.12);
-      });
-    } else if (type === 'victory') {
-      [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.connect(g);
-        g.connect(ctx.destination);
-        o.type = 'triangle';
-        o.frequency.setValueAtTime(freq, now + i * 0.1);
-        g.gain.setValueAtTime(vol * 0.7, now + i * 0.1);
-        g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.15);
-        o.start(now + i * 0.1);
-        o.stop(now + i * 0.1 + 0.16);
-      });
+    switch (type) {
+      case 'click':
+        tone(ctx, out, { type: 'sine', gain: v * 0.35, dur: 0.06, freq: 880, to: 620 });
+        break;
+      case 'flip':
+        tone(ctx, out, { type: 'triangle', gain: v * 0.4, dur: 0.07, freq: 520, to: 780 });
+        break;
+      case 'match':
+        tone(ctx, out, { gain: v * 0.6, dur: 0.12, freq: NOTE(84) });
+        tone(ctx, out, { gain: v * 0.6, start: 0.07, dur: 0.18, freq: NOTE(88) });
+        break;
+      case 'combo':
+        [84, 88, 91, 96].forEach((n, i) => tone(ctx, out, { gain: v * 0.55, start: i * 0.055, dur: 0.14, freq: NOTE(n) }));
+        break;
+      case 'star':
+        [91, 96, 100, 103].forEach((n, i) => tone(ctx, out, { type: 'sine', gain: v * 0.45, start: i * 0.04, dur: 0.16, freq: NOTE(n) }));
+        break;
+      case 'wrong':
+        tone(ctx, out, { type: 'square', gain: v * 0.22, dur: 0.12, freq: 330, to: 260 });
+        tone(ctx, out, { type: 'square', gain: v * 0.22, start: 0.11, dur: 0.16, freq: 247, to: 196 });
+        break;
+      case 'drop':
+        tone(ctx, out, { type: 'sine', gain: v * 0.6, dur: 0.12, freq: 420, to: 160 });
+        break;
+      case 'merge': {
+        const lv = opts.level ?? 3;
+        const base = 900 / Math.pow(1.13, lv); // bigger fruit, lower "bloop"
+        tone(ctx, out, { type: 'sine', gain: v * 0.75, dur: 0.16, freq: base * 0.6, to: base * 1.4 });
+        tone(ctx, out, { type: 'triangle', gain: v * 0.3, start: 0.05, dur: 0.14, freq: base * 1.5 });
+        break;
+      }
+      case 'warn':
+        tone(ctx, out, { type: 'square', gain: v * 0.16, dur: 0.06, freq: 1320 });
+        tone(ctx, out, { type: 'square', gain: v * 0.16, start: 0.09, dur: 0.06, freq: 1320 });
+        break;
+      case 'over':
+        [67, 63, 60, 55].forEach((n, i) => tone(ctx, out, { type: 'square', gain: v * 0.2, start: i * 0.16, dur: i === 3 ? 0.45 : 0.15, freq: NOTE(n), to: i === 3 ? NOTE(n) * 0.94 : undefined }));
+        break;
+      case 'victory':
+        [72, 76, 79, 84].forEach((n, i) => tone(ctx, out, { gain: v * 0.6, start: i * 0.09, dur: 0.18, freq: NOTE(n) }));
+        tone(ctx, out, { type: 'sine', gain: v * 0.35, start: 0.36, dur: 0.5, freq: NOTE(96) });
+        break;
+      case 'levelup':
+        [79, 84, 88].forEach((n, i) => tone(ctx, out, { type: 'square', gain: v * 0.18, start: i * 0.08, dur: 0.12, freq: NOTE(n) }));
+        break;
     }
   } catch {
-    // Audio Context errors are gracefully suppressed
+    // Audio errors are ignored
   }
 }

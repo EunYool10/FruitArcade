@@ -124,7 +124,7 @@ export const SettingsModal: React.FC<Props> = ({
 
         <Section icon="🔊" title="사운드">
           {toggle('sfxEnabled', '효과음', '뒤집기, 합성, 충돌 소리')}
-          <SettingRow title="볼륨">
+          <SettingRow title="효과음 크기">
             <div className="flex items-center gap-2.5">
               <input
                 type="range"
@@ -134,9 +134,25 @@ export const SettingsModal: React.FC<Props> = ({
                 value={settings.volume}
                 disabled={!settings.sfxEnabled}
                 onChange={(e) => set('volume', parseInt(e.target.value))}
-                aria-label="볼륨"
+                aria-label="효과음 크기"
               />
               <span className="w-10 text-right font-display text-sm tabular-nums">{settings.sfxEnabled ? `${settings.volume}%` : 'OFF'}</span>
+            </div>
+          </SettingRow>
+          {toggle('bgmEnabled', '배경음악', '로비와 게임마다 다른 음악')}
+          <SettingRow title="음악 크기">
+            <div className="flex items-center gap-2.5">
+              <input
+                type="range"
+                className="range w-32"
+                min={0}
+                max={100}
+                value={settings.bgmVolume}
+                disabled={!settings.bgmEnabled}
+                onChange={(e) => set('bgmVolume', parseInt(e.target.value))}
+                aria-label="음악 크기"
+              />
+              <span className="w-10 text-right font-display text-sm tabular-nums">{settings.bgmEnabled ? `${settings.bgmVolume}%` : 'OFF'}</span>
             </div>
           </SettingRow>
         </Section>

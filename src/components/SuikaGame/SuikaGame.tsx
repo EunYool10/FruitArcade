@@ -493,7 +493,7 @@ export const SuikaGame: React.FC<Props> = ({
               const pts = Math.round(b1.r + b2.r + nf.score);
               setScore((s) => s + pts);
 
-              playSound('merge', settings);
+              playSound('merge', settings, { level: nl });
               vibrate(HAPTIC.merge, settings);
 
               // Particle burst

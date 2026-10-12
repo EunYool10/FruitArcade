@@ -148,7 +148,9 @@ export const FruitDashGame: React.FC<Props> = ({
         const next = timeRef.current + 1;
         timeRef.current = next;
         setElapsedTime(next);
-        levelRef.current = Math.min(10, 1 + Math.floor(next / 10));
+        const nextLevel = Math.min(10, 1 + Math.floor(next / 10));
+        if (nextLevel > levelRef.current) playSound('levelup', live.current.settings);
+        levelRef.current = nextLevel;
         setLevel(levelRef.current);
         if (next >= 30) live.current.onUnlockAchieve('dash_survivor_30');
         if (next >= 30 && diffRef.current === 'hard') live.current.onUnlockAchieve('dash_hard_30');
@@ -355,7 +357,7 @@ export const FruitDashGame: React.FC<Props> = ({
               starsRef.current += 1;
               setScore(scoreRef.current);
               setBonusStarsCollected(starsRef.current);
-              playSound('match', settings);
+              playSound('star', settings);
               vibrate(HAPTIC.match, settings);
               floatsRef.current.push({ x: f.x, y: f.y - 10, text: `+${bonus}`, life: 0 });
 

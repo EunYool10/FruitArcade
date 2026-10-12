@@ -98,6 +98,9 @@ export const MemoryGameBoard: React.FC<Props> = ({
   const [failReason, setFailReason] = useState<'time' | 'life' | 'quit' | undefined>(undefined);
   const [shakingCardIndex, setShakingCardIndex] = useState<number | null>(null);
   const [reward, setReward] = useState<GameReward | null>(null);
+  // Time left (ms) to memorise the cards; counts down only while the game is not paused
+  const [previewLeft, setPreviewLeft] = useState(previewTime);
+  const previewDone = useRef(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const statusTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -193,20 +196,30 @@ export const MemoryGameBoard: React.FC<Props> = ({
     setStatusMsg('카드를 기억하세요!');
     setStatusColor('mango');
 
-    // Preview timer
-    const previewTimer = setTimeout(() => {
-      setCards((prev) => prev.map((c) => ({ ...c, isFlipped: false })));
-      setIsReady(true);
-      setStatusMsg('상큼하게 진행 중...');
-      setStatusColor('melon');
-    }, previewTime);
+    setPreviewLeft(previewTime);
+    previewDone.current = false;
 
     return () => {
-      clearTimeout(previewTimer);
       if (timerRef.current) clearInterval(timerRef.current);
       if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
     };
   }, [mode, previewTime, is8Normal]);
+
+  // Preview countdown (stops while paused)
+  useEffect(() => {
+    if (previewLeft <= 0 || isPaused) return;
+    const id = setTimeout(() => setPreviewLeft((p) => Math.max(0, p - 100)), 100);
+    return () => clearTimeout(id);
+  }, [previewLeft, isPaused]);
+
+  useEffect(() => {
+    if (previewLeft > 0 || previewDone.current) return;
+    previewDone.current = true;
+    setCards((prev) => prev.map((c) => ({ ...c, isFlipped: false })));
+    setIsReady(true);
+    setStatusMsg('상큼하게 진행 중...');
+    setStatusColor('melon');
+  }, [previewLeft]);
 
   // Main game timer
   useEffect(() => {
@@ -218,26 +231,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
     timerRef.current = setInterval(() => {
       setTimeElapsed((prev) => prev + 0.1);
 
-      if (is8Normal) {
-        setTimeRemaining((prev) => {
-          if (prev <= 0.1) {
-            handleGameOver(false, 'time');
-            return 0;
-          }
-          return prev - 0.1;
-        });
-      }
-
-      // 6x6 auto flash hint at 8.5s
-      if (mode === '6' && !autoFlashTriggered.current) {
-        setTimeElapsed((t) => {
-          if (t >= 8.5 && !autoFlashTriggered.current) {
-            autoFlashTriggered.current = true;
-            triggerFlash(2, '시스템 지원 힌트');
-          }
-          return t;
-        });
-      }
+      if (is8Normal) setTimeRemaining((prev) => Math.max(0, prev - 0.1));
     }, 100);
 
     return () => {
@@ -299,6 +293,20 @@ export const MemoryGameBoard: React.FC<Props> = ({
   useEffect(() => {
     onRoundChange(!isGameOver);
   }, [isGameOver, onRoundChange]);
+
+  // Time attack: out of time
+  useEffect(() => {
+    if (is8Normal && previewDone.current && !isGameOver && timeRemaining <= 0) handleGameOver(false, 'time');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeRemaining]);
+
+  // 6×6: one free flash hint after 8.5 seconds
+  useEffect(() => {
+    if (mode === '6' && !autoFlashTriggered.current && timeElapsed >= 8.5) {
+      autoFlashTriggered.current = true;
+      triggerFlash(2, '시스템 지원 힌트');
+    }
+  }, [timeElapsed, mode, triggerFlash]);
 
   // Use manual flash hint button
   const handleUseFlashHint = () => {
@@ -471,35 +479,30 @@ export const MemoryGameBoard: React.FC<Props> = ({
       setCombo(newCombo);
       if (newCombo > maxCombo) setMaxCombo(newCombo);
 
-      const scoreGained = 10;
-      setScore((prevScore) => {
-        const nextScore = prevScore + scoreGained;
-
-        // Guard Hunter milestone check (every 30 points -> +1 Flash hint)
-        const prevMilestone = Math.floor(prevScore / 30);
-        const newMilestone = Math.floor(nextScore / 30);
-        if (newMilestone > prevMilestone && !is8Normal) {
-          setFlashHints((h) => h + 1);
-          showStatus('🛡️ 가드헌터 발동! 플래시 힌트 +1 획득!', 'soda', 2200);
-        }
-
-        if (wrongCount === 0 && nextScore >= 100) {
-          onUnlockAchieve('perfect_100');
-        }
-
-        return nextScore;
-      });
+      // Combos pay extra: +2 per consecutive match after the first, up to +10
+      const scoreGained = 10 + Math.min(10, (newCombo - 1) * 2);
+      // Computed here (not inside a state updater) so achievements/hints never fire during render
+      const prevScore = score;
+      const nextScore = prevScore + scoreGained;
+      setScore(nextScore);
+      if (wrongCount === 0 && nextScore >= 100) onUnlockAchieve('perfect_100');
 
       playSound('match', settings);
       if (newCombo >= 3 && newCombo % 3 === 0) {
         playSound('combo', settings);
-        showStatus(`🔥 ${newCombo}연속 콤보 폭발!! 1쌍 보너스 힌트!`, 'berry', 2000);
+        showStatus(`🔥 ${newCombo}연속 콤보 폭발! +${scoreGained}점 · 보너스 힌트!`, 'berry', 2000);
         setTimeout(() => triggerFlash(1, '콤보 보너스 힌트'), 400);
       } else if (newCombo > 1) {
         playSound('combo', settings);
-        showStatus(`🔥 ${newCombo}연속 콤보! (+10점)`, 'mango', 1500);
+        showStatus(`🔥 ${newCombo}연속 콤보! (+${scoreGained}점)`, 'mango', 1500);
       } else {
         showStatus('맞췄습니다! (+10점)', 'melon', 1200);
+      }
+
+      // Guard Hunter: every 30 points → +1 flash hint (this message wins over the match message)
+      if (!is8Normal && Math.floor(nextScore / 30) > Math.floor(prevScore / 30)) {
+        setFlashHints((h) => h + 1);
+        showStatus('🛡️ 가드헌터 발동! 플래시 힌트 +1 획득!', 'soda', 2200);
       }
 
       setCards((prev) =>
@@ -587,7 +590,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
                 role="status"
                 className={`mt-2.5 truncate rounded-xl border-2 border-line px-3 py-1.5 text-center text-sm font-bold ${STATUS_CLASS[statusColor]}`}
               >
-                {statusMsg}
+                {previewLeft > 0 ? `👀 카드를 기억하세요! ${(previewLeft / 1000).toFixed(1)}초` : statusMsg}
               </p>
             }
           >

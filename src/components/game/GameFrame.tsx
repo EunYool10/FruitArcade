@@ -10,16 +10,16 @@ export const GameFrame: React.FC<{ hud: React.ReactNode; board: React.ReactNode;
   board,
   panel,
 }) => (
-  <div className="mx-auto grid w-full max-w-[1080px] grid-cols-1 items-start gap-3 py-1 lg:grid-cols-[minmax(0,1fr)_300px] lg:grid-rows-[auto_1fr] lg:gap-6">
-    <div className="lg:col-start-2 lg:row-start-1">{hud}</div>
-    <div className="flex min-w-0 justify-center lg:col-start-1 lg:row-span-2 lg:row-start-1">{board}</div>
-    {panel && <div className="space-y-3 lg:col-start-2 lg:row-start-2">{panel}</div>}
+  <div className="mx-auto grid w-full max-w-[1080px] grid-cols-1 items-start gap-3 py-1 short:grid-cols-[minmax(0,1fr)_250px] short:grid-rows-[auto_1fr] lg:grid-cols-[minmax(0,1fr)_300px] lg:grid-rows-[auto_1fr] lg:gap-6">
+    <div className="short:col-start-2 short:row-start-1 lg:col-start-2 lg:row-start-1">{hud}</div>
+    <div className="flex min-w-0 justify-center short:col-start-1 short:row-span-2 short:row-start-1 lg:col-start-1 lg:row-span-2 lg:row-start-1">{board}</div>
+    {panel && <div className="space-y-3 short:col-start-2 short:row-start-2 lg:col-start-2 lg:row-start-2">{panel}</div>}
   </div>
 );
 
 export const Hud: React.FC<{ children: React.ReactNode; footer?: React.ReactNode }> = ({ children, footer }) => (
   <div className="panel p-2.5 sm:p-3">
-    <div className="grid grid-cols-4 gap-2 lg:grid-cols-2">{children}</div>
+    <div className="grid grid-cols-4 gap-2 short:grid-cols-2 lg:grid-cols-2">{children}</div>
     {footer}
   </div>
 );

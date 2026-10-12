@@ -29,8 +29,8 @@ const POOLS: Record<GameType | 'any', Mission[]> = {
   ],
   suika: [
     { id: 'suika-play-2', game: 'suika', kind: 'play', target: 2, icon: '🍉', text: '수박 게임 2판 하기' },
-    { id: 'suika-score-500', game: 'suika', kind: 'score', target: 500, icon: '🍈', text: '수박 게임 500점 이상' },
-    { id: 'suika-score-1500', game: 'suika', kind: 'score', target: 1500, icon: '🍍', text: '수박 게임 1,500점 이상' },
+    { id: 'suika-score-2000', game: 'suika', kind: 'score', target: 2000, icon: '🍈', text: '수박 게임 2,000점 이상' },
+    { id: 'suika-score-5000', game: 'suika', kind: 'score', target: 5000, icon: '🍍', text: '수박 게임 5,000점 이상' },
   ],
   dash: [
     { id: 'dash-play-3', game: 'dash', kind: 'play', target: 3, icon: '🏃', text: 'FRUIT DASH 3판 하기' },

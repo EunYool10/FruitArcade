@@ -111,6 +111,8 @@ export interface SuikaBody {
   scale: number;
   sleeping: boolean;
   sleepT: number;
+  /** Has touched the floor or the pile (falling fruit never count as overflowing) */
+  landed?: boolean;
 }
 
 export interface SuikaParticle {

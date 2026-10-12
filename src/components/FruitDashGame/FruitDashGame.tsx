@@ -14,6 +14,10 @@ const CH = 600;
 const PLAYER_Y = 530;
 const PLAYER_R = 20;
 const GROUND_Y = PLAYER_Y + PLAYER_R + 8;
+// Fruit hit the player only when they really overlap (emoji are smaller than their halo)
+const HIT_SCALE = 0.72;
+// About a second without fruit at the start of a round
+const START_GRACE = -60;
 
 const FRUIT_TYPES = [
   { emoji: '🍓', color: '#ff4d4f', r: 16, hazard: true, points: 5 },
@@ -95,6 +99,8 @@ export const FruitDashGame: React.FC<Props> = ({
   const playerXRef = useRef<number>(CW / 2);
   const targetXRef = useRef<number>(CW / 2);
   const facingRef = useRef(1);
+  const levelRef = useRef(1);
+  const floatsRef = useRef<{ x: number; y: number; text: string; life: number }[]>([]);
   const crashedRef = useRef(false);
   const keysPressedRef = useRef({ left: false, right: false });
   const isPlayingRef = useRef(false);
@@ -128,7 +134,8 @@ export const FruitDashGame: React.FC<Props> = ({
         const next = timeRef.current + 1;
         timeRef.current = next;
         setElapsedTime(next);
-        setLevel(Math.min(10, 1 + Math.floor(next / 10)));
+        levelRef.current = Math.min(10, 1 + Math.floor(next / 10));
+        setLevel(levelRef.current);
         if (next >= 30) live.current.onUnlockAchieve('dash_survivor_30');
         if (next >= 60) live.current.onUnlockAchieve('dash_survivor_60');
       }, 1000);
@@ -147,7 +154,9 @@ export const FruitDashGame: React.FC<Props> = ({
     playerXRef.current = CW / 2;
     targetXRef.current = CW / 2;
     keysPressedRef.current = { left: false, right: false };
-    spawnTimerRef.current = 0;
+    spawnTimerRef.current = START_GRACE;
+    floatsRef.current = [];
+    levelRef.current = 1;
     scoreRef.current = 0;
     starsRef.current = 0;
     timeRef.current = 0;
@@ -261,7 +270,8 @@ export const FruitDashGame: React.FC<Props> = ({
 
         // 2. Spawn falling fruits with progressive difficulty
         spawnTimerRef.current += dt;
-        const spawnInterval = Math.max(12, 42 - level * 3); // Spawns faster as level increases
+        const lvl = levelRef.current;
+        const spawnInterval = Math.max(14, 40 - lvl * 2.6); // Spawns faster as level increases
 
         if (spawnTimerRef.current >= spawnInterval) {
           spawnTimerRef.current = 0;
@@ -272,14 +282,14 @@ export const FruitDashGame: React.FC<Props> = ({
             ? FRUIT_TYPES[FRUIT_TYPES.length - 1]
             : FRUIT_TYPES[Math.floor(Math.random() * (FRUIT_TYPES.length - 1))];
 
-          const speedBase = 2.8 + level * 0.45;
+          const speedBase = 2.6 + lvl * 0.38;
           const spawnX = Math.random() * (CW - chosenDef.r * 2 - 20) + chosenDef.r + 10;
 
           fruitsRef.current.push({
             id: Math.random().toString(36).slice(2),
             x: spawnX,
             y: -chosenDef.r,
-            vx: (Math.random() - 0.5) * (level > 3 ? 1.4 : 0.4),
+            vx: (Math.random() - 0.5) * (lvl > 3 ? 1.4 : 0.4),
             vy: speedBase + Math.random() * 1.5,
             r: chosenDef.r,
             emoji: chosenDef.emoji,
@@ -316,7 +326,7 @@ export const FruitDashGame: React.FC<Props> = ({
           const dx = f.x - currentPx;
           const dy = f.y - currentPy;
           const distSq = dx * dx + dy * dy;
-          const minDist = f.r + pR;
+          const minDist = f.isBonus ? f.r + pR : f.r * HIT_SCALE + pR * 0.85;
 
           // Collision detected!
           if (distSq < minDist * minDist) {
@@ -327,7 +337,8 @@ export const FruitDashGame: React.FC<Props> = ({
               starsRef.current += 1;
               setScore(scoreRef.current);
               setBonusStarsCollected(starsRef.current);
-              playSound('victory', settings);
+              playSound('match', settings);
+              floatsRef.current.push({ x: f.x, y: f.y - 10, text: `+${bonus}`, life: 0 });
 
               // Burst particles
               for (let p = 0; p < 8; p++) {
@@ -354,11 +365,25 @@ export const FruitDashGame: React.FC<Props> = ({
             }
           }
 
-          // Successfully dodged past bottom
-          if (f.y > CH + f.r) {
+          // Landed on the grass: dodged (+2) with a little splash
+          if (f.y + f.r * 0.45 >= GROUND_Y) {
             if (f.isHazard) {
               scoreRef.current += 2;
               setScore(scoreRef.current);
+            }
+            for (let p = 0; p < 6; p++) {
+              const a = Math.PI + Math.random() * Math.PI;
+              particlesRef.current.push({
+                x: f.x,
+                y: GROUND_Y - 3,
+                vx: Math.cos(a) * (0.8 + Math.random() * 2),
+                vy: Math.sin(a) * (1.5 + Math.random() * 2.2),
+                r: 2 + Math.random() * 2.2,
+                color: f.color,
+                alpha: 1,
+                life: 0,
+                maxLife: 18 + Math.random() * 8,
+              });
             }
             fruitsRef.current.splice(i, 1);
           }
@@ -369,11 +394,21 @@ export const FruitDashGame: React.FC<Props> = ({
           const p = particlesRef.current[i];
           p.x += p.vx * dt;
           p.y += p.vy * dt;
+          p.vy += 0.18 * dt;
           p.life += dt;
           p.alpha = Math.max(0, 1 - p.life / p.maxLife);
           if (p.life >= p.maxLife) {
             particlesRef.current.splice(i, 1);
           }
+        }
+      }
+
+      if (!isPaused) {
+        for (let i = floatsRef.current.length - 1; i >= 0; i--) {
+          const t = floatsRef.current[i];
+          t.y -= 1.1 * dt;
+          t.life += dt;
+          if (t.life > 45) floatsRef.current.splice(i, 1);
         }
       }
 
@@ -565,6 +600,21 @@ export const FruitDashGame: React.FC<Props> = ({
       }
       ctx.restore();
 
+      // 7. "+50" popups
+      for (const t of floatsRef.current) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - t.life / 45);
+        ctx.font = '700 22px Fredoka, Jua, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = P.outline;
+        ctx.strokeText(t.text, t.x, t.y);
+        ctx.fillStyle = '#ffd23f';
+        ctx.fillText(t.text, t.x, t.y);
+        ctx.restore();
+      }
+
       animFrameRef.current = requestAnimationFrame(loop);
     };
 
@@ -572,7 +622,7 @@ export const FruitDashGame: React.FC<Props> = ({
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isPaused, level, handleGameOver, settings, dark]);
+  }, [isPaused, handleGameOver, settings, dark]);
 
   // Pointer move handler
   const handlePointerMove = (clientX: number) => {
@@ -606,7 +656,9 @@ export const FruitDashGame: React.FC<Props> = ({
                 className="block h-full w-full cursor-ew-resize touch-none select-none"
               />
               {gameState === 'PLAYING' && (
-                <span className="chip pointer-events-none absolute left-3 top-3 z-10 bg-surface font-display text-sm">LV.{level}</span>
+                <span key={level} className="chip pointer-events-none absolute left-3 top-3 z-10 bg-surface font-display text-sm animate-pop-in">
+                  LV.{level}
+                </span>
               )}
               {gameState === 'IDLE' && (
                 <BoardOverlay>
@@ -644,7 +696,7 @@ export const FruitDashGame: React.FC<Props> = ({
               </li>
             </ul>
             <div className="flex items-center justify-between gap-2">
-              <p className="hidden text-xs text-ink-3 sm:block">← → / A D · 마우스 · 터치</p>
+              <p className="hidden text-xs text-ink-3 sm:block short:hidden">← → / A D · 마우스 · 터치</p>
               <button
                 type="button"
                 className="btn btn-sm ml-auto"

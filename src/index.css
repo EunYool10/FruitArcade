@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* Phones held sideways: use the side-by-side game layout */
+@custom-variant short (@media (max-height: 560px) and (orientation: landscape));
 
 /* ───────────── Design tokens ───────────── */
 
@@ -420,6 +422,11 @@
   @media (min-width: 1024px) {
     .board-fit {
       --board-offset: 112px;
+    }
+  }
+  @media (max-height: 560px) and (orientation: landscape) {
+    .board-fit {
+      --board-offset: 88px;
     }
   }
 }

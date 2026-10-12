@@ -38,13 +38,13 @@ export const Navbar: React.FC<Props> = ({
 
   return (
     <header className="w-full shrink-0">
-      <div className="mx-auto flex h-16 max-w-[1080px] items-center gap-2 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-[1080px] items-center gap-2 px-4 short:h-14 sm:px-6">
         {inLobby ? (
           <div className="flex min-w-0 items-center gap-2">
             <span className="sticker h-10 w-10 shrink-0 -rotate-6 bg-berry text-xl" aria-hidden="true">
               🍓
             </span>
-            <span className="truncate font-display text-lg tracking-tight sm:text-xl">FRUIT ARCADE</span>
+            <span className="truncate font-display text-lg tracking-tight max-[380px]:hidden sm:text-xl">FRUIT ARCADE</span>
           </div>
         ) : (
           <div className="flex min-w-0 items-center gap-2.5">

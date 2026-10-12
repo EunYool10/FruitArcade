@@ -37,7 +37,8 @@ const GRAVITY = 0.38;
 const BOUNCE = 0.22;
 const FRICTION = 0.985;
 const COOLDOWN_MS = 550;
-const MAX_DROP_LEVEL = 4;
+// Chance of each droppable fruit (cherry, strawberry, grape, hallabong, persimmon)
+const DROP_WEIGHTS = [0.3, 0.25, 0.2, 0.15, 0.1];
 const KEY_SPEED = 6.5;
 
 const PALETTE = {
@@ -153,6 +154,8 @@ export const SuikaGame: React.FC<Props> = ({
   const isPlayingRef = useRef(false);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const keysRef = useRef({ left: false, right: false });
+  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shownDangerRef = useRef(3.0);
 
   // Report the finished round once
   useEffect(() => {
@@ -169,11 +172,19 @@ export const SuikaGame: React.FC<Props> = ({
   useEffect(
     () => () => {
       isPlayingRef.current = false;
+      if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
     },
     []
   );
 
-  const randLevel = () => Math.floor(Math.random() * (MAX_DROP_LEVEL + 1));
+  const randLevel = () => {
+    let roll = Math.random();
+    for (let lv = 0; lv < DROP_WEIGHTS.length; lv++) {
+      roll -= DROP_WEIGHTS[lv];
+      if (roll < 0) return lv;
+    }
+    return 0;
+  };
 
   // Track elapsed play time
   useEffect(() => {
@@ -199,6 +210,8 @@ export const SuikaGame: React.FC<Props> = ({
     dangerRef.current = false;
     warnCdRef.current = 0;
     keysRef.current = { left: false, right: false };
+    if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+    shownDangerRef.current = 3.0;
 
     const cLv = randLevel();
     const nLv = randLevel();
@@ -251,13 +264,14 @@ export const SuikaGame: React.FC<Props> = ({
       scale: 0.95,
       sleeping: false,
       sleepT: 0,
+      landed: false,
     });
 
     playSound('drop', settings);
     isCooldownRef.current = true;
     setIsCooldown(true);
 
-    setTimeout(() => {
+    cooldownTimerRef.current = setTimeout(() => {
       if (!isPlayingRef.current) return;
       curLevelRef.current = nextLevelRef.current;
       const newNext = randLevel();
@@ -350,6 +364,7 @@ export const SuikaGame: React.FC<Props> = ({
               b.sleeping = false;
             }
             if (b.y + sr > BOTTOM) {
+              b.landed = true;
               b.y = BOTTOM - sr;
               if (b.vy > 0) {
                 b.vy = -b.vy * (BOUNCE * 0.35);
@@ -382,6 +397,11 @@ export const SuikaGame: React.FC<Props> = ({
               if (d2 < minD * minD && d2 > 0.0001) {
                 b1.sleeping = false;
                 b2.sleeping = false;
+                // Touching the pile means the fruit has landed (two fruit still in the air do not count)
+                if (b1.landed || b2.landed) {
+                  b1.landed = true;
+                  b2.landed = true;
+                }
 
                 const d = Math.sqrt(d2);
                 const nx = dx / d;
@@ -463,6 +483,7 @@ export const SuikaGame: React.FC<Props> = ({
                 scale: 0.75,
                 sleeping: false,
                 sleepT: 0,
+                landed: true,
               });
 
               const pts = Math.round(b1.r + b2.r + nf.score);
@@ -517,7 +538,7 @@ export const SuikaGame: React.FC<Props> = ({
         let isHazard = false;
         for (let i = 0; i < bodiesRef.current.length; i++) {
           const b = bodiesRef.current[i];
-          if (b.scale < 0.85) continue;
+          if (b.scale < 0.85 || !b.landed) continue;
           if (b.y - b.r * b.scale < DEADLINE) {
             isHazard = true;
             break;
@@ -529,7 +550,11 @@ export const SuikaGame: React.FC<Props> = ({
           dangerTimerRef.current = Math.max(0, dangerTimerRef.current - dtSec);
           dangerRef.current = true;
           setIsDanger(true);
-          setDangerTime(dangerTimerRef.current);
+          const shown = Math.ceil(dangerTimerRef.current * 10) / 10;
+          if (shown !== shownDangerRef.current) {
+            shownDangerRef.current = shown;
+            setDangerTime(shown);
+          }
 
           warnCdRef.current -= 1;
           if (warnCdRef.current <= 0) {
@@ -544,14 +569,8 @@ export const SuikaGame: React.FC<Props> = ({
           }
         } else {
           dangerTimerRef.current = Math.min(3.0, dangerTimerRef.current + dtSec * 1.6);
-          if (dangerTimerRef.current >= 3.0) {
-            dangerRef.current = false;
-            setIsDanger(false);
-          } else {
-            dangerRef.current = true;
-          setIsDanger(true);
-            setDangerTime(dangerTimerRef.current);
-          }
+          dangerRef.current = false;
+          setIsDanger(false);
         }
 
         // 6. Update particles & floating texts
@@ -827,7 +846,7 @@ export const SuikaGame: React.FC<Props> = ({
               })}
             </ol>
             <div className="mt-3 flex items-center justify-between gap-2">
-              <p className="hidden text-xs text-ink-3 sm:block">← → 이동 · Space 낙하</p>
+              <p className="hidden text-xs text-ink-3 sm:block short:hidden">← → 이동 · Space 낙하</p>
               <button
                 type="button"
                 className="btn btn-sm ml-auto"

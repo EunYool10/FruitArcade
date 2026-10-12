@@ -33,15 +33,20 @@
 npm install
 npm run dev      # http://localhost:3000
 npm run build    # dist/ 에 빌드
+npm start        # dist/ 를 서빙 (PORT, 기본 3000)
 npm run lint     # 타입 검사
 ```
 
 ## 배포
 
-`main`에 push하면 GitHub Actions([`deploy.yml`](.github/workflows/deploy.yml))가 타입 검사와 빌드를 한 뒤 GitHub Pages에 올립니다.
+`main`에 push하면 두 곳에 자동으로 올라갑니다.
 
-- 주소: https://eunyool10.github.io/FruitArcade/
-- Google 로그인을 쓰려면 Firebase 콘솔 → Authentication → 설정 → **승인된 도메인**에 `eunyool10.github.io`가 있어야 합니다.
+- **Render** 웹 서비스: https://fruitarcade.onrender.com
+  - Build Command `npm ci`(기본값 `npm install`도 됨), Start Command `npm start`
+  - Render에서는 설치가 끝나면 `postinstall`이 자동으로 빌드하고(`RENDER` 환경 변수가 있을 때만), `npm start`가 [`server.mjs`](server.mjs)로 `dist/`를 서빙합니다(압축, 캐시 헤더 포함).
+  - 무료 인스턴스는 한동안 접속이 없으면 잠들어서 첫 접속에 50초 정도 걸릴 수 있습니다. Render **Static Site**(Build Command `npm ci`, Publish directory `dist`)로 만들면 잠들지 않습니다.
+- **GitHub Pages**: https://eunyool10.github.io/FruitArcade/ (GitHub Actions [`deploy.yml`](.github/workflows/deploy.yml)가 타입 검사와 빌드 후 배포)
+- Google 로그인을 쓰려면 Firebase 콘솔 → Authentication → 설정 → **승인된 도메인**에 `fruitarcade.onrender.com`과 `eunyool10.github.io`가 있어야 합니다.
 - 보안 규칙([`firestore.rules`](firestore.rules))은 자동 배포되지 않습니다. 바꾼 뒤에는 Firebase 콘솔 → Firestore → 데이터베이스 `ai-studio-9fb7cc09-…` → **규칙** 탭에 붙여 넣고 게시하거나, Firebase CLI로 배포하세요. 규칙을 게시하기 전에는 랭킹 창에 "준비하고 있어요"가 표시됩니다.
 
 ### 로컬에서 Firebase 에뮬레이터로 테스트
@@ -90,6 +95,7 @@ src/
     audio.ts · music.ts  효과음, 배경음악 시퀀서
     pwa.ts · haptics.ts · profile.ts · shareImage.ts · fx.ts · format.ts
 pwa/sw.js                서비스 워커 템플릿
+server.mjs               npm start용 정적 서버 (Render)
 ```
 
 ## 데이터 저장

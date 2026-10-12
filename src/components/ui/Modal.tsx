@@ -77,7 +77,7 @@ export const Modal: React.FC<ModalProps> = ({
             </button>
           )}
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-1 pb-[max(1.25rem,env(safe-area-inset-bottom))]">{children}</div>
         {footer && <footer className="shrink-0 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-1">{footer}</footer>}
       </div>
     </div>

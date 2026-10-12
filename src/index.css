@@ -181,6 +181,9 @@
     background-image: radial-gradient(var(--bg-dot) 1.3px, transparent 1.5px);
     background-size: 22px 22px;
     -webkit-font-smoothing: antialiased;
+    /* Korean wraps between words, never mid-word; very long strings still break instead of overflowing */
+    word-break: keep-all;
+    overflow-wrap: break-word;
     /* Jua has a single weight; never fake-bold it */
     font-synthesis: none;
     touch-action: manipulation;

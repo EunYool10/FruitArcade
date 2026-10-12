@@ -9,6 +9,14 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.2.1',
+    title: '화면 다듬기',
+    items: [
+      ['글자 줄바꿈', '한글 단어가 줄 끝에서 중간에 잘리던 문제를 고쳤어요. (예: "찾아 / 내세요")'],
+      ['랭킹 창', '기록이 적을 때 생기던 큰 빈 공간을 없애고, 선택한 탭 윗부분이 잘리지 않게 했어요.'],
+    ],
+  },
+  {
     version: '3.2.0',
     title: '관리자 · 보안 강화',
     items: [

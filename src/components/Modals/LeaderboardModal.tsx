@@ -279,13 +279,13 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
         </p>
       )}
 
-      <div className="min-h-[260px]" aria-live="polite" aria-busy={status === 'loading'}>
+      <div aria-live="polite" aria-busy={status === 'loading'}>
         {status === 'loading' ? (
-          <div className="grid h-[260px] place-items-center text-ink-3">
+          <div className="grid h-[200px] place-items-center text-ink-3">
             <Loader2 className="h-7 w-7 animate-spin" aria-label="불러오는 중" />
           </div>
         ) : status !== 'ready' ? (
-          <div className="well grid h-[260px] place-items-center p-6 text-center">
+          <div className="well grid min-h-[200px] place-items-center p-6 text-center">
             <div>
               <p className="text-4xl" aria-hidden="true">
                 {ERRORS[status].icon}
@@ -297,7 +297,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
             </div>
           </div>
         ) : board.entries.length === 0 ? (
-          <div className="well grid h-[260px] place-items-center p-6 text-center">
+          <div className="well grid min-h-[200px] place-items-center p-6 text-center">
             <div>
               <p className="text-4xl" aria-hidden="true">
                 {meta.emoji}

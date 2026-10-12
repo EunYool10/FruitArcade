@@ -1,13 +1,13 @@
 import React from 'react';
-import { User } from 'firebase/auth';
 import { UserStatistics } from '../../types';
 import { LevelInfo } from '../../utils/progress';
 import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
-import { Avatar } from '../ui/Avatar';
+import { Avatar, PlayerView } from '../ui/Avatar';
 import { Meter } from '../ui/Meter';
 
 interface PlayerCardProps {
-  user: User | null;
+  player: PlayerView;
+  streak: number;
   level: LevelInfo;
   stats: UserStatistics;
   achievementCount: number;
@@ -41,7 +41,8 @@ const StatTile: React.FC<{ icon: string; label: string; value: string; onClick?:
 };
 
 export const PlayerCard: React.FC<PlayerCardProps> = ({
-  user,
+  player,
+  streak,
   level,
   stats,
   achievementCount,
@@ -54,15 +55,15 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   return (
     <section className="panel flex flex-col gap-4 p-5 sm:p-6" aria-label="내 정보">
       <div className="flex items-center gap-3">
-        <Avatar user={user} emoji={level.emoji} size="lg" />
+        <Avatar player={player} size="lg" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-xl">{user?.displayName || '게스트'}</p>
+          <p className="truncate font-display text-xl">{player.name}</p>
           <span className="chip mt-1 bg-mango-soft">
             {level.emoji} Lv.{level.level} {level.title}
           </span>
         </div>
         <button type="button" className="btn btn-sm" onClick={onOpenProfile}>
-          {user ? '프로필' : '로그인'}
+          {player.isGuest ? '로그인' : '프로필'}
         </button>
       </div>
 
@@ -77,13 +78,14 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         <p className="mt-1.5 text-xs text-ink-3">다음 레벨까지 {level.next - level.xp} XP</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <StatTile icon="🏆" label="업적" value={`${achievementCount}/${ACHIEVEMENT_COUNT}`} onClick={onOpenAchievements} />
         <StatTile icon="🎮" label="플레이" value={`${stats.totalPlayCount}판`} onClick={onOpenRecords} />
-        <StatTile icon="🏅" label="미션 도장" value={`${stats.missionStamps}개`} />
+        <StatTile icon="🔥" label="연속 출석" value={`${streak}일`} />
+        <StatTile icon="🏅" label="도장" value={`${stats.missionStamps}개`} />
       </div>
 
-      {!user && <p className="text-xs text-ink-3">💡 로그인하면 기록과 업적이 클라우드에 저장돼요.</p>}
+      {player.isGuest && <p className="text-xs text-ink-3">💡 로그인하면 기록과 업적이 클라우드에 저장돼요.</p>}
     </section>
   );
 };

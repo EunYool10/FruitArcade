@@ -1,6 +1,6 @@
 import React from 'react';
 import { BarChart3, Play } from 'lucide-react';
-import { User } from 'firebase/auth';
+import { PlayerView } from '../ui/Avatar';
 import { GameType, HistoryEntry, UserStatistics } from '../../types';
 import { APP_VERSION, GAMES, GAME_ORDER } from '../../constants';
 import { LevelInfo, bestKey, playsKey } from '../../utils/progress';
@@ -9,11 +9,13 @@ import { PlayerCard } from './PlayerCard';
 import { GameCard } from './GameCard';
 import { MissionsCard } from './MissionsCard';
 import { RecentPlays } from './RecentPlays';
+import { applyUpdate, promptInstall, usePwa } from '../../utils/pwa';
 
-export type LobbyTarget = 'profile' | 'achievements' | 'records' | 'patch' | 'credits';
+export type LobbyTarget = 'profile' | 'achievements' | 'records' | 'patch' | 'credits' | 'settings';
 
 interface LobbyProps {
-  user: User | null;
+  player: PlayerView;
+  streak: number;
   stats: UserStatistics;
   history: HistoryEntry[];
   daily: DailyState;
@@ -25,12 +27,25 @@ interface LobbyProps {
 
 const tilt = (deg: number, delay = 0) => ({ '--tilt': `${deg}deg`, animationDelay: `${delay}s` }) as React.CSSProperties;
 
-export const Lobby: React.FC<LobbyProps> = ({ user, stats, history, daily, level, achievementCount, onPlay, onOpen }) => {
+export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, daily, level, achievementCount, onPlay, onOpen }) => {
   const lastGame = history[0]?.game;
   const quick: GameType = lastGame ?? 'suika';
+  const pwa = usePwa();
 
   return (
     <div className="mx-auto w-full max-w-[1080px] space-y-7 py-2 sm:space-y-9">
+      {pwa.updateReady && (
+        <div role="status" className="panel flex items-center gap-3 bg-soda-soft p-3 sm:p-4">
+          <span className="text-2xl" aria-hidden="true">
+            ✨
+          </span>
+          <p className="flex-1 text-sm font-bold">새 버전이 나왔어요!</p>
+          <button type="button" className="btn btn-sm btn-soda" onClick={applyUpdate}>
+            새로고침
+          </button>
+        </div>
+      )}
+
       <section className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* Hero */}
         <div className="panel relative flex min-h-[250px] flex-col justify-center overflow-hidden bg-mango-soft p-6 sm:p-8">
@@ -66,7 +81,8 @@ export const Lobby: React.FC<LobbyProps> = ({ user, stats, history, daily, level
         </div>
 
         <PlayerCard
-          user={user}
+          player={player}
+          streak={streak}
           level={level}
           stats={stats}
           achievementCount={achievementCount}
@@ -88,7 +104,7 @@ export const Lobby: React.FC<LobbyProps> = ({ user, stats, history, daily, level
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
-        <MissionsCard daily={daily} />
+        <MissionsCard daily={daily} streak={streak} />
         <RecentPlays history={history} onOpenRecords={() => onOpen('records')} />
       </section>
 
@@ -99,6 +115,15 @@ export const Lobby: React.FC<LobbyProps> = ({ user, stats, history, daily, level
         <button type="button" className="underline-offset-4 hover:text-ink hover:underline" onClick={() => onOpen('credits')}>
           크레딧
         </button>
+        {!pwa.installed && (pwa.canInstall || pwa.ios) && (
+          <button
+            type="button"
+            className="chip bg-soda-soft text-ink hover:bg-soda"
+            onClick={() => (pwa.canInstall ? promptInstall() : onOpen('settings'))}
+          >
+            📲 앱으로 설치
+          </button>
+        )}
         <span className="font-display">v{APP_VERSION}</span>
       </footer>
     </div>

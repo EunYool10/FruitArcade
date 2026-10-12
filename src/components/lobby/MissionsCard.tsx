@@ -4,7 +4,7 @@ import { XP } from '../../utils/progress';
 import { untilMidnight } from '../../utils/format';
 import { Meter } from '../ui/Meter';
 
-export const MissionsCard: React.FC<{ daily: DailyState }> = ({ daily }) => {
+export const MissionsCard: React.FC<{ daily: DailyState; streak: number }> = ({ daily, streak }) => {
   const missions = missionsFor(daily.date);
   const doneCount = missions.filter((m) => (daily.progress[m.id] || 0) >= m.target).length;
 
@@ -14,7 +14,10 @@ export const MissionsCard: React.FC<{ daily: DailyState }> = ({ daily }) => {
         <h2 id="missions-title" className="font-display text-xl">
           📋 오늘의 미션
         </h2>
-        <span className="chip bg-surface-2 text-ink-2">{untilMidnight()} 뒤 새 미션</span>
+        <div className="flex flex-wrap gap-1.5">
+          {streak > 0 && <span className="chip bg-berry-soft">🔥 {streak}일 연속</span>}
+          <span className="chip bg-surface-2 text-ink-2">{untilMidnight()} 뒤 새 미션</span>
+        </div>
       </header>
 
       <ul className="space-y-2.5">

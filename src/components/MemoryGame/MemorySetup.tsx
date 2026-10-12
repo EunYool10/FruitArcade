@@ -9,6 +9,7 @@ interface Props {
   settings: GameSettings;
   onStart: (config: MemoryConfig) => void;
   onBack: () => void;
+  onHelp: () => void;
 }
 
 const MODES: { value: MemoryMode; label: string; sub: string; emoji: string }[] = [
@@ -28,7 +29,7 @@ const Field: React.FC<{ title: string; children: React.ReactNode }> = ({ title, 
   </div>
 );
 
-export const MemorySetup: React.FC<Props> = ({ initial, settings, onStart, onBack }) => {
+export const MemorySetup: React.FC<Props> = ({ initial, settings, onStart, onBack, onHelp }) => {
   const [mode, setMode] = useState<MemoryMode>(initial.mode);
   const [previewTime, setPreviewTime] = useState(initial.previewTime);
   const [lifeLimit, setLifeLimit] = useState<LifeLimit>(initial.lifeLimit);
@@ -50,6 +51,9 @@ export const MemorySetup: React.FC<Props> = ({ initial, settings, onStart, onBac
         </span>
         <h1 className="mt-2 font-display text-3xl sm:text-4xl">과일 메모리</h1>
         <p className="mt-1 text-ink-2">난이도를 고르고 시작하세요</p>
+        <button type="button" className="btn btn-ghost btn-sm mt-1 text-ink-2" onClick={onHelp}>
+          ❓ 게임 방법 보기
+        </button>
       </div>
 
       <div className="panel space-y-5 p-4 sm:p-5">

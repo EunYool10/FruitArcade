@@ -18,6 +18,7 @@ export const EMPTY_STATS: UserStatistics = {
   suikaHighScore: 0,
   dashHighScore: 0,
   missionStamps: 0,
+  bestStreak: 0,
   lastPlayedAt: '',
 };
 
@@ -63,13 +64,14 @@ export function loadLocalStats(): UserStatistics {
 export const saveLocalStats = (stats: UserStatistics) => write(STATS_KEY, stats);
 
 /** Fold one finished round into the statistics. Shared by local and cloud saves. */
-export function applyResult(stats: UserStatistics, r: GameResult, stamp = false): UserStatistics {
+export function applyResult(stats: UserStatistics, r: GameResult, stamp = false, streak = 0): UserStatistics {
   const next = { ...stats };
   next.totalPlayCount += 1;
   next.totalPlayTime += Math.max(0, Math.round(r.seconds));
   next[playsKey(r.game)] += 1;
   next[bestKey(r.game)] = Math.max(next[bestKey(r.game)], Math.round(r.score));
   if (stamp) next.missionStamps += 1;
+  next.bestStreak = Math.max(next.bestStreak, streak);
   next.lastPlayedAt = new Date().toISOString();
   return next;
 }
@@ -155,4 +157,34 @@ export function clearLocalProgress(): void {
   } catch {
     // ignore
   }
+}
+
+// ───────── Daily streak ─────────
+
+const STREAK_KEY = 'fruit_arcade_streak';
+
+export interface StreakState {
+  /** Last day (YYYY-MM-DD) a round was finished */
+  last: string;
+  count: number;
+}
+
+const dayKey = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+export const loadStreak = (): StreakState => read<StreakState>(STREAK_KEY, { last: '', count: 0 });
+
+/** Streak as it stands today (0 once a whole day was missed). */
+export function currentStreak(s: StreakState, now = new Date()): number {
+  const yesterday = dayKey(new Date(now.getTime() - 86400000));
+  return s.last === dayKey(now) || s.last === yesterday ? s.count : 0;
+}
+
+/** Record a finished round; returns the new state and whether today extended the streak. */
+export function bumpStreak(s: StreakState, now = new Date()): { state: StreakState; extended: boolean } {
+  const today = dayKey(now);
+  if (s.last === today) return { state: s, extended: false };
+  const state = { last: today, count: currentStreak(s, now) + 1 };
+  write(STREAK_KEY, state);
+  return { state, extended: true };
 }

@@ -10,23 +10,24 @@ interface Props {
   onClose: () => void;
 }
 
-type Filter = 'all' | NonNullable<Achievement['game']>;
+type Filter = 'every' | NonNullable<Achievement['game']>;
 
 const TABS: { id: Filter; label: string }[] = [
-  { id: 'all', label: '전체' },
+  { id: 'every', label: '전체' },
   { id: 'memory', label: '🍓 메모리' },
   { id: 'suika', label: '🍉 수박' },
   { id: 'dash', label: '🏃 대시' },
+  { id: 'all', label: '🏅 기타' },
 ];
 
 export const AchievementsModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<Filter>('every');
   const [lockedOnly, setLockedOnly] = useState(false);
 
   const unlocked = getUnlockedAchievements();
   const unlockedCount = countUnlocked(unlocked);
   const list = ACHIEVEMENT_DEFINITIONS.filter(
-    (a) => (filter === 'all' || a.game === filter) && !(lockedOnly && unlocked[a.id])
+    (a) => (filter === 'every' || a.game === filter) && !(lockedOnly && unlocked[a.id])
   );
 
   return (

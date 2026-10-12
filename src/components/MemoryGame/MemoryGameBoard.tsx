@@ -3,6 +3,7 @@ import { Search, Zap } from 'lucide-react';
 import { GameResult, GameReward, GameSettings, LifeLimit, MemoryCard, MemoryMode } from '../../types';
 import { Tone } from '../../constants';
 import { playSound } from '../../utils/audio';
+import { HAPTIC, vibrate } from '../../utils/haptics';
 import { celebrate } from '../../utils/fx';
 import { formatTime } from '../../utils/format';
 import { GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
@@ -278,6 +279,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
       if (settings.celebrateEffect) celebrate();
     } else {
       playSound('over', settings);
+      vibrate(HAPTIC.over, settings);
     }
 
   }, [settings]);
@@ -385,6 +387,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
   const handleJokerClick = (index: number) => {
     setIsReady(false);
     playSound('match', settings);
+    vibrate(HAPTIC.match, settings);
 
     const newJokerStreak = jokerStreak + 1;
     setJokerStreak(newJokerStreak);
@@ -437,6 +440,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
   const handleSpecialCardClick = (index: number, type: 'card-hint' | 'flash') => {
     setIsReady(false);
     playSound('match', settings);
+    vibrate(HAPTIC.match, settings);
 
     setCards((prev) =>
       prev.map((c, i) => (i === index ? { ...c, isFlipped: true, specialUsed: true } : c))
@@ -488,6 +492,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
       if (wrongCount === 0 && nextScore >= 100) onUnlockAchieve('perfect_100');
 
       playSound('match', settings);
+      vibrate(HAPTIC.match, settings);
       if (newCombo >= 3 && newCombo % 3 === 0) {
         playSound('combo', settings);
         showStatus(`🔥 ${newCombo}연속 콤보 폭발! +${scoreGained}점 · 보너스 힌트!`, 'berry', 2000);
@@ -529,6 +534,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
       setWrongCount(newWrong);
       setScore((s) => s - penalty);
       playSound('wrong', settings);
+      vibrate(HAPTIC.wrong, settings);
 
       if (settings.shakeEffect) {
         setShakingCardIndex(idx2);
@@ -717,6 +723,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
       {isGameOver && (
         <ScreenOverlay>
           <ResultCard
+            game="memory"
             emoji={resultEmoji}
             title={resultTitle}
             subtitle={resultSub}

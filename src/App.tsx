@@ -24,6 +24,9 @@ import { PauseModal } from './components/Modals/PauseModal';
 import { ProfileModal } from './components/Modals/ProfileModal';
 import { RecordsModal } from './components/Modals/RecordsModal';
 import { Toast, ToastHost } from './components/ui/Toast';
+import { PlayerView } from './components/ui/Avatar';
+import { PlayerContext } from './components/PlayerContext';
+import { Tutorial, markSeen, tutorialSeen } from './components/game/Tutorial';
 import {
   countUnlocked,
   getUnlockedAchievements,
@@ -44,7 +47,12 @@ import {
   mergeStats,
   pushHistory,
   saveLocalStats,
+  StreakState,
+  bumpStreak,
+  currentStreak,
+  loadStreak,
 } from './utils/progress';
+import { PlayerProfile, loadProfile, saveProfile } from './utils/profile';
 import { DailyState, applyDaily, loadDaily, saveDaily, todayKey } from './utils/missions';
 import { playSound } from './utils/audio';
 
@@ -114,9 +122,12 @@ export default function App() {
   const [history, setHistory] = useState<HistoryEntry[]>(loadHistory);
   const historyRef = useRef(history);
   const [daily, setDaily] = useState<DailyState>(loadDaily);
+  const [streak, setStreak] = useState<StreakState>(loadStreak);
+  const [profile, setProfile] = useState<PlayerProfile>(loadProfile);
   const [, setAchieveTick] = useState(0);
 
   const [modal, setModal] = useState<ModalId | null>(null);
+  const [tutorialGame, setTutorialGame] = useState<GameType | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -128,10 +139,17 @@ export default function App() {
   const isPlayScreen = PLAY_SCREENS.includes(screen);
   const isPlaying = isPlayScreen && roundActive;
   // Games freeze while paused or while any window covers them
-  const gamePaused = isPaused || modal !== null;
+  const gamePaused = isPaused || modal !== null || tutorialGame !== null;
 
   const achievementCount = countUnlocked();
   const level = levelInfo(computeXp(stats, achievementCount));
+  const streakNow = currentStreak(streak);
+  const player: PlayerView = {
+    name: profile.nickname || user?.displayName || '게스트',
+    emoji: profile.avatar || level.emoji,
+    photo: profile.avatar ? null : user?.photoURL ?? null,
+    isGuest: !user,
+  };
 
   // ───────── helpers ─────────
 
@@ -179,10 +197,18 @@ export default function App() {
     if (u) cloudApi().then((api) => api.saveUserSettings(u.uid, next)).catch(() => {});
   };
 
+  // The top-bar button mutes or unmutes effects and music together
   const handleToggleSound = () => {
-    const next = !settings.sfxEnabled;
-    updateSettings({ ...settings, sfxEnabled: next });
+    const next = !(settings.sfxEnabled || settings.bgmEnabled);
+    updateSettings({ ...settings, sfxEnabled: next, bgmEnabled: next });
     playSound('click', { sfxEnabled: next, volume: settings.volume });
+  };
+
+  const updateProfile = (next: PlayerProfile) => {
+    setProfile(next);
+    saveProfile(next);
+    const u = userRef.current;
+    if (u) cloudApi().then((api) => api.saveProfileCustom(u.uid, next)).catch(() => {});
   };
 
   // ───────── auth & cloud sync ─────────
@@ -199,6 +225,18 @@ export default function App() {
         setSettings(nextSettings);
         writeJSON(SETTINGS_KEY, nextSettings);
         if (Object.keys(cloud.settings).length === 0) api.saveUserSettings(u.uid, nextSettings).catch(() => {});
+
+        // Nickname / avatar: the cloud wins when set, otherwise keep this device's choice
+        const local = loadProfile();
+        const mergedProfile = {
+          nickname: cloud.custom.nickname || local.nickname,
+          avatar: cloud.custom.avatar || local.avatar,
+        };
+        setProfile(mergedProfile);
+        saveProfile(mergedProfile);
+        if (mergedProfile.nickname !== cloud.custom.nickname || mergedProfile.avatar !== cloud.custom.avatar) {
+          api.saveProfileCustom(u.uid, mergedProfile).catch(() => {});
+        }
 
         // Achievements: union of both sides
         const { merged, cloudOutdated } = mergeAchievements(cloud.achievements);
@@ -273,6 +311,9 @@ export default function App() {
     resetAchievements();
     bumpAchievements();
     commitStats({ ...EMPTY_STATS });
+    const blank = { nickname: '', avatar: '' };
+    setProfile(blank);
+    saveProfile(blank);
     historyRef.current = [];
     setHistory([]);
     setModal(null);
@@ -328,7 +369,10 @@ export default function App() {
       saveDaily(nextDaily);
       setDaily(nextDaily);
 
-      const next = applyResult(prev, result, stampEarned);
+      const { state: nextStreak, extended } = bumpStreak(loadStreak());
+      setStreak(nextStreak);
+
+      const next = applyResult(prev, result, stampEarned, nextStreak.count);
       commitStats(next);
 
       const newBest = result.score > 0 && result.score > prevBest;
@@ -341,10 +385,21 @@ export default function App() {
       const u = userRef.current;
       if (u) {
         cloudApi()
-          .then((api) => api.recordCloudResult(u.uid, result, stampEarned))
+          .then((api) => api.recordCloudResult(u.uid, result, stampEarned, nextStreak.count))
           .then((cloud) => commitStats(mergeStats(statsRef.current, cloud)))
           .catch((err) => console.warn('Failed to save game result:', err));
       }
+
+      // Progress achievements (shown on this round's result card)
+      const unlockIf = (cond: boolean, id: string) => cond && handleUnlockAchieve(id);
+      unlockIf(after.level >= 5, 'level_5');
+      unlockIf(after.level >= 10, 'level_10');
+      unlockIf(next.missionStamps >= 1, 'stamp_1');
+      unlockIf(next.missionStamps >= 10, 'stamp_10');
+      unlockIf(nextStreak.count >= 3, 'streak_3');
+      unlockIf(nextStreak.count >= 7, 'streak_7');
+      unlockIf(nextStreak.count >= 30, 'streak_30');
+      unlockIf(result.game === 'suika' && result.score >= 10000, 'suika_10000');
 
       return {
         xpGained: after.xp - before.xp,
@@ -352,11 +407,12 @@ export default function App() {
         prevBest,
         levelUp: after.level > before.level ? after.level : null,
         missions: completed.map((m) => m.text),
+        streak: extended && nextStreak.count > 1 ? nextStreak.count : null,
         achievements: [...roundAchRef.current],
         stamp: stampEarned,
       };
     },
-    [commitStats]
+    [commitStats, handleUnlockAchieve]
   );
 
   // ───────── navigation ─────────
@@ -386,6 +442,7 @@ export default function App() {
     setAutoStart(quick);
     setGameKey((k) => k + 1);
     goTo(GAMES[g].screen);
+    if (!tutorialSeen(g)) setTutorialGame(g);
   };
 
   const openModal = (id: ModalId) => {
@@ -405,12 +462,15 @@ export default function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (modal) setModal(null);
+      if (tutorialGame) {
+        markSeen(tutorialGame);
+        setTutorialGame(null);
+      } else if (modal) setModal(null);
       else if (isPlaying) setIsPaused((p) => !p);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [modal, isPlaying]);
+  }, [modal, isPlaying, tutorialGame]);
 
   // Pause when the tab is hidden mid-round
   useEffect(() => {
@@ -463,6 +523,7 @@ export default function App() {
   };
 
   return (
+    <PlayerContext.Provider value={player}>
     <div className="flex h-dvh w-full flex-col overflow-hidden">
       <ToastHost toast={toasts[0]} />
 
@@ -470,7 +531,7 @@ export default function App() {
         screen={screen}
         roundActive={isPlaying}
         settings={settings}
-        user={user}
+        player={player}
         level={level}
         onHome={() => goTo(screen === 'memory-play' ? 'memory-setup' : 'lobby')}
         onPause={() => setIsPaused(true)}
@@ -492,7 +553,8 @@ export default function App() {
               <Suspense fallback={<Loading />}>
                 {screen === 'lobby' && (
                   <Lobby
-                    user={user}
+                    player={player}
+                    streak={streakNow}
                     stats={stats}
                     history={history}
                     daily={daily}
@@ -504,7 +566,13 @@ export default function App() {
                 )}
 
                 {screen === 'memory-setup' && (
-                  <MemorySetup initial={memoryCfg} settings={settings} onStart={startMemory} onBack={() => goTo('lobby')} />
+                  <MemorySetup
+                    initial={memoryCfg}
+                    settings={settings}
+                    onStart={startMemory}
+                    onBack={() => goTo('lobby')}
+                    onHelp={() => setTutorialGame('memory')}
+                  />
                 )}
 
                 {screen === 'memory-play' && (
@@ -518,11 +586,26 @@ export default function App() {
                 )}
 
                 {screen === 'suika' && (
-                  <SuikaGame key={gameKey} {...gameCommon} autoStart={autoStart} dark={resolvedTheme === 'dark'} best={stats.suikaHighScore} />
+                  <SuikaGame
+                    key={gameKey}
+                    {...gameCommon}
+                    autoStart={autoStart}
+                    dark={resolvedTheme === 'dark'}
+                    best={stats.suikaHighScore}
+                    onHelp={() => setTutorialGame('suika')}
+                  />
                 )}
 
                 {screen === 'dash' && (
-                  <FruitDashGame key={gameKey} {...gameCommon} autoStart={autoStart} dark={resolvedTheme === 'dark'} best={stats.dashHighScore} />
+                  <FruitDashGame
+                    key={gameKey}
+                    {...gameCommon}
+                    autoStart={autoStart}
+                    dark={resolvedTheme === 'dark'}
+                    best={stats.dashHighScore}
+                    onChangeDifficulty={(d) => updateSettings({ ...settings, dashDifficulty: d })}
+                    onHelp={() => setTutorialGame('dash')}
+                  />
                 )}
               </Suspense>
             </motion.div>
@@ -534,6 +617,9 @@ export default function App() {
         isOpen={modal === 'profile'}
         onClose={() => setModal(null)}
         user={user}
+        player={player}
+        profile={profile}
+        onUpdateProfile={updateProfile}
         stats={stats}
         level={level}
         achievementCount={achievementCount}
@@ -554,12 +640,14 @@ export default function App() {
       />
       <PatchNotesModal isOpen={modal === 'patch'} onClose={() => setModal(null)} />
       <CreditsModal isOpen={modal === 'credits'} onClose={() => setModal(null)} />
+      <Tutorial game={tutorialGame} onClose={() => setTutorialGame(null)} />
       <PauseModal
-        isOpen={isPaused && isPlaying && modal === null}
+        isOpen={isPaused && isPlaying && modal === null && tutorialGame === null}
         onResume={() => setIsPaused(false)}
         onRestart={restartGame}
         onExit={() => goTo('lobby')}
       />
     </div>
+    </PlayerContext.Provider>
   );
 }

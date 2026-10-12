@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { RotateCcw } from 'lucide-react';
-import { DashFallingFruit, DashParticle, GameResult, GameReward, GameSettings } from '../../types';
+import { DashDifficulty, DashFallingFruit, DashParticle, GameResult, GameReward, GameSettings } from '../../types';
 import { GAMES } from '../../constants';
 import { playSound } from '../../utils/audio';
+import { HAPTIC, vibrate } from '../../utils/haptics';
 import { celebrate } from '../../utils/fx';
 import { formatNumber, formatTime } from '../../utils/format';
 import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
 import { StartCard } from '../game/StartCard';
+import { Segmented } from '../ui/Segmented';
 import { ResultCard } from '../game/ResultCard';
 
 const CW = 440;
@@ -58,6 +60,13 @@ const SPECKS = Array.from({ length: 36 }, (_, i) => ({
   speed: 0.15 + ((i * 13) % 5) * 0.06,
 }));
 
+// Harder = faster and denser, but every dodge and star is worth more
+export const DASH_DIFFICULTY: Record<DashDifficulty, { label: string; sub: string; speed: number; spawn: number; dodge: number; star: number }> = {
+  easy: { label: '쉬움', sub: '천천히', speed: 0.8, spawn: 1.3, dodge: 1, star: 30 },
+  normal: { label: '보통', sub: '기본', speed: 1, spawn: 1, dodge: 2, star: 50 },
+  hard: { label: '어려움', sub: '점수 1.5배', speed: 1.22, spawn: 0.8, dodge: 3, star: 80 },
+};
+
 const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 
 interface Props {
@@ -71,6 +80,8 @@ interface Props {
   onGameComplete: (result: GameResult) => GameReward;
   onRoundChange: (active: boolean) => void;
   onExit: () => void;
+  onChangeDifficulty: (d: DashDifficulty) => void;
+  onHelp?: () => void;
 }
 
 export const FruitDashGame: React.FC<Props> = ({
@@ -83,6 +94,8 @@ export const FruitDashGame: React.FC<Props> = ({
   onGameComplete,
   onRoundChange,
   onExit,
+  onChangeDifficulty,
+  onHelp,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -99,6 +112,7 @@ export const FruitDashGame: React.FC<Props> = ({
   const playerXRef = useRef<number>(CW / 2);
   const targetXRef = useRef<number>(CW / 2);
   const facingRef = useRef(1);
+  const diffRef = useRef<DashDifficulty>(settings.dashDifficulty);
   const levelRef = useRef(1);
   const floatsRef = useRef<{ x: number; y: number; text: string; life: number }[]>([]);
   const crashedRef = useRef(false);
@@ -137,6 +151,7 @@ export const FruitDashGame: React.FC<Props> = ({
         levelRef.current = Math.min(10, 1 + Math.floor(next / 10));
         setLevel(levelRef.current);
         if (next >= 30) live.current.onUnlockAchieve('dash_survivor_30');
+        if (next >= 30 && diffRef.current === 'hard') live.current.onUnlockAchieve('dash_hard_30');
         if (next >= 60) live.current.onUnlockAchieve('dash_survivor_60');
       }, 1000);
     } else {
@@ -149,6 +164,7 @@ export const FruitDashGame: React.FC<Props> = ({
   }, [gameState, isPaused]);
 
   const handleStartGame = () => {
+    diffRef.current = settings.dashDifficulty;
     fruitsRef.current = [];
     particlesRef.current = [];
     playerXRef.current = CW / 2;
@@ -186,6 +202,7 @@ export const FruitDashGame: React.FC<Props> = ({
     crashedRef.current = true;
     setGameState('OVER');
     playSound('over', s);
+    vibrate(HAPTIC.crash, s);
 
     if (finalScore >= 500) unlock('dash_dodge_master');
     if (starsRef.current >= 5) unlock('dash_star_collector');
@@ -271,7 +288,8 @@ export const FruitDashGame: React.FC<Props> = ({
         // 2. Spawn falling fruits with progressive difficulty
         spawnTimerRef.current += dt;
         const lvl = levelRef.current;
-        const spawnInterval = Math.max(14, 40 - lvl * 2.6); // Spawns faster as level increases
+        const diff = DASH_DIFFICULTY[diffRef.current];
+        const spawnInterval = Math.max(14, 40 - lvl * 2.6) * diff.spawn; // Spawns faster as level increases
 
         if (spawnTimerRef.current >= spawnInterval) {
           spawnTimerRef.current = 0;
@@ -282,7 +300,7 @@ export const FruitDashGame: React.FC<Props> = ({
             ? FRUIT_TYPES[FRUIT_TYPES.length - 1]
             : FRUIT_TYPES[Math.floor(Math.random() * (FRUIT_TYPES.length - 1))];
 
-          const speedBase = 2.6 + lvl * 0.38;
+          const speedBase = (2.6 + lvl * 0.38) * diff.speed;
           const spawnX = Math.random() * (CW - chosenDef.r * 2 - 20) + chosenDef.r + 10;
 
           fruitsRef.current.push({
@@ -332,12 +350,13 @@ export const FruitDashGame: React.FC<Props> = ({
           if (distSq < minDist * minDist) {
             if (f.isBonus) {
               // Collect bonus star
-              const bonus = f.bonusPoints || 50;
+              const bonus = diff.star;
               scoreRef.current += bonus;
               starsRef.current += 1;
               setScore(scoreRef.current);
               setBonusStarsCollected(starsRef.current);
               playSound('match', settings);
+              vibrate(HAPTIC.match, settings);
               floatsRef.current.push({ x: f.x, y: f.y - 10, text: `+${bonus}`, life: 0 });
 
               // Burst particles
@@ -368,7 +387,7 @@ export const FruitDashGame: React.FC<Props> = ({
           // Landed on the grass: dodged (+2) with a little splash
           if (f.y + f.r * 0.45 >= GROUND_Y) {
             if (f.isHazard) {
-              scoreRef.current += 2;
+              scoreRef.current += diff.dodge;
               setScore(scoreRef.current);
             }
             for (let p = 0; p < 6; p++) {
@@ -632,7 +651,8 @@ export const FruitDashGame: React.FC<Props> = ({
     targetXRef.current = (clientX - rect.left) * (CW / rect.width);
   };
 
-  const dodged = Math.max(0, Math.round((score - bonusStarsCollected * 50) / 2));
+  const diffInfo = DASH_DIFFICULTY[gameState === 'IDLE' ? settings.dashDifficulty : diffRef.current];
+  const dodged = Math.max(0, Math.round((score - bonusStarsCollected * diffInfo.star) / diffInfo.dodge));
 
   return (
     <>
@@ -657,12 +677,24 @@ export const FruitDashGame: React.FC<Props> = ({
               />
               {gameState === 'PLAYING' && (
                 <span key={level} className="chip pointer-events-none absolute left-3 top-3 z-10 bg-surface font-display text-sm animate-pop-in">
-                  LV.{level}
+                  LV.{level} · {diffInfo.label}
                 </span>
               )}
               {gameState === 'IDLE' && (
                 <BoardOverlay>
-                  <StartCard meta={GAMES.dash} best={best} onStart={handleStartGame} />
+                  <StartCard meta={GAMES.dash} best={best} onStart={handleStartGame} onHelp={onHelp}>
+                    <Segmented<DashDifficulty>
+                      ariaLabel="난이도"
+                      columns={3}
+                      value={settings.dashDifficulty}
+                      onChange={onChangeDifficulty}
+                      options={(Object.keys(DASH_DIFFICULTY) as DashDifficulty[]).map((d) => ({
+                        value: d,
+                        label: DASH_DIFFICULTY[d].label,
+                        sub: DASH_DIFFICULTY[d].sub,
+                      }))}
+                    />
+                  </StartCard>
                 </BoardOverlay>
               )}
             </div>
@@ -677,7 +709,7 @@ export const FruitDashGame: React.FC<Props> = ({
                   🍎
                 </span>
                 <span>
-                  과일에 닿으면 끝! 피할 때마다 <b>+2점</b>
+                  과일에 닿으면 끝! 피할 때마다 <b>+{diffInfo.dodge}점</b>
                 </span>
               </li>
               <li className="flex items-center gap-2.5">
@@ -685,7 +717,7 @@ export const FruitDashGame: React.FC<Props> = ({
                   ⭐
                 </span>
                 <span>
-                  황금 별을 먹으면 <b>+50점</b>
+                  황금 별을 먹으면 <b>+{diffInfo.star}점</b>
                 </span>
               </li>
               <li className="flex items-center gap-2.5">
@@ -716,9 +748,10 @@ export const FruitDashGame: React.FC<Props> = ({
       {gameState === 'OVER' && (
         <ScreenOverlay>
           <ResultCard
+            game="dash"
             emoji="💥"
             title="CRASH!"
-            subtitle="과일에 부딪혔어요"
+            subtitle={`과일에 부딪혔어요 · ${diffInfo.label}`}
             tone="berry"
             score={score}
             stats={[
@@ -728,7 +761,7 @@ export const FruitDashGame: React.FC<Props> = ({
               { label: '황금 별', value: `${bonusStarsCollected}개` },
             ]}
             reward={reward}
-            shareText={`🏃 FRUIT DASH ${formatNumber(score)}점! ${elapsedTime}초 동안 살아남았어요`}
+            shareText={`🏃 FRUIT DASH(${diffInfo.label}) ${formatNumber(score)}점! ${elapsedTime}초 동안 살아남았어요`}
             onRetry={handleStartGame}
             onExit={onExit}
           />

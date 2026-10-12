@@ -6,6 +6,30 @@ import { Modal } from '../ui/Modal';
 import { SettingRow, Toggle } from '../ui/Toggle';
 import { Segmented } from '../ui/Segmented';
 import { ConfirmButton } from '../ui/ConfirmButton';
+import { promptInstall, usePwa } from '../../utils/pwa';
+import { HAPTICS_SUPPORTED } from '../../utils/haptics';
+
+/** Install instructions that fit the browser */
+const AppInstall: React.FC = () => {
+  const pwa = usePwa();
+  if (pwa.installed) return <p className="text-sm font-bold text-melon-ink">✅ 앱으로 설치되어 있어요</p>;
+  return (
+    <div className="space-y-2">
+      {pwa.canInstall ? (
+        <button type="button" className="btn btn-soda w-full" onClick={() => promptInstall()}>
+          📲 홈 화면에 설치
+        </button>
+      ) : pwa.ios ? (
+        <p className="text-sm">
+          Safari 아래쪽 <b>공유 버튼</b> → <b>홈 화면에 추가</b>를 눌러 주세요.
+        </p>
+      ) : (
+        <p className="text-sm">브라우저 메뉴의 <b>앱 설치</b> 또는 <b>홈 화면에 추가</b>를 눌러 주세요.</p>
+      )}
+      <p className="text-xs text-ink-3">설치하면 인터넷이 없어도 게임을 할 수 있어요. (로그인 · 클라우드 저장 제외)</p>
+    </div>
+  );
+};
 
 interface Props {
   isOpen: boolean;
@@ -122,6 +146,7 @@ export const SettingsModal: React.FC<Props> = ({
           {toggle('comboEffect', '콤보 · 파티클', '콤보 강조와 합성 파티클')}
           {toggle('shakeEffect', '흔들림', '틀린 카드와 수박 게임 화면 흔들림')}
           {toggle('celebrateEffect', '꽃가루', '클리어와 신기록 축하')}
+          {HAPTICS_SUPPORTED && toggle('haptics', '진동', '합성 · 충돌 · 오답 때 짧게 진동')}
         </Section>
 
         <Section icon="👀" title="보기 편하게">
@@ -152,6 +177,10 @@ export const SettingsModal: React.FC<Props> = ({
               </div>
             ))}
           </dl>
+        </Section>
+
+        <Section icon="📲" title="앱">
+          <AppInstall />
         </Section>
 
         <Section icon="🗑️" title="데이터">

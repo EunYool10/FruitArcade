@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertCircle, Loader2, LogOut } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { UserStatistics } from '../../types';
@@ -7,7 +7,8 @@ import { LevelInfo, bestKey } from '../../utils/progress';
 import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
 import { formatNumber, formatTime } from '../../utils/format';
 import { Modal } from '../ui/Modal';
-import { Avatar } from '../ui/Avatar';
+import { Avatar, PlayerView } from '../ui/Avatar';
+import { AVATARS, NICKNAME_MAX, PlayerProfile, cleanNickname } from '../../utils/profile';
 import { Meter } from '../ui/Meter';
 import { ConfirmButton } from '../ui/ConfirmButton';
 
@@ -15,6 +16,9 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
+  player: PlayerView;
+  profile: PlayerProfile;
+  onUpdateProfile: (p: PlayerProfile) => void;
   stats: UserStatistics;
   level: LevelInfo;
   achievementCount: number;
@@ -37,9 +41,34 @@ const PERKS = [
   { icon: '🔒', title: '내 데이터는 나만', desc: '본인 계정으로만 읽고 쓸 수 있어요.' },
 ];
 
-export const ProfileModal: React.FC<Props> = ({ isOpen, onClose, user, stats, level, achievementCount, onLogin, onLogout }) => {
+export const ProfileModal: React.FC<Props> = ({
+  isOpen,
+  onClose,
+  user,
+  player,
+  profile,
+  onUpdateProfile,
+  stats,
+  level,
+  achievementCount,
+  onLogin,
+  onLogout,
+}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nickDraft, setNickDraft] = useState(profile.nickname);
+
+  useEffect(() => {
+    if (isOpen) setNickDraft(profile.nickname);
+  }, [isOpen, profile.nickname]);
+
+  const commitNickname = () => {
+    const nickname = cleanNickname(nickDraft);
+    setNickDraft(nickname);
+    if (nickname !== profile.nickname) onUpdateProfile({ ...profile, nickname });
+  };
+  // The default avatar: Google photo when signed in, otherwise the level fruit
+  const defaultLook: PlayerView = { ...player, emoji: level.emoji, photo: user?.photoURL ?? null };
 
   const signIn = async () => {
     setError(null);
@@ -58,8 +87,8 @@ export const ProfileModal: React.FC<Props> = ({ isOpen, onClose, user, stats, le
     <Modal
       isOpen={isOpen}
       onClose={loading ? undefined : close}
-      title={user ? '내 프로필' : '로그인'}
-      subtitle={user ? '기록이 클라우드에 저장되고 있어요' : 'Google 계정으로 기록을 안전하게 보관하세요'}
+      title="내 프로필"
+      subtitle={user ? '기록이 클라우드에 저장되고 있어요' : '로그인하지 않아도 꾸밀 수 있어요'}
       icon={user ? '😎' : '👋'}
       tone="melon"
     >
@@ -73,15 +102,56 @@ export const ProfileModal: React.FC<Props> = ({ isOpen, onClose, user, stats, le
         </div>
       )}
 
+      <section className="well mb-3 space-y-3 p-3.5" aria-label="꾸미기">
+        <div className="flex items-center gap-3">
+          <Avatar player={player} size="lg" />
+          <div className="min-w-0 flex-1">
+            <label htmlFor="nickname" className="text-[11px] font-bold text-ink-3">
+              닉네임 (최대 {NICKNAME_MAX}자)
+            </label>
+            <input
+              id="nickname"
+              value={nickDraft}
+              maxLength={NICKNAME_MAX}
+              placeholder={user?.displayName || '게스트'}
+              onChange={(e) => setNickDraft(e.target.value)}
+              onBlur={commitNickname}
+              onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+              className="mt-0.5 h-10 w-full select-text rounded-xl border-2 border-line bg-surface px-3 font-display text-lg outline-none focus:border-soda"
+            />
+            {user?.email && <p className="mt-1 truncate text-xs text-ink-3">{user.email}</p>}
+          </div>
+        </div>
+        <div>
+          <p className="mb-1.5 text-[11px] font-bold text-ink-3">아바타</p>
+          <div className="grid grid-cols-7 gap-1.5" role="group" aria-label="아바타">
+            <button
+              type="button"
+              aria-pressed={!profile.avatar}
+              aria-label="기본 아바타"
+              onClick={() => onUpdateProfile({ ...profile, avatar: '' })}
+              className={`grid aspect-square place-items-center rounded-xl border-2 border-line ${!profile.avatar ? 'bg-mango shadow-hard-sm' : 'bg-surface'}`}
+            >
+              <Avatar player={defaultLook} size="sm" />
+            </button>
+            {AVATARS.map((a) => (
+              <button
+                key={a}
+                type="button"
+                aria-pressed={profile.avatar === a}
+                aria-label={`아바타 ${a}`}
+                onClick={() => onUpdateProfile({ ...profile, avatar: a })}
+                className={`grid aspect-square place-items-center rounded-xl border-2 border-line text-xl ${profile.avatar === a ? 'bg-mango shadow-hard-sm' : 'bg-surface'}`}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {user ? (
         <div className="space-y-3">
-          <div className="well flex items-center gap-3 p-3.5">
-            <Avatar user={user} emoji={level.emoji} size="lg" />
-            <div className="min-w-0">
-              <p className="truncate font-display text-xl">{user.displayName || '게이머'}</p>
-              <p className="truncate text-xs text-ink-3">{user.email}</p>
-            </div>
-          </div>
 
           <div className="well p-3.5">
             <div className="mb-2 flex items-center justify-between">

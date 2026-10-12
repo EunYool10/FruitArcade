@@ -1,10 +1,18 @@
 import React, { useId, useState } from 'react';
-import { Check, Home, RotateCcw, Share2 } from 'lucide-react';
-import { GameReward } from '../../types';
-import { TONE, Tone } from '../../constants';
+import { Check, Download, Home, Loader2, RotateCcw, Share2 } from 'lucide-react';
+import { GameReward, GameType } from '../../types';
+import { GAMES, TONE, Tone } from '../../constants';
 import { formatNumber } from '../../utils/format';
+import { downloadBlob, renderResultImage } from '../../utils/shareImage';
+import { usePlayer } from '../PlayerContext';
+
+const TONE_HEX: Record<Tone, string> = { berry: '#ff4778', melon: '#2ec27e', mango: '#ffb627', grape: '#7a5cff', soda: '#2ea9ff' };
+
+/** Link to this app (works under a sub-path such as /FruitArcade/) */
+export const appUrl = () => window.location.origin + window.location.pathname;
 
 interface ResultCardProps {
+  game: GameType;
   emoji: string;
   title: string;
   subtitle?: string;
@@ -16,9 +24,12 @@ interface ResultCardProps {
   onRetry: () => void;
   onExit: () => void;
   extraAction?: { label: string; onClick: () => void };
+  /** Replaces the plain app link in shared text (e.g. a challenge link) */
+  shareUrl?: string;
 }
 
 export const ResultCard: React.FC<ResultCardProps> = ({
+  game,
   emoji,
   title,
   subtitle,
@@ -30,15 +41,43 @@ export const ResultCard: React.FC<ResultCardProps> = ({
   onRetry,
   onExit,
   extraAction,
+  shareUrl,
 }) => {
   const titleId = useId();
+  const player = usePlayer();
   const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState<'share' | 'image' | null>(null);
 
+  const makeImage = () =>
+    renderResultImage({
+      emoji: GAMES[game].emoji,
+      title,
+      gameName: GAMES[game].name,
+      color: TONE_HEX[GAMES[game].tone],
+      score,
+      stats,
+      newBest: !!reward?.newBest,
+      player: player.name,
+    }).catch(() => null);
+
+  const saveImage = async () => {
+    setBusy('image');
+    const blob = await makeImage();
+    setBusy(null);
+    if (blob) downloadBlob(blob, `fruit-arcade-${game}-${Math.round(score)}.png`);
+  };
+
+  // Phones: share sheet with the score image; elsewhere: copy the text
   const share = async () => {
-    const text = `${shareText}\n${window.location.origin}`;
+    const text = `${shareText}\n${shareUrl ?? appUrl()}`;
     if (navigator.share) {
+      setBusy('share');
+      const blob = await makeImage();
+      setBusy(null);
+      const file = blob ? new File([blob], 'fruit-arcade.png', { type: 'image/png' }) : null;
       try {
-        await navigator.share({ title: 'FRUIT ARCADE', text });
+        if (file && navigator.canShare?.({ files: [file] })) await navigator.share({ title: 'FRUIT ARCADE', text, files: [file] });
+        else await navigator.share({ title: 'FRUIT ARCADE', text });
       } catch {
         // cancelled
       }
@@ -86,6 +125,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
       {reward && (
         <div className="mt-3 flex flex-wrap justify-center gap-1.5">
           <span className="chip bg-mango-soft">✨ +{reward.xpGained} XP</span>
+          {reward.streak && <span className="chip bg-berry-soft">🔥 {reward.streak}일 연속!</span>}
           {reward.levelUp && <span className="chip bg-grape-deep text-white">🎉 레벨 업! Lv.{reward.levelUp}</span>}
           {reward.missions.map((m) => (
             <span key={m} className="chip bg-melon-soft">
@@ -106,25 +146,31 @@ export const ResultCard: React.FC<ResultCardProps> = ({
           <RotateCcw className="h-5 w-5" strokeWidth={2.5} /> 다시 하기
         </button>
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" className="btn" onClick={share}>
-            {copied ? <Check className="h-4 w-4" strokeWidth={3} /> : <Share2 className="h-4 w-4" strokeWidth={2.5} />}
+          <button type="button" className="btn" onClick={share} disabled={busy !== null}>
+            {busy === 'share' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : copied ? (
+              <Check className="h-4 w-4" strokeWidth={3} />
+            ) : (
+              <Share2 className="h-4 w-4" strokeWidth={2.5} />
+            )}
             {copied ? '복사됨' : '공유'}
           </button>
-          {extraAction ? (
-            <button type="button" className="btn" onClick={extraAction.onClick}>
+          <button type="button" className="btn" onClick={saveImage} disabled={busy !== null}>
+            {busy === 'image' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" strokeWidth={2.5} />}
+            이미지
+          </button>
+        </div>
+        <div className={`grid gap-2 ${extraAction ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {extraAction && (
+            <button type="button" className="btn btn-ghost" onClick={extraAction.onClick}>
               {extraAction.label}
             </button>
-          ) : (
-            <button type="button" className="btn" onClick={onExit}>
-              <Home className="h-4 w-4" strokeWidth={2.5} /> 로비
-            </button>
           )}
-        </div>
-        {extraAction && (
-          <button type="button" className="btn btn-ghost w-full" onClick={onExit}>
+          <button type="button" className="btn btn-ghost" onClick={onExit}>
             <Home className="h-4 w-4" strokeWidth={2.5} /> 로비로
           </button>
-        )}
+        </div>
       </div>
     </div>
   );

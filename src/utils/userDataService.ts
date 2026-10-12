@@ -3,12 +3,15 @@ import { doc, getDoc, runTransaction, setDoc, updateDoc } from 'firebase/firesto
 import { db } from '../firestore';
 import { GameResult, GameSettings, UnlockedAchievements, UserStatistics } from '../types';
 import { EMPTY_STATS, applyResult, mergeStats, sameStats } from './progress';
+import { PlayerProfile } from './profile';
 
 /** Raw cloud values; the app merges them with what this device already has. */
 export interface CloudData {
   statistics: Partial<UserStatistics>;
   achievements: UnlockedAchievements;
   settings: Partial<GameSettings>;
+  /** Nickname / fruit avatar chosen in the app (empty strings when never set) */
+  custom: PlayerProfile;
 }
 
 const userRef = (uid: string) => doc(db, 'users', uid);
@@ -31,6 +34,7 @@ export async function loadUserData(user: User): Promise<CloudData> {
       statistics: data.statistics || {},
       achievements: data.achievements || {},
       settings: data.settings || {},
+      custom: { nickname: data.profile?.nickname || '', avatar: data.profile?.avatar || '' },
     };
   }
 
@@ -40,16 +44,16 @@ export async function loadUserData(user: User): Promise<CloudData> {
     achievements: {},
     settings: {},
   });
-  return { statistics: {}, achievements: {}, settings: {} };
+  return { statistics: {}, achievements: {}, settings: {}, custom: { nickname: '', avatar: '' } };
 }
 
 /** Atomically add one finished round to the cloud stats (safe with several devices). */
-export function recordCloudResult(uid: string, result: GameResult, stamp: boolean): Promise<UserStatistics> {
+export function recordCloudResult(uid: string, result: GameResult, stamp: boolean, streak: number): Promise<UserStatistics> {
   const ref = userRef(uid);
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     const current = { ...EMPTY_STATS, ...(snap.data()?.statistics || {}) };
-    const next = applyResult(current, result, stamp);
+    const next = applyResult(current, result, stamp, streak);
     tx.update(ref, { statistics: next });
     return next;
   });
@@ -77,4 +81,8 @@ export async function saveAchievements(uid: string, achievements: UnlockedAchiev
 
 export async function saveUserSettings(uid: string, settings: GameSettings): Promise<void> {
   await updateDoc(userRef(uid), { settings });
+}
+
+export async function saveProfileCustom(uid: string, p: PlayerProfile): Promise<void> {
+  await updateDoc(userRef(uid), { 'profile.nickname': p.nickname, 'profile.avatar': p.avatar });
 }

@@ -26,6 +26,17 @@ export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
 
   // Suika Achievements
   { id: 'suika_watermelon', title: '전설의 수박 탄생', desc: '수박 게임에서 거대 수박(🍉) 합성 성공', icon: '🍉', game: 'suika' },
+  { id: 'suika_10000', title: '수박 부자', desc: '수박 게임에서 10,000점 이상 기록', icon: '🤑', game: 'suika' },
+  { id: 'dash_hard_30', title: '매운맛 생존자', desc: 'FRUIT DASH 어려움 난이도에서 30초 이상 생존', icon: '🌶️', game: 'dash' },
+
+  // Progress
+  { id: 'level_5', title: '어엿한 딸기', desc: '레벨 5 달성', icon: '🍓', game: 'all' },
+  { id: 'level_10', title: '과일 장인', desc: '레벨 10 달성', icon: '🍑', game: 'all' },
+  { id: 'stamp_1', title: '첫 도장', desc: '오늘의 미션 3개를 모두 깨고 도장 받기', icon: '🏅', game: 'all' },
+  { id: 'stamp_10', title: '도장 수집가', desc: '미션 도장 10개 모으기', icon: '📮', game: 'all' },
+  { id: 'streak_3', title: '사흘 연속', desc: '3일 연속으로 플레이', icon: '🔥', game: 'all' },
+  { id: 'streak_7', title: '일주일 개근', desc: '7일 연속으로 플레이', icon: '📅', game: 'all' },
+  { id: 'streak_30', title: '한 달 개근', desc: '30일 연속으로 플레이', icon: '🗓️', game: 'all' },
 
   { id: 'all_achieved', title: '진정한 과일 마스터', desc: '모든 업적을 전부 해금 완료', icon: '🎖️', game: 'all' },
 ];

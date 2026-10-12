@@ -1,5 +1,4 @@
 import React from 'react';
-import { User } from 'firebase/auth';
 
 const SIZES = {
   sm: 'h-8 w-8 text-base',
@@ -7,21 +6,24 @@ const SIZES = {
   lg: 'h-16 w-16 text-3xl',
 };
 
-/** Google photo when signed in, otherwise the player's level fruit. */
-export const Avatar: React.FC<{ user: User | null; emoji: string; size?: keyof typeof SIZES }> = ({
-  user,
-  emoji,
-  size = 'md',
-}) =>
-  user?.photoURL ? (
+/** How the current player is shown everywhere (nickname, fruit avatar or Google photo). */
+export interface PlayerView {
+  name: string;
+  emoji: string;
+  photo: string | null;
+  isGuest: boolean;
+}
+
+export const Avatar: React.FC<{ player: PlayerView; size?: keyof typeof SIZES }> = ({ player, size = 'md' }) =>
+  player.photo ? (
     <img
-      src={user.photoURL}
+      src={player.photo}
       alt=""
       referrerPolicy="no-referrer"
       className={`${SIZES[size]} shrink-0 rounded-full border-2 border-line bg-surface-2 object-cover`}
     />
   ) : (
     <span className={`${SIZES[size]} grid shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft`} aria-hidden="true">
-      {emoji}
+      {player.emoji}
     </span>
   );

@@ -1,0 +1,17 @@
+{
+  "name": "상큼 과일 아케이드 존",
+  "short_name": "FRUIT ARCADE",
+  "description": "과일 메모리, 수박 게임, FRUIT DASH — 오늘의 미션과 업적에 도전하는 상큼한 과일 아케이드",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff5e6",
+  "theme_color": "#fff5e6",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

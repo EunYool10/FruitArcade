@@ -1,10 +1,9 @@
 import React from 'react';
 import { ArrowLeft, BarChart3, Pause, Settings, Trophy, Volume2, VolumeX } from 'lucide-react';
-import { User } from 'firebase/auth';
 import { GameSettings, ScreenType } from '../types';
 import { GAMES, SCREEN_GAME } from '../constants';
 import { LevelInfo } from '../utils/progress';
-import { Avatar } from './ui/Avatar';
+import { Avatar, PlayerView } from './ui/Avatar';
 
 export type NavTarget = 'settings' | 'profile' | 'achievements' | 'records';
 
@@ -12,7 +11,7 @@ interface Props {
   screen: ScreenType;
   roundActive: boolean;
   settings: GameSettings;
-  user: User | null;
+  player: PlayerView;
   level: LevelInfo;
   onHome: () => void;
   onPause: () => void;
@@ -26,7 +25,7 @@ export const Navbar: React.FC<Props> = ({
   screen,
   roundActive,
   settings,
-  user,
+  player,
   level,
   onHome,
   onPause,
@@ -34,6 +33,7 @@ export const Navbar: React.FC<Props> = ({
   onOpen,
 }) => {
   const game = SCREEN_GAME[screen];
+  const soundOn = settings.sfxEnabled || settings.bgmEnabled;
   const inLobby = screen === 'lobby';
 
   return (
@@ -83,10 +83,10 @@ export const Navbar: React.FC<Props> = ({
             type="button"
             className="btn btn-icon"
             onClick={onToggleSound}
-            aria-label={settings.sfxEnabled ? '효과음 끄기' : '효과음 켜기'}
-            aria-pressed={settings.sfxEnabled}
+            aria-label={soundOn ? '소리 끄기' : '소리 켜기'}
+            aria-pressed={soundOn}
           >
-            {settings.sfxEnabled ? <Volume2 className={ICON} strokeWidth={2.5} /> : <VolumeX className={`${ICON} text-berry-ink`} strokeWidth={2.5} />}
+            {soundOn ? <Volume2 className={ICON} strokeWidth={2.5} /> : <VolumeX className={`${ICON} text-berry-ink`} strokeWidth={2.5} />}
           </button>
           <button type="button" className="btn btn-icon" onClick={() => onOpen('settings')} aria-label="설정">
             <Settings className={ICON} strokeWidth={2.5} />
@@ -96,10 +96,10 @@ export const Navbar: React.FC<Props> = ({
               type="button"
               className="btn h-11 gap-2 px-1.5 sm:pr-3"
               onClick={() => onOpen('profile')}
-              aria-label={user ? `내 프로필 (Lv.${level.level})` : '로그인'}
+              aria-label={player.isGuest ? '로그인' : `내 프로필 (Lv.${level.level})`}
             >
-              <Avatar user={user} emoji={level.emoji} size="sm" />
-              <span className="hidden text-sm sm:inline">{user ? `Lv.${level.level}` : '로그인'}</span>
+              <Avatar player={player} size="sm" />
+              <span className="hidden text-sm sm:inline">{player.isGuest ? '로그인' : `Lv.${level.level}`}</span>
             </button>
           )}
         </nav>

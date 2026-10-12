@@ -4,6 +4,8 @@ export type GameType = 'memory' | 'suika' | 'dash';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
+export type DashDifficulty = 'easy' | 'normal' | 'hard';
+
 export type MemoryMode = '4' | '6' | '8' | '8-joker';
 export type LifeLimit = 'infinite' | '10' | '5';
 
@@ -23,6 +25,10 @@ export interface GameSettings {
   celebrateEffect: boolean;
   highContrast: boolean;
   cardScale: number; // 80 - 120
+  haptics: boolean;
+  bgmEnabled: boolean;
+  bgmVolume: number; // 0 - 100
+  dashDifficulty: DashDifficulty;
 }
 
 export interface Achievement {
@@ -47,6 +53,7 @@ export interface UserStatistics {
   suikaHighScore: number;
   dashHighScore: number;
   missionStamps: number; // days on which every daily mission was cleared
+  bestStreak: number; // longest run of consecutive play days
   lastPlayedAt: string;
 }
 
@@ -65,6 +72,8 @@ export interface GameReward {
   prevBest: number;
   levelUp: number | null;
   missions: string[];
+  /** Consecutive play days, set when this round extended the streak */
+  streak: number | null;
   /** Achievements unlocked during this round, e.g. "🔥 콤보 폭발 폭주족" */
   achievements: string[];
   stamp: boolean;

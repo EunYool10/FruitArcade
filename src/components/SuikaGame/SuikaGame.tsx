@@ -3,6 +3,7 @@ import { AlertTriangle, RotateCcw } from 'lucide-react';
 import { GameResult, GameReward, GameSettings, SuikaBody, SuikaFruitDef, SuikaParticle, SuikaFloatText } from '../../types';
 import { GAMES } from '../../constants';
 import { playSound } from '../../utils/audio';
+import { HAPTIC, vibrate } from '../../utils/haptics';
 import { celebrate } from '../../utils/fx';
 import { formatNumber, formatTime } from '../../utils/format';
 import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
@@ -107,6 +108,7 @@ interface Props {
   onGameComplete: (result: GameResult) => GameReward;
   onRoundChange: (active: boolean) => void;
   onExit: () => void;
+  onHelp?: () => void;
 }
 
 export const SuikaGame: React.FC<Props> = ({
@@ -119,6 +121,7 @@ export const SuikaGame: React.FC<Props> = ({
   onGameComplete,
   onRoundChange,
   onExit,
+  onHelp,
 }) => {
   // Kept in a ref so the physics loop is not restarted when the callback identity changes
   const onUnlockRef = useRef(onUnlockAchieve);
@@ -268,6 +271,7 @@ export const SuikaGame: React.FC<Props> = ({
     });
 
     playSound('drop', settings);
+    vibrate(HAPTIC.tap, settings);
     isCooldownRef.current = true;
     setIsCooldown(true);
 
@@ -490,6 +494,7 @@ export const SuikaGame: React.FC<Props> = ({
               setScore((s) => s + pts);
 
               playSound('merge', settings);
+              vibrate(HAPTIC.merge, settings);
 
               // Particle burst
               for (let p = 0; p < (settings.comboEffect ? 9 : 0); p++) {
@@ -528,6 +533,7 @@ export const SuikaGame: React.FC<Props> = ({
               // Watermelon + Watermelon Merge -> Huge bonus
               setScore((s) => s + 5000);
               playSound('victory', settings);
+              vibrate(HAPTIC.over, settings);
               shakeRef.current = 24;
               if (settings.celebrateEffect) celebrate(true);
             }
@@ -566,6 +572,7 @@ export const SuikaGame: React.FC<Props> = ({
             isPlayingRef.current = false;
             setGameState('OVER');
             playSound('over', settings);
+            vibrate(HAPTIC.over, settings);
           }
         } else {
           dangerTimerRef.current = Math.min(3.0, dangerTimerRef.current + dtSec * 1.6);
@@ -814,7 +821,7 @@ export const SuikaGame: React.FC<Props> = ({
 
               {gameState === 'IDLE' && (
                 <BoardOverlay>
-                  <StartCard meta={GAMES.suika} best={best} onStart={handleStartGame} />
+                  <StartCard meta={GAMES.suika} best={best} onStart={handleStartGame} onHelp={onHelp} />
                 </BoardOverlay>
               )}
             </div>
@@ -866,6 +873,7 @@ export const SuikaGame: React.FC<Props> = ({
       {gameState === 'OVER' && (
         <ScreenOverlay>
           <ResultCard
+            game="suika"
             emoji={highestFruit === FRUITS.length - 1 ? '🍉' : '💥'}
             title="GAME OVER"
             subtitle="과일이 점선 위로 넘쳤어요"

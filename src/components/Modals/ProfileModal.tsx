@@ -26,6 +26,7 @@ interface Props {
   achievementCount: number;
   onLogin: () => Promise<{ success: boolean; error?: string }>;
   onLogout: () => void;
+  onOpenAdmin?: () => void;
 }
 
 const GoogleIcon = () => (
@@ -56,6 +57,7 @@ export const ProfileModal: React.FC<Props> = ({
   achievementCount,
   onLogin,
   onLogout,
+  onOpenAdmin,
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +142,16 @@ export const ProfileModal: React.FC<Props> = ({
             )}
             {user?.email && (
               <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-ink-3">
-                {isAdmin && <span className="chip h-5 shrink-0 bg-grape-deep px-2 text-[10px] text-white">🛡️ 관리자</span>}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    className="chip h-5 shrink-0 bg-grape-deep px-2 text-[10px] text-white hover:bg-grape"
+                    onClick={onOpenAdmin}
+                    aria-label="관리자 화면 열기"
+                  >
+                    🛡️ 관리자
+                  </button>
+                )}
                 <span className="truncate">{user.email}</span>
               </p>
             )}

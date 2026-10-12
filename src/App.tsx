@@ -29,6 +29,8 @@ import { PlayerContext } from './components/PlayerContext';
 import { ChallengeContext } from './components/ChallengeContext';
 import { ChallengeModal } from './components/Modals/ChallengeModal';
 import { LeaderboardModal } from './components/Modals/LeaderboardModal';
+import { AdminModal } from './components/Modals/AdminModal';
+import { FeedbackModal } from './components/Modals/FeedbackModal';
 import { RankContext } from './components/RankContext';
 import { RankResult, publicName } from './utils/ranking';
 import { Challenge, challengeLink, takeChallengeFromUrl } from './utils/challenge';
@@ -80,6 +82,7 @@ type AuthApi = Awaited<ReturnType<typeof loadAuthApi>>;
 const cloudApi = () => import('./utils/userDataService');
 type CloudApi = Awaited<ReturnType<typeof cloudApi>>;
 const rankApi = () => import('./utils/leaderboardService');
+const communityApi = () => import('./utils/communityService');
 
 const SETTINGS_KEY = 'fruit_arcade_settings';
 const MEMORY_CFG_KEY = 'fruit_arcade_memory';
@@ -456,6 +459,10 @@ export default function App() {
         cloudWrite((api) => api.recordCloudResult(u.uid, result, stampEarned, nextStreak.count))
           .then((cloud) => commitStats(mergeStats(statsRef.current, cloud)))
           .catch((err) => console.warn('Failed to save game result:', err));
+        // Counted in the admin stats (rounds and play time per day)
+        communityApi()
+          .then((api) => api.recordActivity(u.uid, result.seconds))
+          .catch((err) => console.warn('Failed to record activity:', err));
       }
 
       // Leaderboards: post the round, then look up today's and the all-time place
@@ -677,6 +684,7 @@ export default function App() {
         player={player}
         level={level}
         challenge={activeChallenge && SCREEN_GAME[screen] === activeChallenge.g ? activeChallenge : null}
+        isAdmin={isAdmin}
         onHome={() => goTo(screen === 'memory-play' ? 'memory-setup' : 'lobby')}
         onPause={() => setIsPaused(true)}
         onToggleSound={handleToggleSound}
@@ -788,6 +796,7 @@ export default function App() {
         achievementCount={achievementCount}
         onLogin={handleLogin}
         onLogout={handleLogout}
+        onOpenAdmin={() => setModal('admin')}
       />
       <AchievementsModal isOpen={modal === 'achievements'} onClose={() => setModal(null)} />
       <RecordsModal isOpen={modal === 'records'} onClose={() => setModal(null)} stats={stats} history={history} />
@@ -800,6 +809,7 @@ export default function App() {
         onResetAchievements={resetAllAchievements}
         onResetRecords={resetAllRecords}
         onNotify={(msg) => pushToast({ icon: '✅', title: msg, tone: 'melon' })}
+        onOpenFeedback={() => setModal('feedback')}
       />
       <LeaderboardModal
         isOpen={modal === 'leaderboard'}
@@ -808,6 +818,15 @@ export default function App() {
         uid={user?.uid ?? null}
         isAdmin={isAdmin}
         onLogin={() => setModal('profile')}
+      />
+      <AdminModal isOpen={modal === 'admin' && isAdmin} onClose={() => setModal(null)} adminUid={user?.uid ?? null} />
+      <FeedbackModal
+        isOpen={modal === 'feedback'}
+        onClose={() => setModal(null)}
+        uid={user?.uid ?? null}
+        name={rankWhoRef.current.name}
+        onLogin={() => setModal('profile')}
+        onSent={() => pushToast({ icon: '💌', title: '의견을 보냈어요', sub: '고마워요! 운영자가 꼭 읽을게요', tone: 'melon' })}
       />
       <PatchNotesModal isOpen={modal === 'patch'} onClose={() => setModal(null)} />
       <CreditsModal isOpen={modal === 'credits'} onClose={() => setModal(null)} />

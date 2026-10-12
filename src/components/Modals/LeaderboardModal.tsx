@@ -1,14 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Ban, Loader2, LogIn, RotateCcw, Shield, Trash2 } from 'lucide-react';
+import { Ban, Flag, Loader2, LogIn, RotateCcw, Shield, Trash2 } from 'lucide-react';
 import { GameType } from '../../types';
 import { GAMES, GAME_ORDER } from '../../constants';
 import { formatNumber } from '../../utils/format';
-import { PERIOD_LABEL, RANK_PERIODS, RankEntry, RankPeriod, rankErrorKind } from '../../utils/ranking';
-import type { BanEntry } from '../../utils/leaderboardService';
+import { PERIOD_LABEL, RANK_PERIODS, RankEntry, RankPeriod, boardId, rankErrorKind } from '../../utils/ranking';
+import type { ReportReason } from '../../utils/communityService';
 import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
 
 const rankApi = () => import('../../utils/leaderboardService');
+const communityApi = () => import('../../utils/communityService');
 
 interface Props {
   isOpen: boolean;
@@ -37,6 +38,12 @@ const ERRORS: Record<Exclude<Status, 'loading' | 'ready'>, { icon: string; text:
   other: { icon: '😵', text: '랭킹을 불러오지 못했어요.' },
 };
 
+const REASONS: [ReportReason, string][] = [
+  ['name', '부적절한 닉네임'],
+  ['score', '의심스러운 점수'],
+  ['other', '기타'],
+];
+
 /** Places with ties sharing a number (1, 2, 2, 4 ...) */
 function placesOf(entries: RankEntry[]): number[] {
   return entries.map((e, i) => {
@@ -46,15 +53,17 @@ function placesOf(entries: RankEntry[]): number[] {
   });
 }
 
-interface ModTools {
-  open: boolean;
-  busy: boolean;
-  onToggle: () => void;
-  onDelete: () => void;
-  onBan: () => void;
+interface RowProps {
+  entry: RankEntry;
+  place: number;
+  mine: boolean;
+  /** Small button at the end of the row (admin tools or report) */
+  action?: React.ReactNode;
+  /** Opens under the row */
+  panel?: React.ReactNode;
 }
 
-const Row: React.FC<{ entry: RankEntry; place: number; mine: boolean; mod?: ModTools }> = ({ entry, place, mine, mod }) => (
+const Row: React.FC<RowProps> = ({ entry, place, mine, action, panel }) => (
   <li
     className={`rounded-2xl border-2 px-3 py-2 ${mine ? 'border-line bg-mango-soft shadow-hard-sm' : 'border-transparent bg-surface-2'}`}
     aria-current={mine ? 'true' : undefined}
@@ -71,45 +80,78 @@ const Row: React.FC<{ entry: RankEntry; place: number; mine: boolean; mod?: ModT
         {mine && <span className="ml-1.5 text-xs text-ink-3">(나)</span>}
       </span>
       <span className="shrink-0 font-display text-lg tabular-nums">{formatNumber(entry.score)}</span>
-      {mod && (
-        <button
-          type="button"
-          className="btn btn-sm btn-icon shrink-0"
-          aria-label={`${entry.name} 기록 관리`}
-          aria-expanded={mod.open}
-          onClick={mod.onToggle}
-        >
-          <Shield className="h-4 w-4" strokeWidth={2.5} />
-        </button>
-      )}
+      {action}
     </div>
-    {mod?.open &&
-      (mod.busy ? (
-        <p className="mt-2 flex items-center justify-center gap-2 text-sm font-bold text-ink-2">
-          <Loader2 className="h-4 w-4 animate-spin" /> 처리하는 중...
-        </p>
-      ) : (
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          <ConfirmButton
-            className="btn btn-sm w-full"
-            question={`${entry.name}님의 이 기록을 지울까요?`}
-            confirmLabel="지우기"
-            onConfirm={mod.onDelete}
-          >
-            <Trash2 className="h-4 w-4" strokeWidth={2.5} /> 기록 삭제
-          </ConfirmButton>
-          <ConfirmButton
-            className="btn btn-sm btn-primary w-full"
-            question={`${entry.name}님을 랭킹에서 차단할까요? 지금 순위표에 있는 기록도 모두 지워져요.`}
-            confirmLabel="차단하기"
-            onConfirm={mod.onBan}
-          >
-            <Ban className="h-4 w-4" strokeWidth={2.5} /> 차단
-          </ConfirmButton>
-        </div>
-      ))}
+    {panel}
   </li>
 );
+
+const Busy = () => (
+  <p className="mt-2 flex items-center justify-center gap-2 text-sm font-bold text-ink-2">
+    <Loader2 className="h-4 w-4 animate-spin" /> 처리하는 중...
+  </p>
+);
+
+/** Admin: delete this entry or ban the player */
+const AdminTools: React.FC<{ entry: RankEntry; onDelete: () => void; onBan: () => void }> = ({ entry, onDelete, onBan }) => (
+  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+    <ConfirmButton className="btn btn-sm w-full" question={`${entry.name}님의 이 기록을 지울까요?`} confirmLabel="지우기" onConfirm={onDelete}>
+      <Trash2 className="h-4 w-4" strokeWidth={2.5} /> 기록 삭제
+    </ConfirmButton>
+    <ConfirmButton
+      className="btn btn-sm btn-primary w-full"
+      question={`${entry.name}님을 랭킹에서 차단할까요? 지금 순위표에 있는 기록도 모두 지워져요.`}
+      confirmLabel="차단하기"
+      onConfirm={onBan}
+    >
+      <Ban className="h-4 w-4" strokeWidth={2.5} /> 차단
+    </ConfirmButton>
+  </div>
+);
+
+/** Player: tell the admins what's wrong with this entry */
+const ReportForm: React.FC<{ entry: RankEntry; onSend: (reason: ReportReason, note: string) => void; onCancel: () => void }> = ({
+  entry,
+  onSend,
+  onCancel,
+}) => {
+  const [reason, setReason] = useState<ReportReason>('score');
+  const [note, setNote] = useState('');
+  return (
+    <div className="mt-2 space-y-2 rounded-2xl border-2 border-line bg-surface p-3">
+      <p className="text-sm font-bold">{entry.name}님을 신고하는 이유</p>
+      <div role="group" aria-label="신고 이유" className="flex flex-wrap gap-1.5">
+        {REASONS.map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={reason === value}
+            onClick={() => setReason(value)}
+            className={`chip h-8 px-3 text-xs transition-colors ${reason === value ? 'bg-berry text-white shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <input
+        value={note}
+        maxLength={200}
+        placeholder="자세한 내용 (선택)"
+        aria-label="자세한 내용"
+        onChange={(e) => setNote(e.target.value)}
+        className="h-10 w-full select-text rounded-xl border-2 border-line bg-surface-2 px-3 text-sm outline-none focus:border-berry"
+      />
+      <div className="flex gap-2">
+        <button type="button" className="btn btn-sm btn-primary flex-1" onClick={() => onSend(reason, note)}>
+          <Flag className="h-4 w-4" strokeWidth={2.5} /> 신고하기
+        </button>
+        <button type="button" className="btn btn-sm" onClick={onCancel}>
+          취소
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initialGame, uid, isAdmin, onLogin }) => {
   const [game, setGame] = useState<GameType>(initialGame);
@@ -119,11 +161,10 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
   const [reload, setReload] = useState(0);
   const request = useRef(0);
 
-  // Admin moderation
-  const [modRow, setModRow] = useState<string | null>(null);
-  const [modBusy, setModBusy] = useState(false);
+  // Row with its admin tools or report form open
+  const [openRow, setOpenRow] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
-  const [bans, setBans] = useState<BanEntry[] | null>(null);
 
   // Opening from a result card jumps to that game
   useEffect(() => {
@@ -133,7 +174,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
     }
   }, [isOpen, initialGame]);
 
-  useEffect(() => setModRow(null), [game, period, isOpen]);
+  useEffect(() => setOpenRow(null), [game, period, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -159,58 +200,68 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
     })();
   }, [isOpen, game, period, uid, reload]);
 
-  useEffect(() => {
-    if (!isOpen || !isAdmin) return;
-    let alive = true;
-    rankApi()
-      .then((api) => api.listBans())
-      .then((list) => alive && setBans(list))
-      .catch(() => alive && setBans([]));
-    return () => {
-      alive = false;
-    };
-  }, [isOpen, isAdmin, reload]);
-
-  const moderate = async (kind: 'delete' | 'ban', e: RankEntry) => {
-    if (!uid) return;
-    setModBusy(true);
+  /** Runs a row action and shows how it went */
+  const run = async (fn: () => Promise<string>, failText: string) => {
+    setBusy(true);
     setNotice(null);
     try {
+      setNotice({ text: await fn(), ok: true });
+      setOpenRow(null);
+    } catch (err) {
+      console.warn('Leaderboard action failed:', err);
+      setNotice({ text: failText, ok: false });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const moderate = (kind: 'delete' | 'ban', e: RankEntry) =>
+    run(async () => {
       const api = await rankApi();
       if (kind === 'delete') await api.deleteEntry(game, period, e.uid);
-      else await api.banPlayer(uid, e.uid, e.name);
-      setNotice({ text: kind === 'delete' ? `${e.name}님의 기록을 지웠어요.` : `${e.name}님을 랭킹에서 차단했어요.`, ok: true });
-      setModRow(null);
+      else await api.banPlayer(uid!, e.uid, e.name);
       setReload((r) => r + 1);
-    } catch (err) {
-      console.warn('Moderation failed:', err);
-      setNotice({ text: '처리하지 못했어요. 관리자 권한과 인터넷 연결을 확인해 주세요.', ok: false });
-    } finally {
-      setModBusy(false);
-    }
-  };
+      return kind === 'delete' ? `${e.name}님의 기록을 지웠어요.` : `${e.name}님을 랭킹에서 차단했어요.`;
+    }, '처리하지 못했어요. 관리자 권한과 인터넷 연결을 확인해 주세요.');
 
-  const liftBan = async (b: BanEntry) => {
-    try {
-      await (await rankApi()).unban(b.uid);
-      setNotice({ text: `${b.name}님의 차단을 풀었어요.`, ok: true });
-      setReload((r) => r + 1);
-    } catch (err) {
-      console.warn('Unban failed:', err);
-      setNotice({ text: '차단을 풀지 못했어요.', ok: false });
-    }
-  };
+  const report = (e: RankEntry, reason: ReportReason, note: string) =>
+    run(async () => {
+      const result = await (await communityApi()).reportEntry(uid!, boardId(game, period), e, reason, note);
+      return result === 'sent' ? '신고했어요. 관리자가 확인할게요.' : '이미 신고한 기록이에요.';
+    }, '신고하지 못했어요. 인터넷 연결을 확인해 주세요.');
 
-  const modFor = (e: RankEntry): ModTools | undefined =>
-    isAdmin
-      ? {
-          open: modRow === e.uid,
-          busy: modBusy,
-          onToggle: () => setModRow((r) => (r === e.uid ? null : e.uid)),
-          onDelete: () => moderate('delete', e),
-          onBan: () => moderate('ban', e),
-        }
-      : undefined;
+  /** Admins get a shield on every row; signed-in players can report other people's rows */
+  const rowProps = (e: RankEntry): Pick<RowProps, 'action' | 'panel'> => {
+    const open = openRow === e.uid;
+    const toggle = () => setOpenRow((r) => (r === e.uid ? null : e.uid));
+    if (isAdmin) {
+      return {
+        action: (
+          <button type="button" className="btn btn-sm btn-icon shrink-0" aria-label={`${e.name} 기록 관리`} aria-expanded={open} onClick={toggle}>
+            <Shield className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+        ),
+        panel: open && (busy ? <Busy /> : <AdminTools entry={e} onDelete={() => moderate('delete', e)} onBan={() => moderate('ban', e)} />),
+      };
+    }
+    if (uid && e.uid !== uid) {
+      return {
+        action: (
+          <button
+            type="button"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-3 transition-colors hover:bg-berry-soft hover:text-berry-ink"
+            aria-label={`${e.name} 신고`}
+            aria-expanded={open}
+            onClick={toggle}
+          >
+            <Flag className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+        ),
+        panel: open && (busy ? <Busy /> : <ReportForm entry={e} onSend={(reason, note) => report(e, reason, note)} onCancel={() => setOpenRow(null)} />),
+      };
+    }
+    return {};
+  };
 
   const places = placesOf(board.entries);
   const meta = GAMES[game];
@@ -312,7 +363,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
           <>
             <ol className="space-y-1.5">
               {board.entries.map((e, i) => (
-                <Row key={e.uid} entry={e} place={places[i]} mine={e.uid === uid} mod={modFor(e)} />
+                <Row key={e.uid} entry={e} place={places[i]} mine={e.uid === uid} {...rowProps(e)} />
               ))}
             </ol>
             {board.me && (
@@ -321,7 +372,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
                   ···
                 </p>
                 <ol>
-                  <Row entry={board.me.entry} place={board.me.place} mine mod={modFor(board.me.entry)} />
+                  <Row entry={board.me.entry} place={board.me.place} mine {...rowProps(board.me.entry)} />
                 </ol>
               </>
             )}
@@ -330,30 +381,8 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
       </div>
       <p className="mt-3 text-center text-[11px] text-ink-3">
         한 사람당 최고 점수 하나만 올라가요 · 오늘 순위는 매일 자정, 이번 주 순위는 월요일에 새로 시작해요 (한국 시간)
+        {uid && !isAdmin && ' · 이상한 기록은 깃발 버튼으로 신고해 주세요'}
       </p>
-
-      {isAdmin && (
-        <details className="mt-4 rounded-2xl border-2 border-line bg-surface-2 p-3">
-          <summary className="cursor-pointer text-sm font-bold">🚫 차단 목록{bans ? ` (${bans.length})` : ''}</summary>
-          {!bans ? (
-            <Loader2 className="mx-auto mt-2 h-5 w-5 animate-spin text-ink-3" aria-label="불러오는 중" />
-          ) : bans.length === 0 ? (
-            <p className="mt-2 text-sm text-ink-3">차단된 사람이 없어요.</p>
-          ) : (
-            <ul className="mt-2 space-y-1.5">
-              {bans.map((b) => (
-                <li key={b.uid} className="flex items-center gap-2 rounded-xl bg-surface px-3 py-1.5 text-sm">
-                  <span className="min-w-0 flex-1 truncate font-bold">{b.name}</span>
-                  {b.at > 0 && <span className="shrink-0 text-xs text-ink-3">{new Date(b.at).toLocaleDateString('ko-KR')}</span>}
-                  <button type="button" className="btn btn-sm shrink-0" onClick={() => liftBan(b)}>
-                    해제
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </details>
-      )}
     </Modal>
   );
 };

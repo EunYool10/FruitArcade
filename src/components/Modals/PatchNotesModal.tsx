@@ -9,6 +9,15 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.3.0',
+    title: '신고 · 의견 · 관리자 화면',
+    items: [
+      ['🚩 신고', '랭킹에서 이상한 닉네임이나 점수를 깃발 버튼으로 신고할 수 있어요. 관리자가 확인해요.'],
+      ['💌 의견 · 버그 보내기', '로비 아래 "의견 보내기"나 설정에서 운영자에게 바로 보낼 수 있어요.'],
+      ['🛡️ 관리자 화면', '오늘 플레이어 · 판 수, 최근 7일 그래프, 신고 · 의견 · 차단을 한곳에서 처리해요.'],
+    ],
+  },
+  {
     version: '3.2.1',
     title: '화면 다듬기',
     items: [

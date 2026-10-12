@@ -1,4 +1,5 @@
 import { GameType } from '../types';
+import { GAMES } from '../constants';
 import { isReservedNickname } from './profile';
 
 // Leaderboard ids and labels. Kept free of Firebase so the lobby can import it.
@@ -11,15 +12,38 @@ export const PERIOD_LABEL: Record<RankPeriod, string> = { day: '오늘', week: '
 const KST = 9 * 3600_000;
 const DAY = 86_400_000;
 
+/** Days since 1970-01-01 in KST, the same count firestore.rules uses */
+export const kstDay = (now = Date.now()) => Math.floor((now + KST) / DAY);
+
+/** Day id used by the daily boards and activity stats: d<kstDay> */
+export const dayId = (now = Date.now(), offset = 0) => `d${kstDay(now) + offset}`;
+
+/** "10/13 (월)" for a KST day index */
+export function dayLabel(index: number): string {
+  const d = new Date(index * DAY);
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()} (${'일월화수목금토'[d.getUTCDay()]})`;
+}
+
 /**
  * Board id for a game and period: daily and weekly boards reset at midnight KST,
  * weeks start on Monday. Must match isValidBoardId in firestore.rules.
  */
 export function boardId(game: GameType, period: RankPeriod, now = Date.now()): string {
   if (period === 'all') return `${game}_all`;
-  const day = Math.floor((now + KST) / DAY);
+  const day = kstDay(now);
   // 1970-01-01 was a Thursday; +3 days makes weeks start on Monday
   return period === 'day' ? `${game}_d${day}` : `${game}_w${Math.floor((day + 3) / 7)}`;
+}
+
+/** "메모리 · 10/13 (월)" style name for a board id */
+export function boardLabel(board: string): string {
+  const [game, period = ''] = board.split('_');
+  const name = GAMES[game as GameType]?.short ?? game;
+  if (period === 'all') return `${name} · 전체`;
+  const n = Number(period.slice(1));
+  if (period.startsWith('d')) return `${name} · ${dayLabel(n)}`;
+  // Monday of week n (weeks count from Monday 1969-12-29)
+  return `${name} · ${dayLabel(n * 7 - 3)} 주`;
 }
 
 export interface RankEntry {

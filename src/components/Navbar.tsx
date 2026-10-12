@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, BarChart3, Crown, Pause, Settings, Trophy, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, BarChart3, Crown, Pause, Settings, Shield, Trophy, Volume2, VolumeX } from 'lucide-react';
 import { GameSettings, ScreenType } from '../types';
 import { GAMES, SCREEN_GAME } from '../constants';
 import { LevelInfo } from '../utils/progress';
@@ -7,7 +7,7 @@ import { Avatar, PlayerView } from './ui/Avatar';
 import { Challenge } from '../utils/challenge';
 import { formatNumber } from '../utils/format';
 
-export type NavTarget = 'settings' | 'profile' | 'achievements' | 'records' | 'leaderboard';
+export type NavTarget = 'settings' | 'profile' | 'achievements' | 'records' | 'leaderboard' | 'admin';
 
 interface Props {
   screen: ScreenType;
@@ -17,6 +17,8 @@ interface Props {
   level: LevelInfo;
   /** Friend challenge being played on this screen */
   challenge: Challenge | null;
+  /** Shows the admin screen button */
+  isAdmin: boolean;
   onHome: () => void;
   onPause: () => void;
   onToggleSound: () => void;
@@ -32,6 +34,7 @@ export const Navbar: React.FC<Props> = ({
   player,
   level,
   challenge,
+  isAdmin,
   onHome,
   onPause,
   onToggleSound,
@@ -80,6 +83,11 @@ export const Navbar: React.FC<Props> = ({
         )}
 
         <nav className="ml-auto flex shrink-0 items-center gap-2" aria-label="빠른 메뉴">
+          {inLobby && isAdmin && (
+            <button type="button" className="btn btn-icon btn-grape" onClick={() => onOpen('admin')} aria-label="관리자 화면">
+              <Shield className={ICON} strokeWidth={2.5} />
+            </button>
+          )}
           {inLobby && (
             <>
               <button type="button" className="btn btn-icon hidden sm:inline-flex" onClick={() => onOpen('leaderboard')} aria-label="랭킹">

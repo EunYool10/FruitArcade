@@ -40,6 +40,7 @@ interface Props {
   onResetAchievements: () => void;
   onResetRecords: () => void;
   onNotify: (msg: string) => void;
+  onOpenFeedback: () => void;
 }
 
 type BoolKey = { [K in keyof GameSettings]: GameSettings[K] extends boolean ? K : never }[keyof GameSettings];
@@ -71,6 +72,7 @@ export const SettingsModal: React.FC<Props> = ({
   onResetAchievements,
   onResetRecords,
   onNotify,
+  onOpenFeedback,
 }) => {
   const set = <K extends keyof GameSettings>(key: K, value: GameSettings[K]) => onUpdateSettings({ ...settings, [key]: value });
 
@@ -197,6 +199,14 @@ export const SettingsModal: React.FC<Props> = ({
 
         <Section icon="📲" title="앱">
           <AppInstall />
+        </Section>
+
+        <Section icon="💌" title="의견 · 도움">
+          <SettingRow title="의견 · 버그 보내기" desc="불편한 점이나 바라는 기능을 운영자에게 바로 보내요">
+            <button type="button" className="btn btn-sm btn-soda shrink-0" onClick={onOpenFeedback}>
+              보내기
+            </button>
+          </SettingRow>
         </Section>
 
         <Section icon="🗑️" title="데이터">

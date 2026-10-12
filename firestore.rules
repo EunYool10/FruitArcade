@@ -38,6 +38,23 @@ rules_version = '2';
 // Document: config/admins  (edited only in the Firebase console)
 // Fields: emails - list of Google account emails with admin rights
 //
+// Collection: reports  (players flag a leaderboard entry; only admins read)
+// Document ID: <boardId>~<targetUid>~<reporterUid> (one report per player per entry)
+// Fields: reporter (== auth uid), target (uid, not the reporter), targetName (1-40),
+//         board (board id), score (int), reason (name | score | other),
+//         note (0-200 chars), at (== request.time), status (open -> done by admins)
+//
+// Collection: feedback  (bug reports and ideas; only admins read)
+// Document ID: <uid>~<5-minute bucket> (at most one message per 5 minutes)
+// Fields: uid (== auth uid), name (1-40), kind (bug | idea | other),
+//         message (1-1000 chars, may contain line breaks), version (1-20),
+//         device (0-200), at (== request.time), status (new -> done by admins)
+//
+// Collection: activity/{dayId}/players  (daily play counts for the admin stats)
+// Day ID: d<dayIndex> (KST), only today or yesterday can be written
+// Document ID: Firebase Auth uid
+// Fields: plays (int, +1 per round), seconds (int, total play time), at (== request.time)
+//
 // ===============================================================
 
 service cloud.firestore {
@@ -92,6 +109,14 @@ service cloud.firestore {
         && !value.matches('(?s).*[\\x00-\\x1f\\x7f].*');
     }
 
+    // Free text that may span lines (no other control characters)
+    function isMessageText(value, minLen, maxLen) {
+      return value is string
+        && value.size() >= minLen
+        && value.size() <= maxLen
+        && !value.matches('(?s).*[\\x00-\\x09\\x0b-\\x1f\\x7f].*');
+    }
+
     // Missing, null, or a string up to maxLen
     function isOptionalText(m, key, maxLen) {
       return !(key in m) || m[key] == null || (m[key] is string && m[key].size() <= maxLen);
@@ -135,10 +160,21 @@ service cloud.firestore {
       return boardId.split('_')[0];
     }
 
+    function isValidBoardFormat(boardId) {
+      return boardId is string && boardId.matches('^(memory|suika|dash|puzzle)_(all|d[0-9]{1,6}|w[0-9]{1,6})$');
+    }
+
     function isValidBoardId(boardId) {
-      return boardId is string
-        && boardId.matches('^(memory|suika|dash|puzzle)_(all|d[0-9]{1,6}|w[0-9]{1,6})$')
-        && isOpenPeriod(boardId.split('_')[1]);
+      return isValidBoardFormat(boardId) && isOpenPeriod(boardId.split('_')[1]);
+    }
+
+    function isOpenDay(dayId) {
+      return dayId == 'd' + string(dayIndex()) || dayId == 'd' + string(dayIndex() - 1);
+    }
+
+    // 5-minute buckets for the feedback rate limit
+    function feedbackBucket() {
+      return request.time.toMillis() / 300000;
     }
 
     // Caps well above anything reachable in normal play
@@ -193,6 +229,54 @@ service cloud.firestore {
         && data.score >= 0
         && data.score <= maxScore(boardGame(boardId))
         && data.at == request.time;
+    }
+
+    function isValidReport(reportId, data) {
+      return data.keys().hasAll(['reporter', 'target', 'targetName', 'board', 'score', 'reason', 'note', 'at', 'status'])
+        && data.keys().hasOnly(['reporter', 'target', 'targetName', 'board', 'score', 'reason', 'note', 'at', 'status'])
+        && data.reporter == request.auth.uid
+        && isValidId(data.target)
+        && data.target != request.auth.uid
+        && isPlainText(data.targetName, 1, 40)
+        && isValidBoardFormat(data.board)
+        && data.score is int
+        && data.score >= 0
+        && data.score <= 1000000
+        && data.reason in ['name', 'score', 'other']
+        && isPlainText(data.note, 0, 200)
+        && data.at == request.time
+        && data.status == 'open'
+        && reportId == data.board + '~' + data.target + '~' + request.auth.uid;
+    }
+
+    function isValidFeedback(feedbackId, data) {
+      return data.keys().hasAll(['uid', 'name', 'kind', 'message', 'version', 'device', 'at', 'status'])
+        && data.keys().hasOnly(['uid', 'name', 'kind', 'message', 'version', 'device', 'at', 'status'])
+        && data.uid == request.auth.uid
+        && isPlainText(data.name, 1, 40)
+        && data.kind in ['bug', 'idea', 'other']
+        && isMessageText(data.message, 1, 1000)
+        && isPlainText(data.version, 1, 20)
+        && isPlainText(data.device, 0, 200)
+        && data.at == request.time
+        && data.status == 'new'
+        && (feedbackId == request.auth.uid + '~' + string(feedbackBucket())
+          || feedbackId == request.auth.uid + '~' + string(feedbackBucket() - 1));
+    }
+
+    function isValidActivity(data) {
+      return data.keys().hasAll(['plays', 'seconds', 'at'])
+        && data.keys().hasOnly(['plays', 'seconds', 'at'])
+        && data.plays is int
+        && data.seconds is int
+        && data.seconds >= 0
+        && data.at == request.time;
+    }
+
+    // Only admins may flip the status field, nothing else
+    function isStatusChange(allowed) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in allowed;
     }
 
     function isValidBan(data) {
@@ -255,6 +339,40 @@ service cloud.firestore {
       allow get: if isGoogleUser()
         && request.auth.token.email_verified == true
         && request.auth.token.email in resource.data.emails;
+    }
+
+    // Players flag leaderboard entries; admins review them
+    match /reports/{reportId} {
+      allow create: if isGoogleUser() && isValidReport(reportId, request.resource.data);
+      allow read: if isAdmin();
+      allow update: if isAdmin() && isStatusChange(['open', 'done']);
+      allow delete: if isAdmin();
+    }
+
+    // Bug reports and ideas from signed-in players
+    match /feedback/{feedbackId} {
+      allow create: if isGoogleUser() && isValidFeedback(feedbackId, request.resource.data);
+      allow read: if isAdmin();
+      allow update: if isAdmin() && isStatusChange(['new', 'done']);
+      allow delete: if isAdmin();
+    }
+
+    // One doc per player per day: rounds played and time, counted for the admin stats
+    match /activity/{dayId}/players/{uid} {
+      allow read: if isAdmin();
+      allow create: if isGoogleUser()
+        && isOwner(uid)
+        && isOpenDay(dayId)
+        && isValidActivity(request.resource.data)
+        && request.resource.data.plays == 1
+        && request.resource.data.seconds <= 3600;
+      allow update: if isGoogleUser()
+        && isOwner(uid)
+        && isOpenDay(dayId)
+        && isValidActivity(request.resource.data)
+        && request.resource.data.plays == resource.data.plays + 1
+        && request.resource.data.seconds >= resource.data.seconds
+        && request.resource.data.seconds <= resource.data.seconds + 3600;
     }
 
     // Default deny all other paths to prevent unauthorized access

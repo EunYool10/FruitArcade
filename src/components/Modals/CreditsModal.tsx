@@ -7,8 +7,12 @@ interface Props {
   onClose: () => void;
 }
 
-// 은율 made the whole game; friends chipped in with ideas
-const MAKER = { emoji: '🍓', name: '은율', role: '기획 · 디자인 · 개발 · 운영' };
+// What 은율 worked on, shown as tags; friends chipped in with ideas
+const MAKER = {
+  emoji: '🍓',
+  name: '은율',
+  skills: ['기획', 'UI/UX 디자인', '프론트엔드 개발', '게임 개발', '사운드', '서버 · 데이터베이스', '보안', 'QA · 테스트', '배포 · 운영'],
+};
 const IDEAS = [
   { emoji: '🍊', name: '예찬' },
   { emoji: '🍇', name: '윤성' },
@@ -17,15 +21,20 @@ const IDEAS = [
 
 export const CreditsModal: React.FC<Props> = ({ isOpen, onClose }) => (
   <Modal isOpen={isOpen} onClose={onClose} title="크레딧" subtitle={`상큼 과일 아케이드 존 v${APP_VERSION}`} icon="🎬" tone="berry" size="sm">
-    <div className="well flex items-center gap-3 bg-mango-soft p-4">
-      <span className="sticker h-14 w-14 shrink-0 -rotate-6 bg-surface text-3xl" aria-hidden="true">
-        {MAKER.emoji}
-      </span>
-      <div className="min-w-0">
+    <div className="well bg-mango-soft p-4">
+      <div className="flex items-center gap-3">
+        <span className="sticker h-14 w-14 shrink-0 -rotate-6 bg-surface text-3xl" aria-hidden="true">
+          {MAKER.emoji}
+        </span>
         <p className="font-display text-2xl leading-tight">{MAKER.name}</p>
-        <p className="text-sm text-ink-2">{MAKER.role}</p>
-        <span className="chip mt-1.5 bg-berry-deep text-white">전부 다 만들었어요</span>
       </div>
+      <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={`${MAKER.name}이 맡은 분야`}>
+        {MAKER.skills.map((s) => (
+          <li key={s} className="chip bg-surface text-xs">
+            {s}
+          </li>
+        ))}
+      </ul>
     </div>
 
     <h3 className="mb-2 mt-4 font-display text-lg">💡 아이디어</h3>

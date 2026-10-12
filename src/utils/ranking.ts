@@ -64,6 +64,8 @@ export interface RankEntry {
   score: number;
   /** Worn title id (see titles.ts) */
   title?: string;
+  /** Avatar frame id from the shop */
+  frame?: string;
 }
 
 /** The player's place on the boards after a round, for the result card */

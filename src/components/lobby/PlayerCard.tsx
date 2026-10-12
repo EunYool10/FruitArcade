@@ -4,6 +4,7 @@ import { LevelInfo } from '../../utils/progress';
 import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
 import { Avatar, PlayerView } from '../ui/Avatar';
 import { Meter } from '../ui/Meter';
+import { formatNumber } from '../../utils/format';
 
 interface PlayerCardProps {
   player: PlayerView;
@@ -11,6 +12,8 @@ interface PlayerCardProps {
   level: LevelInfo;
   stats: UserStatistics;
   achievementCount: number;
+  coins: number;
+  onOpenShop: () => void;
   onOpenProfile: () => void;
   onOpenAchievements: () => void;
   onOpenRecords: () => void;
@@ -46,6 +49,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   level,
   stats,
   achievementCount,
+  coins,
+  onOpenShop,
   onOpenProfile,
   onOpenAchievements,
   onOpenRecords,
@@ -67,6 +72,9 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                 {player.title.icon} {player.title.label}
               </span>
             )}
+            <button type="button" className="chip bg-mango text-on-bright transition-transform hover:-translate-y-0.5" onClick={onOpenShop} aria-label={`코인 ${coins}개 · 상점 열기`}>
+              🪙 {formatNumber(coins)}
+            </button>
           </div>
         </div>
         <button type="button" className="btn btn-sm" onClick={onOpenProfile}>

@@ -159,7 +159,7 @@ export const ProfileModal: React.FC<Props> = ({
                 <span className="truncate">{user.email}</span>
               </p>
             )}
-            {user && <p className="mt-0.5 text-[11px] text-ink-3">🏆 랭킹에는 닉네임과 아바타만 보여요 (다음 기록부터 반영)</p>}
+            {user && <p className="mt-0.5 text-[11px] text-ink-3">🏆 랭킹에는 닉네임 · 아바타 · 칭호 · 테두리만 보여요</p>}
           </div>
         </div>
         <div>

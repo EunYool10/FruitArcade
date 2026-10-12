@@ -9,6 +9,8 @@ export interface PlayerProfile {
   avatar: string;
   /** Title worn next to the name (achievement id or "weekly_champion"), empty = none */
   title: string;
+  /** Avatar frame from the shop (item id), empty = none */
+  frame: string;
 }
 
 export const AVATARS = ['🍓', '🍉', '🍊', '🍋', '🍇', '🍑', '🍒', '🍍', '🥝', '🍎', '🫐', '🥥'];
@@ -18,9 +20,9 @@ export function loadProfile(): PlayerProfile {
   try {
     const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
     const text = (v: unknown) => (typeof v === 'string' ? v : '');
-    return { nickname: text(p?.nickname), avatar: text(p?.avatar), title: text(p?.title) };
+    return { nickname: text(p?.nickname), avatar: text(p?.avatar), title: text(p?.title), frame: text(p?.frame) };
   } catch {
-    return { nickname: '', avatar: '', title: '' };
+    return { nickname: '', avatar: '', title: '', frame: '' };
   }
 }
 

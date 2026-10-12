@@ -1,5 +1,6 @@
 import React from 'react';
 import type { TitleDef } from '../../utils/titles';
+import { FRAME_CLASS } from '../../utils/shop';
 
 const SIZES = {
   sm: 'h-8 w-8 text-base',
@@ -15,18 +16,34 @@ export interface PlayerView {
   isGuest: boolean;
   /** Worn title, shown next to the name */
   title?: TitleDef | null;
+  /** Avatar frame bought in the shop (item id) */
+  frame?: string;
 }
 
-export const Avatar: React.FC<{ player: PlayerView; size?: keyof typeof SIZES }> = ({ player, size = 'md' }) =>
-  player.photo ? (
-    <img
-      src={player.photo}
-      alt=""
-      referrerPolicy="no-referrer"
-      className={`${SIZES[size]} shrink-0 rounded-full border-2 border-line bg-surface-2 object-cover`}
-    />
-  ) : (
-    <span className={`${SIZES[size]} grid shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft`} aria-hidden="true">
-      {player.emoji}
-    </span>
-  );
+/** Colored ring from the shop around an avatar or sticker (nothing when no frame) */
+export const Framed: React.FC<{ frame?: string; shape?: 'circle' | 'sticker'; children: React.ReactNode }> = ({
+  frame,
+  shape = 'circle',
+  children,
+}) => {
+  const ring = frame ? FRAME_CLASS[frame] : undefined;
+  if (!ring) return <>{children}</>;
+  return <span className={`inline-grid shrink-0 p-[3px] ${shape === 'circle' ? 'rounded-full' : 'rounded-[1.2rem]'} ${ring}`}>{children}</span>;
+};
+
+export const Avatar: React.FC<{ player: PlayerView; size?: keyof typeof SIZES }> = ({ player, size = 'md' }) => (
+  <Framed frame={player.frame}>
+    {player.photo ? (
+      <img
+        src={player.photo}
+        alt=""
+        referrerPolicy="no-referrer"
+        className={`${SIZES[size]} shrink-0 rounded-full border-2 border-line bg-surface-2 object-cover`}
+      />
+    ) : (
+      <span className={`${SIZES[size]} grid shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft`} aria-hidden="true">
+        {player.emoji}
+      </span>
+    )}
+  </Framed>
+);

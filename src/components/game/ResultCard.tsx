@@ -159,6 +159,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
       {reward && (
         <div className="mt-3 flex flex-wrap justify-center gap-1.5">
           <span className="chip bg-mango-soft">✨ +{reward.xpGained} XP</span>
+          {reward.coins > 0 && <span className="chip bg-mango text-on-bright">🪙 +{reward.coins}</span>}
           {reward.streak && <span className="chip bg-berry-soft">🔥 {reward.streak}일 연속!</span>}
           {reward.levelUp && <span className="chip bg-grape-deep text-white">🎉 레벨 업! Lv.{reward.levelUp}</span>}
           {reward.missions.map((m) => (

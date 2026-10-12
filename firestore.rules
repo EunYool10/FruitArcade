@@ -14,6 +14,7 @@ rules_version = '2';
 //   - statistics: map (<= 40 keys) - play counts / high scores (older versions left extra keys)
 //   - achievements: map (<= 100 keys) - unlocked achievement id -> date
 //   - settings: map (<= 40 keys) - game settings
+//   - inventory: map (<= 100 keys) - shop item id -> purchase date (coins live in statistics)
 //   No other top-level fields and no subcollections.
 //
 // Collection: leaderboards/{boardId}/scores  (public)
@@ -28,7 +29,8 @@ rules_version = '2';
 //   - name: string (1-40 chars, no control characters, may not pose as staff
 //           like "Tester", "QA", "관리자" unless written by an admin)
 //   - avatar: string (1-16 chars)
-//   - score: int (0 <= score <= per-game cap, may only go up, at most every 3 s)
+//   - score: int (0 <= score <= per-game cap, may only go up, at most every 3 s;
+//           name/avatar/title/frame may be refreshed alone with the same score)
 //   - at: timestamp (== request.time)
 //   - title, frame: optional ids ([a-z0-9_], 1-32) of the worn title and avatar frame
 //
@@ -208,12 +210,13 @@ service cloud.firestore {
     }
 
     function isValidUserDoc(userId, data) {
-      return data.keys().hasOnly(['profile', 'statistics', 'achievements', 'settings'])
+      return data.keys().hasOnly(['profile', 'statistics', 'achievements', 'settings', 'inventory'])
         && 'profile' in data
         && isValidProfile(userId, data.profile)
         && (!('statistics' in data) || (data.statistics is map && data.statistics.size() <= 40))
         && (!('achievements' in data) || (data.achievements is map && data.achievements.size() <= 100))
-        && (!('settings' in data) || (data.settings is map && data.settings.size() <= 40));
+        && (!('settings' in data) || (data.settings is map && data.settings.size() <= 40))
+        && (!('inventory' in data) || (data.inventory is map && data.inventory.size() <= 100));
     }
 
     // Who the account belongs to can't be rewritten after sign-up
@@ -322,13 +325,16 @@ service cloud.firestore {
         && isValidScoreEntry(boardId, uid, request.resource.data)
         && !isBanned();
 
-      // Only a higher score replaces the entry, at most every 3 seconds; uid can never change
+      // A higher score replaces the entry; with the same score only the look (name, avatar,
+      // title, frame) may change. Either way at most every 3 seconds, and the uid never changes.
       allow update: if isGoogleUser()
         && isOwner(uid)
         && resource.data.uid == uid
         && isValidBoardId(boardId)
         && isValidScoreEntry(boardId, uid, request.resource.data)
-        && request.resource.data.score > resource.data.score
+        && (request.resource.data.score > resource.data.score
+          || (request.resource.data.score == resource.data.score
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'avatar', 'title', 'frame', 'at'])))
         && request.time > resource.data.at + duration.value(3, 's')
         && !isBanned();
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { cardBackStyle } from '../../utils/shop';
 import { Search, Zap } from 'lucide-react';
 import { GameResult, GameReward, GameSettings, LifeLimit, MemoryCard, MemoryMode } from '../../types';
 import { Tone } from '../../constants';
@@ -587,6 +588,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
   // Size everything by grid density
   const emojiSize = gridSize === 4 ? 'text-4xl sm:text-6xl' : gridSize === 6 ? 'text-3xl sm:text-4xl' : 'text-xl sm:text-3xl';
   const markSize = gridSize === 4 ? 'text-2xl sm:text-4xl' : gridSize === 6 ? 'text-lg sm:text-2xl' : 'text-xs sm:text-lg';
+  const back = cardBackStyle(settings.cardBack ?? '');
   const gap = gridSize === 8 ? 'gap-1 sm:gap-1.5' : 'gap-1.5 sm:gap-2.5';
   const radius = gridSize === 8 ? 'rounded-lg sm:rounded-xl' : 'rounded-xl sm:rounded-2xl';
   const border = settings.highContrast ? 'border-[3px]' : 'border-2';
@@ -657,11 +659,11 @@ export const MemoryGameBoard: React.FC<Props> = ({
                       }`}
                     >
                       {/* Back */}
-                      <div className={`card-face dots grid place-items-center ${radius} ${border} border-line bg-berry shadow-hard-sm`}>
+                      <div className={`card-face grid place-items-center ${radius} ${border} border-line shadow-hard-sm ${back.className}`}>
                         <span
                           className={`grid aspect-square w-[48%] place-items-center rounded-full border-2 border-line bg-surface font-display leading-none text-ink ${markSize}`}
                         >
-                          ?
+                          {back.mark}
                         </span>
                       </div>
                       {/* Front */}

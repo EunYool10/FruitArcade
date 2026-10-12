@@ -31,9 +31,12 @@ import { ChallengeModal } from './components/Modals/ChallengeModal';
 import { LeaderboardModal } from './components/Modals/LeaderboardModal';
 import { AdminModal } from './components/Modals/AdminModal';
 import { FeedbackModal } from './components/Modals/FeedbackModal';
+import { ShopModal } from './components/Modals/ShopModal';
+import { Inventory, ItemKind, ShopItem, clearInventory, coinsFor, loadInventory, mergeInventory, saveInventory } from './utils/shop';
 import { RankContext } from './components/RankContext';
 import { RankResult, kstWeek, publicName } from './utils/ranking';
 import { earnedTitles, wornTitle } from './utils/titles';
+import { josa } from './utils/format';
 import { DayStats, clearDays, loadDays, recordDay } from './utils/dailyStats';
 import { Challenge, challengeLink, takeChallengeFromUrl } from './utils/challenge';
 import { randomSeed } from './utils/rng';
@@ -51,6 +54,7 @@ import {
   applyResult,
   bestKey,
   clearLocalProgress,
+  coinBalance,
   computeXp,
   levelInfo,
   loadHistory,
@@ -143,6 +147,8 @@ export default function App() {
   const [streak, setStreak] = useState<StreakState>(loadStreak);
   const [profile, setProfile] = useState<PlayerProfile>(loadProfile);
   const [days, setDays] = useState<DayStats>(loadDays);
+  const [inventory, setInventory] = useState<Inventory>(loadInventory);
+  const inventoryRef = useRef(inventory);
   const daysRef = useRef(days);
 
   // Friend challenges: one arriving by link, and the one being played
@@ -188,13 +194,15 @@ export default function App() {
     photo: profile.avatar ? null : user?.photoURL ?? null,
     isGuest: !user,
     title,
+    frame: inventory[profile.frame] ? profile.frame : '',
   };
   /** How the player appears on public boards (nickname only, never the Google name) */
-  const rankWhoRef = useRef<{ name: string; avatar: string; title?: string }>({ name: '', avatar: '' });
+  const rankWhoRef = useRef<{ name: string; avatar: string; title?: string; frame?: string }>({ name: '', avatar: '' });
   rankWhoRef.current = {
     name: publicName(profile.nickname, user?.uid ?? '', isAdmin),
     avatar: profile.avatar || level.emoji,
     ...(title ? { title: title.id } : {}),
+    ...(player.frame ? { frame: player.frame } : {}),
   };
 
   // ───────── helpers ─────────
@@ -284,11 +292,53 @@ export default function App() {
     playSound('click', { sfxEnabled: next, volume: settings.volume });
   };
 
+  // A changed nickname / avatar / title / frame shows up on the player's leaderboard entries
+  // shortly after (debounced, so flipping through titles makes one update)
+  const lookTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleLookSync = () => {
+    if (lookTimer.current) clearTimeout(lookTimer.current);
+    lookTimer.current = setTimeout(() => {
+      const u = userRef.current;
+      if (!u) return;
+      rankApi()
+        .then((api) => api.syncLook(u.uid, rankWhoRef.current))
+        .catch((err) => console.warn('Failed to refresh leaderboard look:', err));
+    }, 2500);
+  };
+
   const updateProfile = (next: PlayerProfile) => {
     setProfile(next);
     saveProfile(next);
     const u = userRef.current;
-    if (u) cloudWrite((api) => api.saveProfileCustom(u.uid, next)).catch(() => {});
+    if (u) {
+      cloudWrite((api) => api.saveProfileCustom(u.uid, next)).catch(() => {});
+      scheduleLookSync();
+    }
+  };
+
+  // ───────── shop ─────────
+
+  const buyItem = (item: ShopItem) => {
+    const stats0 = statsRef.current;
+    if (inventoryRef.current[item.id] || coinBalance(stats0) < item.price) return;
+    const inv = { ...inventoryRef.current, [item.id]: new Date().toISOString() };
+    inventoryRef.current = inv;
+    setInventory(inv);
+    saveInventory(inv);
+    commitStats({ ...stats0, coinsSpent: stats0.coinsSpent + item.price });
+    playSound('levelup', settings);
+    pushToast({ icon: '🛍️', title: `${item.name}${josa(item.name, '을', '를')} 샀어요`, sub: '바로 사용해 보세요!', tone: 'mango' });
+    const u = userRef.current;
+    if (u) {
+      cloudWrite((api) => api.saveInventory(u.uid, inv)).catch(() => {});
+      cloudWrite((api) => api.pushMergedStats(u.uid, statsRef.current)).catch(() => {});
+    }
+  };
+
+  const equipItem = (kind: ItemKind, item: ShopItem | null) => {
+    const id = item?.id ?? '';
+    if (kind === 'frame') updateProfile({ ...profile, frame: id });
+    else updateSettings({ ...settings, cardBack: id });
   };
 
   // ───────── auth & cloud sync ─────────
@@ -311,15 +361,26 @@ export default function App() {
           nickname: cloud.custom.nickname || local.nickname,
           avatar: cloud.custom.avatar || local.avatar,
           title: cloud.custom.title || local.title,
+          frame: cloud.custom.frame || local.frame,
         };
         setProfile(mergedProfile);
         saveProfile(mergedProfile);
         if (
           mergedProfile.nickname !== cloud.custom.nickname ||
           mergedProfile.avatar !== cloud.custom.avatar ||
-          mergedProfile.title !== cloud.custom.title
+          mergedProfile.title !== cloud.custom.title ||
+          mergedProfile.frame !== cloud.custom.frame
         ) {
           cloudWrite((api) => api.saveProfileCustom(u.uid, mergedProfile)).catch(() => {});
+        }
+
+        // Shop items: union of both sides
+        const mergedInv = mergeInventory(inventoryRef.current, cloud.inventory);
+        inventoryRef.current = mergedInv;
+        setInventory(mergedInv);
+        saveInventory(mergedInv);
+        if (Object.keys(mergedInv).some((id) => !(id in cloud.inventory))) {
+          cloudWrite((api) => api.saveInventory(u.uid, mergedInv)).catch(() => {});
         }
 
         // Achievements: union of both sides
@@ -430,7 +491,10 @@ export default function App() {
     resetAchievements();
     bumpAchievements();
     commitStats({ ...EMPTY_STATS });
-    const blank = { nickname: '', avatar: '', title: '' };
+    const blank = { nickname: '', avatar: '', title: '', frame: '' };
+    clearInventory();
+    inventoryRef.current = {};
+    setInventory({});
     setProfile(blank);
     saveProfile(blank);
     historyRef.current = [];
@@ -491,10 +555,11 @@ export default function App() {
       const { state: nextStreak, extended } = bumpStreak(loadStreak());
       setStreak(nextStreak);
 
-      const next = applyResult(prev, result, stampEarned, nextStreak.count);
+      const newBest = result.score > 0 && result.score > prevBest;
+      const coins = coinsFor(result, { newBest, stamp: stampEarned, firstToday: extended });
+      const next = applyResult(prev, result, stampEarned, nextStreak.count, coins);
       commitStats(next);
 
-      const newBest = result.score > 0 && result.score > prevBest;
       historyRef.current = pushHistory(historyRef.current, { ...result, at: Date.now(), best: newBest });
       daysRef.current = recordDay(daysRef.current, result);
       setDays(daysRef.current);
@@ -505,7 +570,7 @@ export default function App() {
 
       const u = userRef.current;
       if (u) {
-        cloudWrite((api) => api.recordCloudResult(u.uid, result, stampEarned, nextStreak.count))
+        cloudWrite((api) => api.recordCloudResult(u.uid, result, stampEarned, nextStreak.count, coins))
           .then((cloud) => commitStats(mergeStats(statsRef.current, cloud)))
           .catch((err) => console.warn('Failed to save game result:', err));
         // Counted in the admin stats (rounds and play time per day)
@@ -561,6 +626,7 @@ export default function App() {
         achievements: [...roundAchRef.current],
         stamp: stampEarned,
         challenge,
+        coins,
       };
     },
     [commitStats, handleUnlockAchieve, cloudWrite]
@@ -714,7 +780,7 @@ export default function App() {
   // ───────── render ─────────
 
   const gameCommon = {
-    settings,
+    settings: inventory[settings.cardBack] || !settings.cardBack ? settings : { ...settings, cardBack: '' },
     isPaused: gamePaused,
     onUnlockAchieve: handleUnlockAchieve,
     onGameComplete: handleGameComplete,
@@ -764,6 +830,7 @@ export default function App() {
                     daily={daily}
                     level={level}
                     achievementCount={achievementCount}
+                    coins={coinBalance(stats)}
                     onPlay={playGame}
                     onOpen={openModal}
                   />
@@ -871,6 +938,17 @@ export default function App() {
         uid={user?.uid ?? null}
         isAdmin={isAdmin}
         onLogin={() => setModal('profile')}
+      />
+      <ShopModal
+        isOpen={modal === 'shop'}
+        onClose={() => setModal(null)}
+        balance={coinBalance(stats)}
+        inventory={inventory}
+        player={player}
+        equippedFrame={player.frame ?? ''}
+        equippedBack={inventory[settings.cardBack] ? settings.cardBack : ''}
+        onBuy={buyItem}
+        onEquip={equipItem}
       />
       <AdminModal isOpen={modal === 'admin' && isAdmin} onClose={() => setModal(null)} adminUid={user?.uid ?? null} />
       <FeedbackModal

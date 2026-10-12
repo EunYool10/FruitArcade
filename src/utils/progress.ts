@@ -22,6 +22,8 @@ export const EMPTY_STATS: UserStatistics = {
   missionStamps: 0,
   bestStreak: 0,
   lastChampionWeek: 0,
+  coinsEarned: 0,
+  coinsSpent: 0,
   lastPlayedAt: '',
 };
 
@@ -67,7 +69,7 @@ export function loadLocalStats(): UserStatistics {
 export const saveLocalStats = (stats: UserStatistics) => write(STATS_KEY, stats);
 
 /** Fold one finished round into the statistics. Shared by local and cloud saves. */
-export function applyResult(stats: UserStatistics, r: GameResult, stamp = false, streak = 0): UserStatistics {
+export function applyResult(stats: UserStatistics, r: GameResult, stamp = false, streak = 0, coins = 0): UserStatistics {
   const next = { ...stats };
   next.totalPlayCount += 1;
   next.totalPlayTime += Math.max(0, Math.round(r.seconds));
@@ -75,9 +77,13 @@ export function applyResult(stats: UserStatistics, r: GameResult, stamp = false,
   next[bestKey(r.game)] = Math.max(next[bestKey(r.game)], Math.round(r.score));
   if (stamp) next.missionStamps += 1;
   next.bestStreak = Math.max(next.bestStreak, streak);
+  next.coinsEarned += Math.max(0, Math.round(coins));
   next.lastPlayedAt = new Date().toISOString();
   return next;
 }
+
+/** Coins left to spend in the shop */
+export const coinBalance = (s: UserStatistics) => Math.max(0, (s.coinsEarned || 0) - (s.coinsSpent || 0));
 
 /** Field-wise maximum, so merging never loses progress from either side. */
 export function mergeStats(a: Partial<UserStatistics>, b: Partial<UserStatistics>): UserStatistics {

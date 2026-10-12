@@ -8,6 +8,7 @@ import { titleDef } from '../../utils/titles';
 import type { ReportReason } from '../../utils/communityService';
 import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
+import { Framed } from '../ui/Avatar';
 
 const rankApi = () => import('../../utils/leaderboardService');
 const communityApi = () => import('../../utils/communityService');
@@ -98,9 +99,11 @@ const Row: React.FC<RowProps> = ({ entry, place, mine, champion, action, panel }
       <span className="w-8 shrink-0 text-center font-display text-lg tabular-nums">
         {place <= 3 ? <span aria-label={`${place}위`}>{MEDAL[place - 1]}</span> : place}
       </span>
-      <span className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" aria-hidden="true">
-        {entry.avatar}
-      </span>
+      <Framed frame={entry.frame} shape="sticker">
+        <span className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" aria-hidden="true">
+          {entry.avatar}
+        </span>
+      </Framed>
       <NameBlock entry={entry} mine={mine} champion={champion} />
       <span className="shrink-0 font-display text-lg tabular-nums">{formatNumber(entry.score)}</span>
       {action}
@@ -434,9 +437,11 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
                   </span>
                   {entry ? (
                     <>
-                      <span className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" aria-hidden="true">
-                        {entry.avatar}
-                      </span>
+                      <Framed frame={entry.frame} shape="sticker">
+                        <span className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" aria-hidden="true">
+                          {entry.avatar}
+                        </span>
+                      </Framed>
                       <NameBlock entry={entry} mine={entry.uid === uid} champion />
                       <span className="shrink-0 font-display text-lg tabular-nums">{formatNumber(entry.score)}</span>
                     </>

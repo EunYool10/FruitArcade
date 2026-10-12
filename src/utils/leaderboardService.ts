@@ -2,6 +2,7 @@ import {
   DocumentData,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getCountFromServer,
   getDoc,
@@ -11,6 +12,7 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  updateDoc,
   where,
   writeBatch,
 } from 'firebase/firestore';
@@ -31,6 +33,7 @@ const toEntry = (uid: string, d: DocumentData): RankEntry => ({
   avatar: typeof d.avatar === 'string' ? d.avatar : '🍓',
   score: typeof d.score === 'number' ? d.score : 0,
   ...(typeof d.title === 'string' && TITLE_ID.test(d.title) ? { title: d.title } : {}),
+  ...(typeof d.frame === 'string' && TITLE_ID.test(d.frame) ? { frame: d.frame } : {}),
 });
 
 /**
@@ -40,7 +43,7 @@ const toEntry = (uid: string, d: DocumentData): RankEntry => ({
 export function submitScore(
   uid: string,
   game: GameType,
-  who: { name: string; avatar: string; title?: string },
+  who: { name: string; avatar: string; title?: string; frame?: string },
   score: number
 ): Promise<Record<RankPeriod, number>> {
   const now = Date.now();
@@ -51,11 +54,47 @@ export function submitScore(
     snaps.forEach((snap, i) => {
       const prev = snap.exists() ? Number(snap.data().score) || 0 : -1;
       const title = who.title && TITLE_ID.test(who.title) ? { title: who.title } : {};
-      if (score > prev) tx.set(refs[i], { uid, name: who.name, avatar: who.avatar, score, at: serverTimestamp(), ...title });
+      const frame = who.frame && TITLE_ID.test(who.frame) ? { frame: who.frame } : {};
+      if (score > prev) tx.set(refs[i], { uid, name: who.name, avatar: who.avatar, score, at: serverTimestamp(), ...title, ...frame });
       best[RANK_PERIODS[i]] = Math.max(prev, score);
     });
     return best;
   });
+}
+
+export interface Look {
+  name: string;
+  avatar: string;
+  title?: string;
+  frame?: string;
+}
+
+/**
+ * Put a new nickname / avatar / title / frame on the player's current entries
+ * (today, this week, all time for every game). Scores stay as they are.
+ */
+export async function syncLook(uid: string, look: Look): Promise<number> {
+  const now = Date.now();
+  const refs = GAME_ORDER.flatMap((g) => RANK_PERIODS.map((p) => doc(scores(boardId(g, p, now)), uid)));
+  const snaps = await Promise.all(refs.map((r) => getDoc(r)));
+  const title = look.title && TITLE_ID.test(look.title) ? look.title : '';
+  const frame = look.frame && TITLE_ID.test(look.frame) ? look.frame : '';
+  const writes = snaps.flatMap((snap, i) => {
+    if (!snap.exists()) return [];
+    const d = snap.data();
+    if (d.name === look.name && d.avatar === look.avatar && (d.title ?? '') === title && (d.frame ?? '') === frame) return [];
+    return [
+      updateDoc(refs[i], {
+        name: look.name,
+        avatar: look.avatar,
+        title: title || deleteField(),
+        frame: frame || deleteField(),
+        at: serverTimestamp(),
+      }),
+    ];
+  });
+  const done = await Promise.allSettled(writes);
+  return done.filter((r) => r.status === 'fulfilled').length;
 }
 
 /** 1-based place of `score` on a board; ties share a place */

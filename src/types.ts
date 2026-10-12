@@ -29,6 +29,8 @@ export interface GameSettings {
   bgmEnabled: boolean;
   bgmVolume: number; // 0 - 100
   dashDifficulty: DashDifficulty;
+  /** Memory card back from the shop ('' = the classic one) */
+  cardBack: string;
 }
 
 export interface Achievement {
@@ -57,6 +59,8 @@ export interface UserStatistics {
   missionStamps: number; // days on which every daily mission was cleared
   bestStreak: number; // longest run of consecutive play days
   lastChampionWeek: number; // latest week (KST index) the player topped a weekly board, 0 = never
+  coinsEarned: number; // all coins ever earned (only grows, so devices merge by max)
+  coinsSpent: number; // all coins ever spent in the shop (only grows)
   lastPlayedAt: string;
 }
 
@@ -82,6 +86,8 @@ export interface GameReward {
   stamp: boolean;
   /** Outcome when this round was a friend challenge */
   challenge: { name: string; target: number; won: boolean } | null;
+  /** Shop coins earned this round */
+  coins: number;
 }
 
 export interface HistoryEntry extends GameResult {

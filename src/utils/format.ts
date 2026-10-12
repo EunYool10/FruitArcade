@@ -13,6 +13,13 @@ export const formatTime = (sec: number, showTenths = false): string => {
 
 export const formatNumber = (n: number): string => Math.round(n).toLocaleString('ko-KR');
 
+/** Korean particle that fits the word's last syllable: josa('테두리', '을', '를') → '를' */
+export function josa(word: string, afterConsonant: string, afterVowel: string): string {
+  const code = word.trim().charCodeAt(word.trim().length - 1) - 0xac00;
+  if (!(code >= 0 && code <= 11171)) return `${afterConsonant}(${afterVowel})`;
+  return code % 28 ? afterConsonant : afterVowel;
+}
+
 export function relativeTime(at: number, now = Date.now()): string {
   const s = Math.max(0, Math.round((now - at) / 1000));
   if (s < 60) return '방금 전';

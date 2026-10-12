@@ -1,6 +1,6 @@
 import { GameSettings, GameType, ScreenType } from './types';
 
-export const APP_VERSION = '3.4.0';
+export const APP_VERSION = '3.5.0';
 
 export const DEFAULT_SETTINGS: GameSettings = {
   theme: 'light',
@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   bgmEnabled: true,
   bgmVolume: 40,
   dashDifficulty: 'normal',
+  cardBack: '',
 };
 
 export type Tone = 'berry' | 'melon' | 'mango' | 'grape' | 'soda';

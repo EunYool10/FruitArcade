@@ -12,6 +12,8 @@ export interface CloudData {
   settings: Partial<GameSettings>;
   /** Nickname / fruit avatar chosen in the app (empty strings when never set) */
   custom: PlayerProfile;
+  /** Shop items bought (item id → purchase date) */
+  inventory: Record<string, string>;
 }
 
 const userRef = (uid: string) => doc(db, 'users', uid);
@@ -35,7 +37,8 @@ export async function loadUserData(user: User): Promise<CloudData> {
       statistics: data.statistics || {},
       achievements: data.achievements || {},
       settings: data.settings || {},
-      custom: { nickname: data.profile?.nickname || '', avatar: data.profile?.avatar || '', title: data.profile?.title || '' },
+      custom: { nickname: data.profile?.nickname || '', avatar: data.profile?.avatar || '', title: data.profile?.title || '', frame: data.profile?.frame || '' },
+      inventory: data.inventory && typeof data.inventory === 'object' ? data.inventory : {},
     };
   }
 
@@ -45,16 +48,16 @@ export async function loadUserData(user: User): Promise<CloudData> {
     achievements: {},
     settings: {},
   });
-  return { statistics: {}, achievements: {}, settings: {}, custom: { nickname: '', avatar: '', title: '' } };
+  return { statistics: {}, achievements: {}, settings: {}, custom: { nickname: '', avatar: '', title: '', frame: '' }, inventory: {} };
 }
 
 /** Atomically add one finished round to the cloud stats (safe with several devices). */
-export function recordCloudResult(uid: string, result: GameResult, stamp: boolean, streak: number): Promise<UserStatistics> {
+export function recordCloudResult(uid: string, result: GameResult, stamp: boolean, streak: number, coins: number): Promise<UserStatistics> {
   const ref = userRef(uid);
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     const current = { ...EMPTY_STATS, ...(snap.data()?.statistics || {}) };
-    const next = applyResult(current, result, stamp, streak);
+    const next = applyResult(current, result, stamp, streak, coins);
     tx.update(ref, { statistics: next });
     return next;
   });
@@ -85,5 +88,9 @@ export async function saveUserSettings(uid: string, settings: GameSettings): Pro
 }
 
 export async function saveProfileCustom(uid: string, p: PlayerProfile): Promise<void> {
-  await updateDoc(userRef(uid), { 'profile.nickname': p.nickname, 'profile.avatar': p.avatar, 'profile.title': p.title });
+  await updateDoc(userRef(uid), { 'profile.nickname': p.nickname, 'profile.avatar': p.avatar, 'profile.title': p.title, 'profile.frame': p.frame });
+}
+
+export async function saveInventory(uid: string, inventory: Record<string, string>): Promise<void> {
+  await updateDoc(userRef(uid), { inventory });
 }

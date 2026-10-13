@@ -71,7 +71,8 @@ export interface RankEntry {
 /** The player's place on the boards after a round, for the result card */
 export interface RankResult {
   game: GameType;
-  status: 'pending' | 'done' | 'error';
+  /** rejected: the score server didn't accept the round, so it stayed off the boards */
+  status: 'pending' | 'done' | 'error' | 'rejected';
   day?: number;
   all?: number;
 }

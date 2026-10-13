@@ -1,5 +1,6 @@
-// Serves the built game (dist/) for hosts that run `npm start`, such as a Render web service.
-// GitHub Pages doesn't use this; it serves dist/ directly.
+// Serves the built game (dist/) for hosts that run `npm start`, such as a Render web service,
+// plus the score API under /api/ (server/api.mjs). GitHub Pages serves dist/ directly and calls
+// this server for scores.
 import { createServer } from 'node:http';
 import { existsSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
@@ -8,12 +9,13 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import zlib from 'node:zlib';
+import { handleApi, scoresEnabled } from './server/api.mjs';
 
 const ROOT = fileURLToPath(new URL('./dist/', import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
 
 // When the host's build step only installs packages, build once here instead
-if (!existsSync(path.join(ROOT, 'index.html'))) {
+if (!existsSync(path.join(ROOT, 'index.html')) || !existsSync(new URL('./dist-server/verify.js', import.meta.url))) {
   console.log('dist/ not found, building it now (a build command of "npm ci && npm run build" skips this)');
   execSync('npm run build', { stdio: 'inherit' });
 }
@@ -87,11 +89,15 @@ async function findFile(pathname) {
 
 const server = createServer(async (req, res) => {
   try {
+    const { pathname } = new URL(req.url || '/', 'http://localhost');
+    if (pathname.startsWith('/api/')) {
+      await handleApi(req, res, pathname);
+      return;
+    }
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.writeHead(405, { Allow: 'GET, HEAD' }).end();
       return;
     }
-    const { pathname } = new URL(req.url || '/', 'http://localhost');
     const found = await findFile(pathname);
     if (!found) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Not found');
@@ -134,4 +140,6 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, '0.0.0.0', () => console.log(`FRUIT ARCADE serving dist/ on port ${PORT}`));
+server.listen(PORT, '0.0.0.0', () =>
+  console.log(`FRUIT ARCADE serving dist/ on port ${PORT}; score checks ${scoresEnabled ? 'on' : 'off (SCORE_SECRET not set)'}`)
+);

@@ -74,6 +74,8 @@ export interface GameResult {
   won?: boolean;
   /** Puzzle stage number: stage rounds skip best scores and the leaderboard */
   stage?: number;
+  /** Classic puzzle: seed and swaps, replayed by the score server */
+  replay?: { seed: string; moves: [number, number][] };
 }
 
 /** What the app hands back so the result screen can celebrate. */

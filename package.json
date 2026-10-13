@@ -1,11 +1,11 @@
 {
   "name": "fruit-arcade",
   "private": true,
-  "version": "3.7.0",
+  "version": "3.8.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build",
+    "build": "vite build && vite build --ssr server/verify.ts --outDir dist-server",
     "preview": "vite preview",
     "start": "node server.mjs",
     "postinstall": "node -e \"if (process.env.RENDER) require('node:child_process').execSync('npm run build', { stdio: 'inherit' })\"",

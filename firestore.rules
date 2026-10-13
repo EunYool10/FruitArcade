@@ -20,7 +20,7 @@ rules_version = '2';
 //
 // Collection: leaderboards/{boardId}/scores  (public)
 // Board ID: <game>_<period>
-//   - game:   memory | suika | dash | puzzle
+//   - game:   memory | suika | dash | puzzle | slice
 //   - period: all            -> all-time board
 //             d<dayIndex>    -> daily board, days since 1970-01-01 in KST (UTC+9)
 //             w<weekIndex>   -> weekly board, Monday-start weeks since 1969-12-29 in KST
@@ -34,6 +34,9 @@ rules_version = '2';
 //           name/avatar/title/frame may be refreshed alone with the same score)
 //   - at: timestamp (== request.time)
 //   - title, frame: optional ids ([a-z0-9_], 1-32) of the worn title and avatar frame
+//   - proof: optional 64-char hex from the score server (server.mjs) that checked the round:
+//           SHA-256 of "<secret>|<uid>|<game>|<score>|<KST day>|<secret>". Required once
+//           config/scoreKey.enforce is true; a proof that is there must always match.
 //
 // Collection: bans  (moderation)
 // Document ID: uid of a player blocked from the leaderboards
@@ -41,6 +44,9 @@ rules_version = '2';
 //
 // Document: config/admins  (edited only in the Firebase console)
 // Fields: emails - list of Google account emails with admin rights
+//
+// Document: config/scoreKey  (edited only in the Firebase console, never readable by clients)
+// Fields: secret - shared with the score server (its SCORE_SECRET), enforce - bool
 //
 // Collection: reports  (players flag a leaderboard entry; only admins read)
 // Document ID: <boardId>~<targetUid>~<reporterUid> (one report per player per entry)
@@ -169,6 +175,29 @@ service cloud.firestore {
       return boardId.split('_')[0];
     }
 
+    // ───────── score proofs from the score server ─────────
+
+    // { secret, enforce }: only these rules read it (clients have no access)
+    function scoreKey() {
+      return get(/databases/$(database)/documents/config/scoreKey).data;
+    }
+
+    // SHA-256 over the round and its KST day, with the secret at both ends
+    function scoreProof(key, uid, game, score, day) {
+      return hashing.sha256(key.secret + '|' + uid + '|' + game + '|' + string(score) + '|' + string(day) + '|' + key.secret).toHexString();
+    }
+
+    // A proof has to match (signed today or yesterday, for rounds that end at midnight);
+    // entries without one are taken only while enforce is off
+    function hasValidProof(boardId, uid, data) {
+      let key = scoreKey();
+      let game = boardGame(boardId);
+      return ('proof' in data
+          && (data.proof == scoreProof(key, uid, game, data.score, dayIndex())
+            || data.proof == scoreProof(key, uid, game, data.score, dayIndex() - 1)))
+        || (!('proof' in data) && key.enforce != true);
+    }
+
     function isValidBoardFormat(boardId) {
       return boardId is string && boardId.matches('^(memory|suika|dash|puzzle|slice)_(all|d[0-9]{1,6}|w[0-9]{1,6})$');
     }
@@ -232,13 +261,14 @@ service cloud.firestore {
 
     function isValidScoreEntry(boardId, uid, data) {
       return hasRequiredFields(['uid', 'name', 'avatar', 'score', 'at'])
-        && hasOnlyAllowedFields(['uid', 'name', 'avatar', 'score', 'at', 'title', 'frame'])
+        && hasOnlyAllowedFields(['uid', 'name', 'avatar', 'score', 'at', 'title', 'frame', 'proof'])
         && data.uid == uid
         && data.uid == request.auth.uid
         && isPlainText(data.name, 1, 40)
         && isPlainText(data.avatar, 1, 16)
         && isOptionalId(data, 'title')
         && isOptionalId(data, 'frame')
+        && (!('proof' in data) || (data.proof is string && data.proof.size() == 64))
         && (!isReservedName(data.name) || isAdmin())
         && data.score is int
         && data.score >= 0
@@ -325,16 +355,17 @@ service cloud.firestore {
         && isOwner(uid)
         && isValidBoardId(boardId)
         && isValidScoreEntry(boardId, uid, request.resource.data)
+        && hasValidProof(boardId, uid, request.resource.data)
         && !isBanned();
 
-      // A higher score replaces the entry; with the same score only the look (name, avatar,
-      // title, frame) may change. Either way at most every 3 seconds, and the uid never changes.
+      // A higher score (with its proof) replaces the entry; with the same score only the look
+      // (name, avatar, title, frame) may change. Either way at most every 3 seconds, and the uid never changes.
       allow update: if isGoogleUser()
         && isOwner(uid)
         && resource.data.uid == uid
         && isValidBoardId(boardId)
         && isValidScoreEntry(boardId, uid, request.resource.data)
-        && (request.resource.data.score > resource.data.score
+        && ((request.resource.data.score > resource.data.score && hasValidProof(boardId, uid, request.resource.data))
           || (request.resource.data.score == resource.data.score
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'avatar', 'title', 'frame', 'at'])))
         && request.time > resource.data.at + duration.value(3, 's')

@@ -13,6 +13,7 @@ import { ResultCard, appUrl } from '../game/ResultCard';
 import { Segmented } from '../ui/Segmented';
 import { STAGES, STAGE_COUNT, Stage, StageProgress, goalProgress, goalTarget, goalText, isUnlocked, nextStage, starsFor } from './stages';
 import {
+  CLASSIC_MOVES,
   FRUIT,
   FRUIT_COLOR,
   FRUIT_NAME,
@@ -28,10 +29,10 @@ import {
   idx,
   pos,
   reshuffle,
+  stepPoints,
   swapped,
 } from './engine';
 
-const MOVES = 30;
 const SWAP_MS = 170;
 const POP_MS = 220;
 const FALL_MS = 300;
@@ -81,7 +82,7 @@ export const PuzzleGame: React.FC<Props> = ({
   const [popping, setPopping] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
   const [score, setScore] = useState(0);
-  const [moves, setMoves] = useState(MOVES);
+  const [moves, setMoves] = useState(CLASSIC_MOVES);
   const [maxCombo, setMaxCombo] = useState(0);
   const [specials, setSpecials] = useState(0);
   const [popped, setPopped] = useState(0);
@@ -100,7 +101,9 @@ export const PuzzleGame: React.FC<Props> = ({
   const outcomeRef = useRef<{ won: boolean; stars: number } | null>(null);
 
   const scoreRef = useRef(0);
-  const movesRef = useRef(MOVES);
+  const movesRef = useRef(CLASSIC_MOVES);
+  // Classic rounds keep their seed and swaps so the score server can replay them
+  const replayRef = useRef<{ seed: string; moves: [number, number][] } | null>(null);
   const aliveRef = useRef(true);
   const lastActionRef = useRef(Date.now());
   const dragRef = useRef<{ i: number; x: number; y: number } | null>(null);
@@ -138,7 +141,7 @@ export const PuzzleGame: React.FC<Props> = ({
       game: 'puzzle',
       score: scoreRef.current,
       seconds: elapsed,
-      ...(st ? { stage: st.no, won: !!out?.won } : {}),
+      ...(st ? { stage: st.no, won: !!out?.won } : replayRef.current ? { replay: replayRef.current } : {}),
     });
     setReward(r);
     if (r.newBest && settings.celebrateEffect) celebrate();
@@ -174,11 +177,12 @@ export const PuzzleGame: React.FC<Props> = ({
     if (!st) onRoundSeed?.(s);
     stageRef.current = st;
     setStage(st);
+    replayRef.current = st ? null : { seed: s, moves: [] };
     goalRef.current = 0;
     setGoalValue(0);
     outcomeRef.current = null;
     setOutcome(null);
-    const total = st ? st.moves : MOVES;
+    const total = st ? st.moves : CLASSIC_MOVES;
     commit(generate(rngRef.current));
     scoreRef.current = 0;
     movesRef.current = total;
@@ -217,7 +221,7 @@ export const PuzzleGame: React.FC<Props> = ({
       if (step.created.some((c) => c.special === 'bomb')) live.current.onUnlockAchieve('puzzle_bomb');
       if (cascade >= 5) live.current.onUnlockAchieve('puzzle_combo_5');
 
-      const gained = Math.round(step.cleared.length * 10 * (1 + (cascade - 1) * 0.5) + step.created.length * 20 + (step.bombs + step.lines) * 25);
+      const gained = stepPoints(step, cascade);
       scoreRef.current += gained;
       setScore(scoreRef.current);
       setPopped((p) => p + step.cleared.length);
@@ -297,6 +301,7 @@ export const PuzzleGame: React.FC<Props> = ({
 
       movesRef.current -= 1;
       setMoves(movesRef.current);
+      replayRef.current?.moves.push([a, b]);
       await resolve(after, [a, b]);
       if (aliveRef.current) setBusy(false);
     },
@@ -577,7 +582,7 @@ export const PuzzleGame: React.FC<Props> = ({
             game="puzzle"
             emoji="🧩"
             title="끝!"
-            subtitle={`이동 ${MOVES}번을 모두 썼어요`}
+            subtitle={`이동 ${CLASSIC_MOVES}번을 모두 썼어요`}
             tone="grape"
             score={score}
             stats={[

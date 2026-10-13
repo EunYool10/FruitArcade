@@ -14,6 +14,8 @@ if (import.meta.env.VITE_FIREBASE_EMULATOR) {
   // Browser tests sign in as a fake Google user
   (window as any).__emulatorSignIn = (sub: string, name: string) =>
     signInWithCredential(auth, GoogleAuthProvider.credential(JSON.stringify({ sub, name, email: sub + '@example.com', email_verified: true })));
+  // ...and call the score server with their token
+  (window as any).__idToken = () => auth.currentUser?.getIdToken();
 }
 
 // Firestore lives in ./firestore.ts so it is only downloaded once someone signs in

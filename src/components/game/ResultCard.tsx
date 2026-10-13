@@ -132,7 +132,9 @@ export const ResultCard: React.FC<ResultCardProps> = ({
       {ranked && reward && (rank.signedIn ? myRank && myRank.status !== 'error' : score > 0) && (
         <button
           type="button"
-          className="mt-2 inline-flex items-center gap-1.5 rounded-full border-2 border-line bg-mango-soft px-3 py-1 text-sm font-bold hover:bg-mango"
+          className={`mt-2 inline-flex items-center gap-1.5 rounded-full border-2 border-line px-3 py-1 text-sm font-bold ${
+            myRank?.status === 'rejected' ? 'bg-berry-soft' : 'bg-mango-soft hover:bg-mango'
+          }`}
           onClick={() => rank.open(game)}
         >
           <Crown className="h-4 w-4" strokeWidth={2.5} />
@@ -142,6 +144,8 @@ export const ResultCard: React.FC<ResultCardProps> = ({
             <>
               순위 확인 중 <Loader2 className="h-3.5 w-3.5 animate-spin" />
             </>
+          ) : myRank?.status === 'rejected' ? (
+            '점수 확인에 실패해 랭킹에는 안 올라가요'
           ) : (
             <span className="tabular-nums">
               오늘 {formatNumber(myRank?.day ?? 0)}위 · 전체 {formatNumber(myRank?.all ?? 0)}위

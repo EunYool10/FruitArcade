@@ -39,12 +39,14 @@ const toEntry = (uid: string, d: DocumentData): RankEntry => ({
 /**
  * Post a round to today's, this week's and the all-time board. Each board keeps only
  * the player's best, so lower scores are skipped. Returns the best on each board.
+ * `proof` is the score server's signature for this round (required once the rules enforce it).
  */
 export function submitScore(
   uid: string,
   game: GameType,
   who: { name: string; avatar: string; title?: string; frame?: string },
-  score: number
+  score: number,
+  proof?: string
 ): Promise<Record<RankPeriod, number>> {
   const now = Date.now();
   const refs = RANK_PERIODS.map((p) => doc(scores(boardId(game, p, now)), uid));
@@ -55,7 +57,8 @@ export function submitScore(
       const prev = snap.exists() ? Number(snap.data().score) || 0 : -1;
       const title = who.title && TITLE_ID.test(who.title) ? { title: who.title } : {};
       const frame = who.frame && TITLE_ID.test(who.frame) ? { frame: who.frame } : {};
-      if (score > prev) tx.set(refs[i], { uid, name: who.name, avatar: who.avatar, score, at: serverTimestamp(), ...title, ...frame });
+      const signed = proof ? { proof } : {};
+      if (score > prev) tx.set(refs[i], { uid, name: who.name, avatar: who.avatar, score, at: serverTimestamp(), ...title, ...frame, ...signed });
       best[RANK_PERIODS[i]] = Math.max(prev, score);
     });
     return best;

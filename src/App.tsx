@@ -72,6 +72,7 @@ import { PlayerProfile, loadProfile, saveProfile } from './utils/profile';
 import { DailyState, applyDaily, loadDaily, saveDaily, todayKey } from './utils/missions';
 import { playSound } from './utils/audio';
 import { TrackName, music } from './utils/music';
+import { proveRound, startScoredRound, wakeScoreServer } from './utils/scoreServer';
 
 // Games are code-split so the lobby loads fast
 const MemoryGameBoard = lazy(() =>
@@ -142,6 +143,8 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const userRef = useRef<User | null>(null);
   userRef.current = user;
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
 
   const [stats, setStats] = useState<UserStatistics>(loadLocalStats);
   const statsRef = useRef(stats);
@@ -465,6 +468,7 @@ export default function App() {
         setIsAdmin(false);
         if (!u) return;
         syncCloud(u);
+        wakeScoreServer();
         rankApi()
           .then((api) => api.checkAdmin())
           .then((ok) => {
@@ -566,7 +570,13 @@ export default function App() {
   );
 
   const handleRoundChange = useCallback((active: boolean) => {
-    if (active) roundAchRef.current = [];
+    if (active) {
+      roundAchRef.current = [];
+      // Signed in: the score server notes when the round began, and checks it when the score comes in
+      const u = userRef.current;
+      const game = SCREEN_GAME[screenRef.current];
+      if (u && game) startScoredRound(game, () => u.getIdToken());
+    }
     setRoundActive(active);
   }, []);
 
@@ -589,7 +599,8 @@ export default function App() {
       const next = applyResult(prev, result, stampEarned, nextStreak.count, coins);
       commitStats(next);
 
-      historyRef.current = pushHistory(historyRef.current, { ...result, at: Date.now(), best: newBest });
+      const { replay: _replay, ...played } = result;
+      historyRef.current = pushHistory(historyRef.current, { ...played, at: Date.now(), best: newBest });
       daysRef.current = recordDay(daysRef.current, result);
       setDays(daysRef.current);
       setHistory(historyRef.current);
@@ -617,7 +628,15 @@ export default function App() {
         setRank({ game, status: 'pending' });
         rankApi()
           .then(async (api) => {
-            const best = await api.submitScore(u.uid, game, who, rankScore);
+            // The score server checks the round first; its proof goes on the board entries
+            const verdict = await proveRound(result, () => u.getIdToken());
+            if (verdict && 'rejected' in verdict) {
+              console.warn('The score server did not accept this round:', verdict.rejected);
+              if (request === rankRequest.current) setRank({ game, status: 'rejected' });
+              return;
+            }
+            const proof = verdict && 'proof' in verdict ? verdict.proof : undefined;
+            const best = await api.submitScore(u.uid, game, who, rankScore, proof);
             const [day, all] = await Promise.all([api.rankOf(game, 'day', best.day), api.rankOf(game, 'all', best.all)]);
             if (request === rankRequest.current) setRank({ game, status: 'done', day, all });
           })

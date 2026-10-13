@@ -9,6 +9,14 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.8.0',
+    title: '점수 검증 서버',
+    items: [
+      ['🛡️ 점수 검증', '랭킹에 올라가는 점수를 이제 서버가 먼저 확인해요. 과일 퍼즐은 둔 수를 그대로 다시 계산하고, 다른 게임은 실제로 걸린 시간에 비해 점수가 말이 되는지 봐요.'],
+      ['🏆 공정한 랭킹', '확인을 통과한 점수만 서명을 받아 랭킹에 올라가요. 확인에 실패하면 결과 화면에 알려 줘요.'],
+    ],
+  },
+  {
     version: '3.7.0',
     title: '새 게임: 과일 자르기',
     items: [

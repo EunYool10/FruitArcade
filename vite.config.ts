@@ -34,11 +34,13 @@ function serviceWorker(): Plugin {
   };
 }
 
-export default defineConfig(() => {
+export default defineConfig(({isSsrBuild}) => {
   return {
     // Relative asset paths so the build works under any sub-path (GitHub Pages serves /FruitArcade/)
     base: './',
-    plugins: [react(), tailwindcss(), serviceWorker()],
+    // The SSR build is the score server's round checker (server/verify.ts): plain Node code, no app plugins
+    plugins: isSsrBuild ? [] : [react(), tailwindcss(), serviceWorker()],
+    publicDir: isSsrBuild ? false : 'public',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

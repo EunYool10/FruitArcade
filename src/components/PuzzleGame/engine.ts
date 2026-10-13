@@ -4,6 +4,8 @@ import { Rng } from '../../utils/rng';
 export const W = 7;
 export const H = 7;
 export const KINDS = 6;
+/** Moves in a classic (ranked) round */
+export const CLASSIC_MOVES = 30;
 export const FRUIT = ['🍓', '🍊', '🍋', '🍇', '🍏', '🫐'];
 export const FRUIT_NAME = ['딸기', '귤', '레몬', '포도', '사과', '블루베리'];
 export const FRUIT_COLOR = ['#ff4778', '#ff9f1c', '#ffd23f', '#9b5de5', '#7bd389', '#4361ee'];
@@ -170,6 +172,10 @@ export function clearStep(g: Grid, focus: number[]): ClearStep | null {
     lines,
   };
 }
+
+/** Points for one clear step; later steps of a cascade are worth more. The score server replays rounds with this too. */
+export const stepPoints = (step: ClearStep, cascade: number) =>
+  Math.round(step.cleared.length * 10 * (1 + (cascade - 1) * 0.5) + step.created.length * 20 + (step.bombs + step.lines) * 25);
 
 /** Let fruit fall into the gaps and fill the top with new fruit */
 export function collapse(g: Grid, rng: Rng): Grid {

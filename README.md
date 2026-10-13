@@ -23,6 +23,7 @@
 - **칭호 · 명예의 전당:** 업적마다 칭호를 달 수 있고(이름 옆 · 랭킹에 표시), 지난주 게임별 1등은 왕관과 "주간 챔피언" 칭호. 랭킹의 명예의 전당 탭에서 최근 8주 1등을 봅니다
 - **코인 · 상점:** 판마다 코인(점수 보너스 · 신기록 · 오늘 첫 판 · 미션 도장 보너스)을 모아 프로필 테두리와 메모리 카드 뒷면을 삽니다. 로그인하면 다른 기기에서도 그대로
 - **기록 그래프:** 내 기록에서 최근 7일 판 수 · 플레이 시간 · 게임별 최고 점수(이 기기 기준)
+- **점수 검증:** 로그인한 플레이어의 점수는 Render 서버([`server/`](server))가 확인하고 서명한 뒤 랭킹에 올라갑니다. 과일 퍼즐은 시드와 둔 수로 점수를 그대로 다시 계산하고, 실시간 게임은 판 시작 때 받은 티켓으로 실제 걸린 시간을 재서 시간 대비 점수가 게임의 이론상 최대를 넘지 않는지 봅니다
 - **랭킹:** 게임별 오늘 · 이번 주 · 전체 순위. Google 로그인하면 판이 끝날 때 최고 점수가 자동으로 올라가고, 결과 화면에 "오늘 3위 · 전체 23위"가 보입니다. 순위표에는 닉네임과 아바타만 공개됩니다
 - **친구 대결:** 결과를 공유하면 같은 판(같은 시드)으로 도전할 수 있는 링크가 붙습니다. 링크를 연 친구가 점수를 넘으면 "도전 성공!"
 - **결과 화면:** 신기록, 얻은 경험치, 완료한 미션, 순위, 결과 이미지 저장 · 공유(공유 시트 또는 클립보드)
@@ -50,7 +51,9 @@ npm run lint     # 타입 검사
 - **Render** 웹 서비스: https://fruitarcade.onrender.com
   - Build Command `npm ci`(기본값 `npm install`도 됨), Start Command `npm start`
   - Render에서는 설치가 끝나면 `postinstall`이 자동으로 빌드하고(`RENDER` 환경 변수가 있을 때만), `npm start`가 [`server.mjs`](server.mjs)로 `dist/`를 서빙합니다(압축, 캐시 헤더 포함).
-  - 무료 인스턴스는 한동안 접속이 없으면 잠들어서 첫 접속에 50초 정도 걸릴 수 있습니다. Render **Static Site**(Build Command `npm ci`, Publish directory `dist`)로 만들면 잠들지 않습니다.
+  - 같은 서버가 점수 검증 API(`/api/round`, `/api/score`, `/api/health`)도 맡습니다. GitHub Pages에서 하는 플레이도 이 서버로 점수를 확인받으므로 **웹 서비스**여야 합니다(Static Site 불가).
+  - 환경 변수 **`SCORE_SECRET`**(32자 이상)이 있어야 점수 검증이 켜집니다. Firestore `config/scoreKey` 문서의 `secret`과 같은 값이어야 하고, `/api/health`의 `key`(비밀 값 SHA-256 앞 8자리)로 맞는지 확인할 수 있습니다.
+  - 무료 인스턴스는 한동안 접속이 없으면 잠들어서 첫 접속에 50초 정도 걸릴 수 있습니다. 앱은 로그인할 때 서버를 미리 깨우고, 점수 확인은 최대 90초까지 기다립니다.
 - **GitHub Pages**: https://eunyool10.github.io/FruitArcade/ (GitHub Actions [`deploy.yml`](.github/workflows/deploy.yml)가 타입 검사와 빌드 후 배포)
 - Google 로그인을 쓰려면 Firebase 콘솔 → Authentication → 설정 → **승인된 도메인**에 `fruitarcade.onrender.com`과 `eunyool10.github.io`가 있어야 합니다.
 - 보안 규칙([`firestore.rules`](firestore.rules))은 자동 배포되지 않습니다. 바꾼 뒤에는 Firebase 콘솔 → Firestore → 데이터베이스 `ai-studio-9fb7cc09-…` → **규칙** 탭에 붙여 넣고 게시하거나, Firebase CLI로 배포하세요. 규칙을 게시하기 전에는 랭킹 창에 "준비하고 있어요"가 표시됩니다.
@@ -63,6 +66,14 @@ VITE_FIREBASE_EMULATOR=1 npm run dev
 ```
 
 이 환경 변수가 있을 때만 에뮬레이터에 연결하고, 브라우저 콘솔에서 `__emulatorSignIn('uid', '이름')`으로 가짜 Google 계정 로그인을 할 수 있습니다. 실제 빌드에는 포함되지 않습니다.
+
+점수 검증까지 함께 시험하려면 서버를 에뮬레이터 모드로 띄우고(에뮬레이터 토큰은 서명이 없어서 이 모드에서만 받습니다) 앱이 그 서버를 쓰게 합니다. 에뮬레이터의 `config/scoreKey`에도 같은 `secret`을 넣어 두세요.
+
+```bash
+npm run build
+SCORE_SECRET=<32자 이상> SCORE_EMULATOR=1 PORT=8787 npm start
+VITE_FIREBASE_EMULATOR=1 VITE_SCORE_API=http://localhost:8787 npm run dev
+```
 
 ## 기술 스택
 
@@ -102,7 +113,10 @@ src/
     audio.ts · music.ts  효과음, 배경음악 시퀀서
     pwa.ts · haptics.ts · profile.ts · shareImage.ts · fx.ts · format.ts
 pwa/sw.js                서비스 워커 템플릿
-server.mjs               npm start용 정적 서버 (Render)
+server.mjs               npm start용 정적 서버 + /api/ (Render)
+server/
+  api.mjs                점수 API: Google 로그인 토큰 확인, 판 티켓, 서명, 요청 제한
+  verify.ts              판 검사 (퍼즐 다시 계산, 시간 대비 점수). npm run build가 dist-server/로 빌드
 ```
 
 ## 데이터 저장
@@ -119,7 +133,8 @@ server.mjs               npm start용 정적 서버 (Render)
   - 랭킹: 누구나 읽을 수 있고, Google 로그인 사용자가 자기 칸에만 쓸 수 있습니다. 점수는 정수, 게임별 상한 이하, 올라갈 때만(3초에 한 번까지) 바뀌고(점수가 같으면 닉네임 · 아바타 · 칭호 · 테두리만 바꿀 수 있음), 오늘 · 어제 · 이번 주 · 지난주 · 전체 보드에만 쓸 수 있습니다. 운영진처럼 보이는 이름(Tester, QA, 관리자 …)과 차단된 계정은 올라가지 않습니다.
   - 신고(`reports`)는 한 사람이 같은 기록을 한 번만, 의견(`feedback`)은 5분에 한 번 보낼 수 있고 관리자만 읽습니다. `activity/{날짜}/players/{uid}`에는 로그인한 플레이어의 하루 판 수 · 플레이 시간만 쌓여 관리자 통계에 쓰입니다.
   - 관리자: Firestore `config/admins` 문서의 `emails` 배열에 있는 Google 계정(이메일 인증된 계정만)입니다. 랭킹 창의 방패 버튼으로 기록을 지우거나 계정을 차단(`bans/{uid}`)하고 풀 수 있습니다. 관리자를 추가 · 삭제하려면 Firebase 콘솔에서 이 배열을 고치세요(앱에서는 못 바꿉니다).
-  - 브라우저에서 계산한 점수를 그대로 믿기 때문에 규칙만으로는 조작을 완전히 막을 수 없습니다. 이상한 기록은 관리자가 지우고 차단하세요. 사용자가 늘면 Cloud Functions 점수 검증이나 App Check를 권장합니다.
+  - 점수 서명: 랭킹 기록에는 점수 서버가 만든 `proof`(SHA-256 "<secret>|<uid>|<게임>|<점수>|<한국 날짜>|<secret>")가 붙습니다. 규칙이 `config/scoreKey`(클라이언트는 못 읽음)의 secret으로 같은 값을 계산해 맞는지 봅니다. `enforce`가 `true`면 서명 없는 점수는 올라가지 않고, `false`면 서명 없이도 받습니다(서명이 붙어 있으면 언제나 맞아야 함). Render에 `SCORE_SECRET`을 넣고 서명된 기록이 올라오는 것을 확인한 뒤 `enforce`를 켜세요.
+  - 실시간 게임(메모리 · 수박 · 대시 · 자르기)은 다시 계산할 수 없어서, 서버는 걸린 시간 대비 점수가 이론상 최대를 넘는지까지만 봅니다. 그 안에서 꾸민 점수는 막지 못하므로 이상한 기록은 관리자가 지우고 차단하세요.
 
 ## 새 게임 추가하기
 

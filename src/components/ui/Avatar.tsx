@@ -18,6 +18,8 @@ export interface PlayerView {
   title?: TitleDef | null;
   /** Avatar frame bought in the shop (item id) */
   frame?: string;
+  /** Name put on things the player shares (challenge links, result images): never the Google name */
+  shareName?: string;
 }
 
 /** Colored ring from the shop around an avatar or sticker (nothing when no frame) */

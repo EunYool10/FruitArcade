@@ -1,6 +1,10 @@
 import React from 'react';
 import { Modal } from '../ui/Modal';
-import { APP_VERSION } from '../../constants';
+import { APP_VERSION, GAME_ORDER } from '../../constants';
+import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
+import { SHOP_ITEMS } from '../../utils/shop';
+import { STAGE_COUNT } from '../PuzzleGame/stages';
+import { TRACK_COUNT } from '../../utils/music';
 
 interface Props {
   isOpen: boolean;
@@ -17,6 +21,14 @@ const IDEAS = [
   { emoji: '🍊', name: '예찬' },
   { emoji: '🍇', name: '윤성' },
   { emoji: '🍉', name: '진' },
+];
+
+const NUMBERS: [string, string][] = [
+  ['🎮', `게임 ${GAME_ORDER.length}종`],
+  ['🏆', `업적 ${ACHIEVEMENT_COUNT}개`],
+  ['🛍️', `상점 아이템 ${SHOP_ITEMS.filter((i) => !i.staff).length}개`],
+  ['🧩', `퍼즐 스테이지 ${STAGE_COUNT}개`],
+  ['🎵', `배경음악 ${TRACK_COUNT}곡`],
 ];
 
 export const CreditsModal: React.FC<Props> = ({ isOpen, onClose }) => (
@@ -36,6 +48,15 @@ export const CreditsModal: React.FC<Props> = ({ isOpen, onClose }) => (
         ))}
       </ul>
     </div>
+
+    <h3 className="mb-2 mt-4 font-display text-lg">📊 숫자로 보면</h3>
+    <ul className="flex flex-wrap gap-1.5">
+      {NUMBERS.map(([icon, text]) => (
+        <li key={text} className="chip bg-surface-2 text-xs">
+          <span aria-hidden="true">{icon}</span> {text}
+        </li>
+      ))}
+    </ul>
 
     <h3 className="mb-2 mt-4 font-display text-lg">💡 아이디어</h3>
     <ul className="grid grid-cols-3 gap-2">

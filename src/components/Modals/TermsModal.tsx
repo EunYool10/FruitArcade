@@ -1,0 +1,122 @@
+import React from 'react';
+import { Modal } from '../ui/Modal';
+
+interface Props {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+/** Shown in the window and in the patch notes; bump it when the text below changes */
+export const TERMS_DATE = '2026년 10월 13일';
+
+// Plain-language terms and privacy notice. Keep it in step with what the app really does
+// (firestore.rules, server/, scripts/reminders) whenever data handling changes.
+const SECTIONS: { title: string; items: string[] }[] = [
+  {
+    title: '1. 어떤 서비스인가요',
+    items: [
+      'FRUIT ARCADE(이하 "서비스")는 은율이 만들어 무료로 운영하는 과일 미니게임 모음이에요.',
+      '로그인하지 않아도 모든 게임을 할 수 있어요. Google로 로그인하면 기록이 클라우드에 저장되고 랭킹에 참여할 수 있어요.',
+      '광고와 결제는 없어요. 코인과 상점 아이템은 게임 안에서만 쓰이고 돈으로 바꿀 수 없어요.',
+    ],
+  },
+  {
+    title: '2. 계정',
+    items: [
+      '로그인은 Google 계정으로만 해요. 비밀번호는 Google이 처리하고, 서비스는 받지도 저장하지도 않아요.',
+      '내 계정을 남과 같이 쓰거나 남의 계정으로 로그인하면 안 돼요.',
+      '만 14세 미만이라면 보호자의 동의를 받은 뒤 로그인해 주세요.',
+    ],
+  },
+  {
+    title: '3. 모으는 정보와 쓰는 곳',
+    items: [
+      '로그인하면: Google 계정의 이메일, 이름, 프로필 사진 주소, 가입 · 마지막 로그인 시각. 계정 확인과 내 프로필 표시에만 써요.',
+      '게임 기록: 점수, 판 수와 플레이 시간, 업적, 레벨, 코인과 산 아이템, 설정, 미션 · 퍼즐 스테이지 진행.',
+      '점수 확인: 로그인한 상태로 판이 끝나면 게임 · 점수 · 걸린 시간(과일 퍼즐은 둔 수)을 점수 서버에 보내 조작이 없는지 확인해요. 서버는 결과만 돌려주고 판 내용을 따로 모아 두지 않아요(오류 확인용 서버 기록에 사용자 번호 일부와 점수가 남을 수 있어요).',
+      '운영 통계: 날마다 몇 판, 몇 분 했는지(운영진 통계 화면에 써요).',
+      '신고 · 의견: 보낸 내용과 기기 정보(브라우저 · 운영체제 종류, 화면 크기).',
+      '연속 출석 알림을 켜면: 이 브라우저의 푸시 알림 주소, 마지막으로 한 날, 연속 일수를 알림 발송기만 열 수 있게 암호화해서 저장해요.',
+      '로그인하지 않으면 모든 기록은 이 기기의 브라우저 저장소에만 있어요. 광고 추적 쿠키는 쓰지 않아요.',
+    ],
+  },
+  {
+    title: '4. 다른 사람에게 보이는 정보',
+    items: [
+      '랭킹에는 닉네임, 아바타(이모지), 칭호, 테두리, 점수만 공개돼요.',
+      '이메일과 Google 이름 · 사진은 공개되지 않아요. 닉네임을 정하지 않으면 "과일러 1234" 같은 이름으로 보여요.',
+      '친구 대결 링크를 공유하면 그 링크에 닉네임과 점수가 들어가요.',
+    ],
+  },
+  {
+    title: '5. 저장하는 곳과 함께 쓰는 서비스',
+    items: [
+      '계정과 클라우드 데이터: Google Firebase(Authentication, Cloud Firestore).',
+      '점수 확인 서버와 게임 화면: Render. 게임 화면은 GitHub Pages에서도 열려요.',
+      '연속 출석 알림 발송: GitHub Actions와 각 브라우저의 푸시 서비스.',
+      '글꼴: Google Fonts, jsDelivr.',
+      '개인정보를 팔거나 광고에 쓰지 않아요.',
+    ],
+  },
+  {
+    title: '6. 보관 기간과 지우기',
+    items: [
+      '클라우드 기록은 계정을 쓰는 동안 보관해요.',
+      '설정 → 데이터에서 기록과 업적을 직접 초기화할 수 있어요.',
+      '계정 정보와 랭킹 기록까지 모두 지우고 싶다면 "의견 보내기"로 요청해 주세요. 확인한 뒤 지워 드려요.',
+      '알림을 끄거나 로그아웃하면 알림 정보는 바로 지워지고, 40일 동안 쓰지 않은 알림 정보는 자동으로 지워져요.',
+      '오늘 · 이번 주 랭킹은 기간이 끝나면 새로 시작하고, 지난 기록은 명예의 전당에 1등만 보여요.',
+    ],
+  },
+  {
+    title: '7. 공정한 플레이',
+    items: [
+      '점수 조작, 매크로 · 자동 플레이 프로그램, 버그 악용, 서버나 데이터베이스를 직접 건드리는 행동은 하면 안 돼요.',
+      '욕설, 남을 괴롭히는 말, 운영진처럼 보이는 이름(관리자, 운영자, QA 등)은 닉네임으로 쓸 수 없어요.',
+      '이상한 기록은 운영진이 지울 수 있고, 반복되면 랭킹 참여가 막힐 수 있어요.',
+      '다른 사람의 이상한 기록은 랭킹의 깃발 버튼으로 신고해 주세요.',
+    ],
+  },
+  {
+    title: '8. 운영진',
+    items: [
+      '운영진은 신고 처리, 기록 삭제, 차단 같은 관리 기능을 써요.',
+      '운영진은 전용 칭호 · 아이템과 모든 업적을 가지고, 운영진 칭호는 랭킹에 파란 배지로 보여요. 운영진 칭호는 운영진만 달 수 있어요.',
+    ],
+  },
+  {
+    title: '9. 서비스 변경과 책임',
+    items: [
+      '배우면서 만드는 무료 서비스라서 내용이 바뀌거나 잠시 멈출 수 있어요.',
+      '무료 서버는 한동안 쓰지 않으면 잠들어서 처음 열 때 느릴 수 있어요.',
+      '기록이 사라지지 않게 노력하지만, 데이터가 사라져도 보상해 드리기는 어려워요.',
+    ],
+  },
+  {
+    title: '10. 문의와 약관 변경',
+    items: [
+      '궁금한 점, 기록 삭제 요청, 신고는 "의견 보내기"로 보내 주세요.',
+      '약관이 바뀌면 패치노트로 알려 드려요. 바뀐 뒤에도 계속 이용하면 바뀐 약관에 동의한 것으로 봐요.',
+    ],
+  },
+];
+
+export const TermsModal: React.FC<Props> = ({ isOpen, onClose }) => (
+  <Modal isOpen={isOpen} onClose={onClose} title="이용약관 · 개인정보 처리방침" subtitle={`시행일 ${TERMS_DATE}`} icon="📜" tone="grape" size="lg">
+    <p className="well mb-3 p-3.5 text-sm text-ink-2">
+      로그인하면 아래 내용에 동의하는 것으로 봐요. 로그인하지 않아도 모든 게임을 할 수 있어요.
+    </p>
+    <div className="space-y-3">
+      {SECTIONS.map((s) => (
+        <section key={s.title} className="rounded-2xl border-2 border-line bg-surface-2 p-3.5">
+          <h3 className="font-display text-base">{s.title}</h3>
+          <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm text-ink-2 marker:text-ink-3">
+            {s.items.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  </Modal>
+);

@@ -11,7 +11,7 @@ import { MissionsCard } from './MissionsCard';
 import { RecentPlays } from './RecentPlays';
 import { applyUpdate, promptInstall, usePwa } from '../../utils/pwa';
 
-export type LobbyTarget = 'profile' | 'achievements' | 'records' | 'patch' | 'credits' | 'settings' | 'leaderboard' | 'feedback' | 'shop';
+export type LobbyTarget = 'profile' | 'achievements' | 'records' | 'patch' | 'credits' | 'settings' | 'leaderboard' | 'feedback' | 'shop' | 'terms';
 
 interface LobbyProps {
   player: PlayerView;
@@ -132,6 +132,9 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
         </button>
         <button type="button" className="underline-offset-4 hover:text-ink hover:underline" onClick={() => onOpen('feedback')}>
           의견 보내기
+        </button>
+        <button type="button" className="underline-offset-4 hover:text-ink hover:underline" onClick={() => onOpen('terms')}>
+          약관 · 개인정보
         </button>
         {!pwa.installed && (pwa.canInstall || pwa.ios) && (
           <button

@@ -33,6 +33,7 @@ interface Props {
   onLogout: () => void;
   onOpenAdmin?: () => void;
   onOpenShop: () => void;
+  onOpenTerms: () => void;
 }
 
 const GoogleIcon = () => (
@@ -67,6 +68,7 @@ export const ProfileModal: React.FC<Props> = ({
   onLogout,
   onOpenAdmin,
   onOpenShop,
+  onOpenTerms,
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -305,6 +307,13 @@ export const ProfileModal: React.FC<Props> = ({
               </>
             )}
           </button>
+          <p className="text-center text-xs text-ink-3">
+            로그인하면{' '}
+            <button type="button" className="font-bold text-grape-ink underline underline-offset-2" onClick={onOpenTerms}>
+              이용약관 · 개인정보 처리방침
+            </button>
+            에 동의하는 것으로 봐요.
+          </p>
 
           <ul className="space-y-2">
             {PERKS.map((p) => (

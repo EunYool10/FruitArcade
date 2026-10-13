@@ -18,6 +18,7 @@ import { Lobby, LobbyTarget } from './components/lobby/Lobby';
 import { MemorySetup } from './components/MemoryGame/MemorySetup';
 import { AchievementsModal } from './components/Modals/AchievementsModal';
 import { PatchNotesModal } from './components/Modals/PatchNotesModal';
+import { TermsModal } from './components/Modals/TermsModal';
 import { SettingsModal } from './components/Modals/SettingsModal';
 import { CreditsModal } from './components/Modals/CreditsModal';
 import { PauseModal } from './components/Modals/PauseModal';
@@ -56,11 +57,13 @@ import { Challenge, challengeLink, takeChallengeFromUrl } from './utils/challeng
 import { randomSeed } from './utils/rng';
 import { Tutorial, markSeen, tutorialSeen } from './components/game/Tutorial';
 import {
+  ACHIEVEMENT_DEFINITIONS,
   countUnlocked,
   getUnlockedAchievements,
   mergeAchievements,
   resetAchievements,
   unlockAchievement,
+  unlockMany,
 } from './utils/achievements';
 import {
   EMPTY_STATS,
@@ -227,6 +230,8 @@ export default function App() {
     isGuest: !user,
     title,
     frame: owned[profile.frame] ? profile.frame : '',
+    // Shared links and images carry the same public name as the boards, not the Google name
+    shareName: user ? publicName(profile.nickname, user.uid, isAdmin) : profile.nickname || '게스트',
   };
   /** How the player appears on public boards (nickname only, never the Google name) */
   const rankWhoRef = useRef<{ name: string; avatar: string; title?: string; frame?: string }>({ name: '', avatar: '' });
@@ -376,6 +381,18 @@ export default function App() {
       setRemindersBusy(false);
     }
   };
+
+  // 운영진 have every achievement; new ones get added the next time an admin signs in
+  useEffect(() => {
+    const u = userRef.current;
+    if (!isAdmin || !u) return;
+    const added = unlockMany(ACHIEVEMENT_DEFINITIONS.map((a) => a.id));
+    if (!added.length) return;
+    bumpAchievements();
+    cloudWrite((api) => api.saveAchievements(u.uid, getUnlockedAchievements())).catch(() => {});
+    pushToast({ icon: '🏆', title: `운영진이라 업적 ${added.length}개를 모두 달성했어요`, sub: '업적 칭호도 전부 달 수 있어요', tone: 'mango' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
 
   // The admin check comes back after sign-in: then a worn 운영진 title or frame can go on the boards
   useEffect(() => {
@@ -832,7 +849,7 @@ export default function App() {
         g: game,
         s: roundSeeds.current[game] ?? randomSeed(),
         sc: Math.round(score),
-        n: player.name,
+        n: player.shareName ?? player.name,
         m: game === 'memory' ? memoryCfg : undefined,
         d: game === 'dash' ? (activeChallenge?.d ?? settings.dashDifficulty) : undefined,
       }),
@@ -1081,6 +1098,7 @@ export default function App() {
         onLogout={handleLogout}
         onOpenAdmin={() => setModal('admin')}
         onOpenShop={() => setModal('shop')}
+        onOpenTerms={() => setModal('terms')}
       />
       <AchievementsModal isOpen={modal === 'achievements'} onClose={() => setModal(null)} />
       <RecordsModal isOpen={modal === 'records'} onClose={() => setModal(null)} stats={stats} history={history} days={days} />
@@ -1096,6 +1114,7 @@ export default function App() {
         onOpenFeedback={() => setModal('feedback')}
         reminders={{ on: remindersOn, busy: remindersBusy }}
         onToggleReminders={toggleReminders}
+        onOpenTerms={() => setModal('terms')}
       />
       <LeaderboardModal
         isOpen={modal === 'leaderboard'}
@@ -1134,6 +1153,7 @@ export default function App() {
         onSent={() => pushToast({ icon: '💌', title: '의견을 보냈어요', sub: '고마워요! 운영자가 꼭 읽을게요', tone: 'melon' })}
       />
       <PatchNotesModal isOpen={modal === 'patch'} onClose={() => setModal(null)} />
+      <TermsModal isOpen={modal === 'terms'} onClose={() => setModal(null)} />
       <CreditsModal isOpen={modal === 'credits'} onClose={() => setModal(null)} />
       <ChallengeModal challenge={incomingChallenge} onAccept={acceptChallenge} onDismiss={() => setIncomingChallenge(null)} />
       <Tutorial game={tutorialGame} onClose={() => setTutorialGame(null)} />

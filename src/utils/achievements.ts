@@ -133,6 +133,18 @@ export function unlockAchievement(
   return true;
 }
 
+/** Unlock several at once without the per-achievement callbacks; returns the ids that were new */
+export function unlockMany(ids: string[]): string[] {
+  const current = getUnlockedAchievements();
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const added = ids.filter((id) => !current[id] && ACHIEVEMENT_DEFINITIONS.some((a) => a.id === id));
+  if (!added.length) return [];
+  for (const id of added) current[id] = dateStr;
+  persist(current);
+  return added;
+}
+
 export function resetAchievements(): void {
   cache = {};
   try {

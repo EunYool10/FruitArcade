@@ -65,7 +65,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
       score,
       stats,
       newBest: !!reward?.newBest,
-      player: player.name,
+      player: player.shareName ?? player.name,
     }).catch(() => null);
 
   const saveImage = async () => {

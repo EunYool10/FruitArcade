@@ -27,9 +27,12 @@ interface Props {
   achievementCount: number;
   /** Titles the player has earned */
   titles: TitleDef[];
+  /** Avatars bought in the shop (emoji), offered after the free fruit */
+  boughtAvatars: string[];
   onLogin: () => Promise<{ success: boolean; error?: string }>;
   onLogout: () => void;
   onOpenAdmin?: () => void;
+  onOpenShop: () => void;
 }
 
 const GoogleIcon = () => (
@@ -59,9 +62,11 @@ export const ProfileModal: React.FC<Props> = ({
   level,
   achievementCount,
   titles,
+  boughtAvatars,
   onLogin,
   onLogout,
   onOpenAdmin,
+  onOpenShop,
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -163,8 +168,13 @@ export const ProfileModal: React.FC<Props> = ({
           </div>
         </div>
         <div>
-          <p className="mb-1.5 text-[11px] font-bold text-ink-3">아바타</p>
-          <div className="grid grid-cols-7 gap-1.5" role="group" aria-label="아바타">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <p className="text-[11px] font-bold text-ink-3">아바타</p>
+            <button type="button" className="text-[11px] font-bold text-grape-ink underline-offset-2 hover:underline" onClick={onOpenShop}>
+              🛍️ 상점에서 더 보기
+            </button>
+          </div>
+          <div className="grid max-h-44 grid-cols-7 gap-1.5 overflow-y-auto p-0.5" role="group" aria-label="아바타">
             <button
               type="button"
               aria-pressed={!profile.avatar}
@@ -174,7 +184,7 @@ export const ProfileModal: React.FC<Props> = ({
             >
               <Avatar player={defaultLook} size="sm" />
             </button>
-            {AVATARS.map((a) => (
+            {[...AVATARS, ...boughtAvatars].map((a) => (
               <button
                 key={a}
                 type="button"
@@ -191,7 +201,7 @@ export const ProfileModal: React.FC<Props> = ({
         <div>
           <p className="mb-1.5 text-[11px] font-bold text-ink-3">칭호 · 이름 옆에 붙고 랭킹에도 보여요</p>
           {titles.length === 0 ? (
-            <p className="rounded-xl bg-surface px-3 py-2 text-xs text-ink-3">업적을 달성하면 칭호를 달 수 있어요.</p>
+            <p className="rounded-xl bg-surface px-3 py-2 text-xs text-ink-3">업적을 달성하거나 상점에서 칭호를 사면 달 수 있어요.</p>
           ) : (
             <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto p-0.5" role="group" aria-label="칭호">
               <button
@@ -208,7 +218,15 @@ export const ProfileModal: React.FC<Props> = ({
                   type="button"
                   aria-pressed={profile.title === t.id}
                   onClick={() => onUpdateProfile({ ...profile, title: t.id })}
-                  className={`chip h-8 px-3 text-xs ${profile.title === t.id ? 'bg-grape text-white shadow-hard-sm' : 'bg-surface hover:bg-surface-3'}`}
+                  className={`chip h-8 px-3 text-xs ${
+                    profile.title === t.id
+                      ? t.staff
+                        ? 'bg-[#1e3a8a] text-white shadow-hard-sm'
+                        : 'bg-grape text-white shadow-hard-sm'
+                      : t.staff
+                        ? 'border-[#3b82f6] bg-[#dbeafe] text-[#1e3a8a] hover:bg-[#bfdbfe]'
+                        : 'bg-surface hover:bg-surface-3'
+                  }`}
                 >
                   {t.icon} {t.label}
                 </button>

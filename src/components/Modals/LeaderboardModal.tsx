@@ -9,6 +9,7 @@ import type { ReportReason } from '../../utils/communityService';
 import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import { Framed } from '../ui/Avatar';
+import { TitleTag } from '../ui/TitleTag';
 
 const rankApi = () => import('../../utils/leaderboardService');
 const communityApi = () => import('../../utils/communityService');
@@ -81,11 +82,7 @@ const NameBlock: React.FC<{ entry: RankEntry; mine?: boolean; champion?: boolean
         <span className="truncate">{entry.name}</span>
         {mine && <span className="shrink-0 text-xs text-ink-3">(나)</span>}
       </span>
-      {t && (
-        <span className="block truncate text-[11px] font-semibold text-grape-ink">
-          {t.icon} {t.label}
-        </span>
-      )}
+      {t && <TitleTag title={t} variant="line" />}
     </span>
   );
 };

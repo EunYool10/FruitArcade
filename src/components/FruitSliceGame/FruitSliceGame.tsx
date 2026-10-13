@@ -10,6 +10,7 @@ import { formatNumber, formatTime } from '../../utils/format';
 import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
 import { StartCard } from '../game/StartCard';
 import { ResultCard } from '../game/ResultCard';
+import { bladeStyle } from '../../utils/shop';
 
 const CW = 440;
 const CH = 600;
@@ -770,7 +771,8 @@ export const FruitSliceGame: React.FC<Props> = ({
       }
       ctx.globalAlpha = 1;
 
-      // Blade trail: a soft glow with a bright core, thinner toward the tail
+      // Blade trail: a soft glow with a bright core, thinner toward the tail (colors from the shop's blade)
+      const blade = bladeStyle(live.current.settings.blade);
       const now = performance.now();
       const trail = trailRef.current.filter((p) => now - p.t < TRAIL_MS);
       trailRef.current = trail;
@@ -783,7 +785,11 @@ export const FruitSliceGame: React.FC<Props> = ({
         ] as const) {
           for (let i = 1; i < trail.length; i++) {
             const k = Math.max(0, 1 - (now - trail[i].t) / TRAIL_MS);
-            ctx.strokeStyle = core ? `rgba(255, 255, 255, ${0.95 * k})` : `rgba(${P.blade}, ${P.glow * k})`;
+            ctx.strokeStyle = core
+              ? `rgba(${blade.core}, ${0.95 * k})`
+              : blade.rainbow
+                ? `hsla(${Math.round(time * 0.2 + i * 30) % 360}, 95%, 60%, ${P.glow * k})`
+                : `rgba(${blade.glow || P.blade}, ${P.glow * k})`;
             ctx.lineWidth = 1 + width * k;
             ctx.beginPath();
             ctx.moveTo(trail[i - 1].x, trail[i - 1].y);

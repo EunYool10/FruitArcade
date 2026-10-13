@@ -11,6 +11,7 @@ import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/Ga
 import { StartCard } from '../game/StartCard';
 import { Segmented } from '../ui/Segmented';
 import { ResultCard } from '../game/ResultCard';
+import { runnerStyle } from '../../utils/shop';
 
 const CW = 440;
 const CH = 600;
@@ -674,14 +675,15 @@ export const FruitDashGame: React.FC<Props> = ({
         ctx.restore();
       }
 
-      // 6. Player: a little running orange that looks where it is going
+      // 6. Player: a little running fruit (an orange unless a runner from the shop is on) that looks where it is going
+      const look = runnerStyle(settings.runner);
       const px = playerXRef.current;
       const step = targetXRef.current - px;
       const moving = isPlayingRef.current && Math.abs(step) > 1.5;
       if (moving) facingRef.current = step > 0 ? 1 : -1;
       const fx = facingRef.current * 3;
       const stride = moving ? Math.sin(time * 0.03) * 3 : 0;
-      const INK = '#2b2140';
+      const INK = look.face;
 
       ctx.save();
       ctx.translate(px, PLAYER_Y);
@@ -696,7 +698,7 @@ export const FruitDashGame: React.FC<Props> = ({
       ctx.lineWidth = 2.5;
 
       // Feet, lifting in turn while running
-      ctx.fillStyle = '#e07800';
+      ctx.fillStyle = look.feet;
       for (const side of [-1, 1]) {
         const lift = Math.max(0, side < 0 ? stride : -stride);
         ctx.beginPath();
@@ -706,7 +708,7 @@ export const FruitDashGame: React.FC<Props> = ({
       }
 
       // Body
-      ctx.fillStyle = '#ffb627';
+      ctx.fillStyle = look.body;
       ctx.beginPath();
       ctx.arc(0, 0, PLAYER_R, 0, Math.PI * 2);
       ctx.fill();
@@ -721,7 +723,7 @@ export const FruitDashGame: React.FC<Props> = ({
 
       // Leaf
       ctx.lineWidth = 2;
-      ctx.fillStyle = '#2ec27e';
+      ctx.fillStyle = look.leaf;
       ctx.beginPath();
       ctx.ellipse(4, -PLAYER_R - 1, 7, 3.5, -0.5, 0, Math.PI * 2);
       ctx.fill();
@@ -758,7 +760,7 @@ export const FruitDashGame: React.FC<Props> = ({
           ctx.ellipse(fx + ex, -3, 2.3, 3.2, 0, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = INK === '#ffffff' ? look.body : '#fff';
         for (const ex of [-5.5, 5.5]) {
           ctx.beginPath();
           ctx.arc(fx + ex + 0.8, -4.3, 0.9, 0, Math.PI * 2);

@@ -3,6 +3,7 @@ import { UserStatistics } from '../../types';
 import { LevelInfo } from '../../utils/progress';
 import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
 import { Avatar, PlayerView } from '../ui/Avatar';
+import { TitleTag } from '../ui/TitleTag';
 import { Meter } from '../ui/Meter';
 import { formatNumber } from '../../utils/format';
 
@@ -67,12 +68,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             <span className="chip bg-mango-soft">
               {level.emoji} Lv.{level.level} {level.title}
             </span>
-            {player.title && (
-              <span className="chip bg-grape-soft">
-                {player.title.icon} {player.title.label}
-              </span>
-            )}
-            <button type="button" className="chip bg-mango text-on-bright transition-transform hover:-translate-y-0.5" onClick={onOpenShop} aria-label={`코인 ${coins}개 · 상점 열기`}>
+            {player.title && <TitleTag title={player.title} />}
+            <button type="button" className="chip bg-mango text-on-bright transition-transform hover:-translate-y-0.5" onClick={onOpenShop} aria-label={`${Number.isFinite(coins) ? `코인 ${formatNumber(coins)}개` : '코인 무한'} · 상점 열기`}>
               🪙 {formatNumber(coins)}
             </button>
           </div>

@@ -33,7 +33,8 @@ rules_version = '2';
 //   - score: int (0 <= score <= per-game cap, may only go up, at most every 3 s;
 //           name/avatar/title/frame may be refreshed alone with the same score)
 //   - at: timestamp (== request.time)
-//   - title, frame: optional ids ([a-z0-9_], 1-32) of the worn title and avatar frame
+//   - title, frame: optional ids ([a-z0-9_], 1-32) of the worn title and avatar frame;
+//           ids starting with "staff_" (the 운영진 series) only on admins' entries
 //   - proof: optional 64-char hex from the score server (server.mjs) that checked the round:
 //           SHA-256 of "<secret>|<uid>|<game>|<score>|<KST day>|<secret>". Required once
 //           config/scoreKey.enforce is true; a proof that is there must always match.
@@ -276,6 +277,8 @@ service cloud.firestore {
         && isPlainText(data.avatar, 1, 16)
         && isOptionalId(data, 'title')
         && isOptionalId(data, 'frame')
+        && (!('title' in data) || !data.title.matches('^staff_.*') || isAdmin())
+        && (!('frame' in data) || !data.frame.matches('^staff_.*') || isAdmin())
         && (!('proof' in data) || (data.proof is string && data.proof.size() == 64))
         && (!isReservedName(data.name) || isAdmin())
         && data.score is int

@@ -32,7 +32,20 @@ import { LeaderboardModal } from './components/Modals/LeaderboardModal';
 import { AdminModal } from './components/Modals/AdminModal';
 import { FeedbackModal } from './components/Modals/FeedbackModal';
 import { ShopModal } from './components/Modals/ShopModal';
-import { Inventory, ItemKind, ShopItem, clearInventory, coinsFor, loadInventory, mergeInventory, saveInventory } from './utils/shop';
+import {
+  Inventory,
+  ItemKind,
+  SHOP_ITEMS,
+  ShopItem,
+  avatarItem,
+  clearInventory,
+  coinsFor,
+  isStaffId,
+  loadInventory,
+  mergeInventory,
+  saveInventory,
+  usableItems,
+} from './utils/shop';
 import { RankContext } from './components/RankContext';
 import { RankResult, kstWeek, publicName } from './utils/ranking';
 import { earnedTitles, wornTitle } from './utils/titles';
@@ -68,7 +81,7 @@ import {
   currentStreak,
   loadStreak,
 } from './utils/progress';
-import { PlayerProfile, loadProfile, saveProfile } from './utils/profile';
+import { AVATARS, PlayerProfile, loadProfile, saveProfile } from './utils/profile';
 import { DailyState, applyDaily, loadDaily, saveDaily, todayKey } from './utils/missions';
 import { playSound } from './utils/audio';
 import { TrackName, music } from './utils/music';
@@ -200,21 +213,26 @@ export default function App() {
   // Titles: one per unlocked achievement, plus 주간 챔피언 for anyone who topped a weekly board
   const unlocked = getUnlockedAchievements();
   const wasChampion = stats.lastChampionWeek > 0;
-  const titles = earnedTitles(unlocked, wasChampion);
-  const title = wornTitle(profile.title, unlocked, wasChampion);
+  // Items in use: bought ones, plus the whole 운영진 series for admins (who also have unlimited coins)
+  const owned = usableItems(inventory, isAdmin);
+  const coins = isAdmin ? Infinity : coinBalance(stats);
+  const titles = earnedTitles(unlocked, wasChampion, owned);
+  const title = wornTitle(profile.title, unlocked, wasChampion, owned);
+  // A bought avatar shows while it's owned; the free fruit always do
+  const avatar = !profile.avatar || AVATARS.includes(profile.avatar) || owned[avatarItem(profile.avatar)?.id ?? ''] ? profile.avatar : '';
   const player: PlayerView = {
     name: profile.nickname || user?.displayName || '게스트',
-    emoji: profile.avatar || level.emoji,
-    photo: profile.avatar ? null : user?.photoURL ?? null,
+    emoji: avatar || level.emoji,
+    photo: avatar ? null : user?.photoURL ?? null,
     isGuest: !user,
     title,
-    frame: inventory[profile.frame] ? profile.frame : '',
+    frame: owned[profile.frame] ? profile.frame : '',
   };
   /** How the player appears on public boards (nickname only, never the Google name) */
   const rankWhoRef = useRef<{ name: string; avatar: string; title?: string; frame?: string }>({ name: '', avatar: '' });
   rankWhoRef.current = {
     name: publicName(profile.nickname, user?.uid ?? '', isAdmin),
-    avatar: profile.avatar || level.emoji,
+    avatar: avatar || level.emoji,
     ...(title ? { title: title.id } : {}),
     ...(player.frame ? { frame: player.frame } : {}),
   };
@@ -359,6 +377,12 @@ export default function App() {
     }
   };
 
+  // The admin check comes back after sign-in: then a worn 운영진 title or frame can go on the boards
+  useEffect(() => {
+    if (isAdmin && (isStaffId(profile.title) || isStaffId(profile.frame))) scheduleLookSync();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
+
   // ───────── puzzle stages ─────────
 
   const handleStageClear = (no: number, stars: number) => {
@@ -373,27 +397,51 @@ export default function App() {
 
   // ───────── shop ─────────
 
-  const buyItem = (item: ShopItem) => {
-    const stats0 = statsRef.current;
-    if (inventoryRef.current[item.id] || coinBalance(stats0) < item.price) return;
-    const inv = { ...inventoryRef.current, [item.id]: new Date().toISOString() };
+  const saveBought = (inv: Inventory) => {
     inventoryRef.current = inv;
     setInventory(inv);
     saveInventory(inv);
-    commitStats({ ...stats0, coinsSpent: stats0.coinsSpent + item.price });
-    playSound('levelup', settings);
-    pushToast({ icon: '🛍️', title: `${item.name}${josa(item.name, '을', '를')} 샀어요`, sub: '바로 사용해 보세요!', tone: 'mango' });
     const u = userRef.current;
-    if (u) {
-      cloudWrite((api) => api.saveInventory(u.uid, inv)).catch(() => {});
-      cloudWrite((api) => api.pushMergedStats(u.uid, statsRef.current)).catch(() => {});
-    }
+    if (u) cloudWrite((api) => api.saveInventory(u.uid, inv)).catch(() => {});
+  };
+
+  /** Admins don't pay: their coins are unlimited */
+  const buyItem = (item: ShopItem) => {
+    const stats0 = statsRef.current;
+    if (item.staff || inventoryRef.current[item.id] || (!isAdmin && coinBalance(stats0) < item.price)) return;
+    saveBought({ ...inventoryRef.current, [item.id]: new Date().toISOString() });
+    playSound('levelup', settings);
+    pushToast({
+      icon: isAdmin ? '🎁' : '🛍️',
+      title: `${item.name}${josa(item.name, '을', '를')} ${isAdmin ? '받았어요' : '샀어요'}`,
+      sub: '바로 사용해 보세요!',
+      tone: 'mango',
+    });
+    if (isAdmin) return;
+    commitStats({ ...stats0, coinsSpent: stats0.coinsSpent + item.price });
+    const u = userRef.current;
+    if (u) cloudWrite((api) => api.pushMergedStats(u.uid, statsRef.current)).catch(() => {});
+  };
+
+  /** Admins: everything in the shop at once */
+  const takeAllItems = () => {
+    if (!isAdmin) return;
+    const now = new Date().toISOString();
+    const inv = { ...inventoryRef.current };
+    const missing = SHOP_ITEMS.filter((i) => !i.staff && !inv[i.id]);
+    if (!missing.length) return;
+    for (const i of missing) inv[i.id] = now;
+    saveBought(inv);
+    playSound('levelup', settings);
+    pushToast({ icon: '🎁', title: `상점 물건 ${missing.length}개를 받았어요`, sub: '운영자는 코인이 무한이에요', tone: 'mango' });
   };
 
   const equipItem = (kind: ItemKind, item: ShopItem | null) => {
     const id = item?.id ?? '';
     if (kind === 'frame') updateProfile({ ...profile, frame: id });
-    else updateSettings({ ...settings, cardBack: id });
+    else if (kind === 'avatar') updateProfile({ ...profile, avatar: item?.icon ?? '' });
+    else if (kind === 'title') updateProfile({ ...profile, title: id });
+    else updateSettings({ ...settings, [kind]: id });
   };
 
   // ───────── auth & cloud sync ─────────
@@ -874,7 +922,13 @@ export default function App() {
   // ───────── render ─────────
 
   const gameCommon = {
-    settings: inventory[settings.cardBack] || !settings.cardBack ? settings : { ...settings, cardBack: '' },
+    // Card backs, blades and runners only apply while owned (signing out empties the inventory)
+    settings: {
+      ...settings,
+      cardBack: owned[settings.cardBack] ? settings.cardBack : '',
+      blade: owned[settings.blade] ? settings.blade : '',
+      runner: owned[settings.runner] ? settings.runner : '',
+    },
     isPaused: gamePaused,
     onUnlockAchieve: handleUnlockAchieve,
     onGameComplete: handleGameComplete,
@@ -924,7 +978,7 @@ export default function App() {
                     daily={daily}
                     level={level}
                     achievementCount={achievementCount}
-                    coins={coinBalance(stats)}
+                    coins={coins}
                     onPlay={playGame}
                     onOpen={openModal}
                   />
@@ -1022,9 +1076,11 @@ export default function App() {
         level={level}
         achievementCount={achievementCount}
         titles={titles}
+        boughtAvatars={SHOP_ITEMS.filter((i) => i.kind === 'avatar' && owned[i.id]).map((i) => i.icon ?? '')}
         onLogin={handleLogin}
         onLogout={handleLogout}
         onOpenAdmin={() => setModal('admin')}
+        onOpenShop={() => setModal('shop')}
       />
       <AchievementsModal isOpen={modal === 'achievements'} onClose={() => setModal(null)} />
       <RecordsModal isOpen={modal === 'records'} onClose={() => setModal(null)} stats={stats} history={history} days={days} />
@@ -1052,12 +1108,20 @@ export default function App() {
       <ShopModal
         isOpen={modal === 'shop'}
         onClose={() => setModal(null)}
-        balance={coinBalance(stats)}
-        inventory={inventory}
+        balance={coins}
+        isAdmin={isAdmin}
+        owned={owned}
         player={player}
-        equippedFrame={player.frame ?? ''}
-        equippedBack={inventory[settings.cardBack] ? settings.cardBack : ''}
+        equipped={{
+          frame: player.frame ?? '',
+          avatar: avatarItem(avatar)?.id ?? (avatar ? 'fruit' : ''),
+          title: title?.id ?? '',
+          cardBack: owned[settings.cardBack] ? settings.cardBack : '',
+          blade: owned[settings.blade] ? settings.blade : '',
+          runner: owned[settings.runner] ? settings.runner : '',
+        }}
         onBuy={buyItem}
+        onTakeAll={takeAllItems}
         onEquip={equipItem}
       />
       <AdminModal isOpen={modal === 'admin' && isAdmin} onClose={() => setModal(null)} adminUid={user?.uid ?? null} />

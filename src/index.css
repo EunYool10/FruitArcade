@@ -367,6 +367,14 @@
   .stripes {
     background-image: repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.28) 0 6px, transparent 6px 12px);
   }
+  .checker {
+    background-image: repeating-conic-gradient(rgb(255 255 255 / 0.26) 0 25%, transparent 0 50%);
+    background-size: 16px 16px;
+  }
+  .waves {
+    background-image: radial-gradient(circle at 50% 110%, transparent 5px, rgb(255 255 255 / 0.3) 6px 8px, transparent 9px);
+    background-size: 16px 10px;
+  }
 
   .hero-title {
     text-shadow: 3px 3px 0 var(--berry);

@@ -31,6 +31,10 @@ export interface GameSettings {
   dashDifficulty: DashDifficulty;
   /** Memory card back from the shop ('' = the classic one) */
   cardBack: string;
+  /** 과일 자르기 blade trail from the shop ('' = the default) */
+  blade: string;
+  /** FRUIT DASH runner from the shop ('' = the orange) */
+  runner: string;
 }
 
 export interface Achievement {

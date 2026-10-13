@@ -11,7 +11,7 @@ import { MissionsCard } from './MissionsCard';
 import { RecentPlays } from './RecentPlays';
 import { applyUpdate, promptInstall, usePwa } from '../../utils/pwa';
 
-export type LobbyTarget = 'profile' | 'achievements' | 'records' | 'patch' | 'credits' | 'settings' | 'leaderboard' | 'feedback' | 'shop' | 'terms';
+export type LobbyTarget = 'profile' | 'achievements' | 'records' | 'patch' | 'credits' | 'settings' | 'leaderboard' | 'feedback' | 'shop' | 'terms' | 'friends';
 
 interface LobbyProps {
   player: PlayerView;
@@ -23,13 +23,15 @@ interface LobbyProps {
   achievementCount: number;
   /** Shop coins to spend */
   coins: number;
+  /** Friend requests and gifts waiting */
+  friendBadge: number;
   onPlay: (game: GameType, quick?: boolean) => void;
   onOpen: (target: LobbyTarget) => void;
 }
 
 const tilt = (deg: number, delay = 0) => ({ '--tilt': `${deg}deg`, animationDelay: `${delay}s` }) as React.CSSProperties;
 
-export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, daily, level, achievementCount, coins, onPlay, onOpen }) => {
+export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, daily, level, achievementCount, coins, friendBadge, onPlay, onOpen }) => {
   const lastGame = history[0]?.game;
   const quick: GameType = lastGame ?? 'suika';
   const pwa = usePwa();
@@ -92,7 +94,9 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
           stats={stats}
           achievementCount={achievementCount}
           coins={coins}
+          friendBadge={friendBadge}
           onOpenShop={() => onOpen('shop')}
+          onOpenFriends={() => onOpen('friends')}
           onOpenProfile={() => onOpen('profile')}
           onOpenAchievements={() => onOpen('achievements')}
           onOpenRecords={() => onOpen('records')}

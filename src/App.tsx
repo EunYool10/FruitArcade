@@ -19,6 +19,8 @@ import { MemorySetup } from './components/MemoryGame/MemorySetup';
 import { AchievementsModal } from './components/Modals/AchievementsModal';
 import { PatchNotesModal } from './components/Modals/PatchNotesModal';
 import { TermsModal } from './components/Modals/TermsModal';
+import { FriendsModal, SendResult } from './components/Modals/FriendsModal';
+import { PlayerModal } from './components/Modals/PlayerModal';
 import { SettingsModal } from './components/Modals/SettingsModal';
 import { CreditsModal } from './components/Modals/CreditsModal';
 import { PauseModal } from './components/Modals/PauseModal';
@@ -112,12 +114,13 @@ type CloudApi = Awaited<ReturnType<typeof cloudApi>>;
 const rankApi = () => import('./utils/leaderboardService');
 const communityApi = () => import('./utils/communityService');
 const remindersApi = () => import('./utils/reminders');
+const friendsApi = () => import('./utils/friendsService');
 
 const SETTINGS_KEY = 'fruit_arcade_settings';
 const MEMORY_CFG_KEY = 'fruit_arcade_memory';
 const DEFAULT_MEMORY: MemoryConfig = { mode: '4', previewTime: 2000, lifeLimit: 'infinite' };
 
-type ModalId = NavTarget | LobbyTarget;
+type ModalId = NavTarget | LobbyTarget | 'player';
 
 function readJSON<T>(key: string, fallback: T): T {
   try {
@@ -163,6 +166,10 @@ export default function App() {
   userRef.current = user;
   const screenRef = useRef(screen);
   screenRef.current = screen;
+  // Friends: my friend code, the badge (requests + gifts waiting), whose card is open
+  const [myCode, setMyCode] = useState('');
+  const [friendBadge, setFriendBadge] = useState(0);
+  const [viewUid, setViewUid] = useState<string | null>(null);
   // Streak reminders (web push) on this device
   const [remindersOn, setRemindersOn] = useState(() => loadReminderState().on);
   const [remindersBusy, setRemindersBusy] = useState(false);
@@ -331,7 +338,63 @@ export default function App() {
   // A changed nickname / avatar / title / frame shows up on the player's leaderboard entries
   // shortly after (debounced, so flipping through titles makes one update)
   const lookTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** What friends see on my card (same public name as the boards) */
+  const cardRef = useRef({ name: '', avatar: '', level: 1, achievements: 0, best: {} as Partial<Record<GameType, number>>, title: '', frame: '' });
+  cardRef.current = {
+    name: rankWhoRef.current.name,
+    avatar: rankWhoRef.current.avatar,
+    title: rankWhoRef.current.title ?? '',
+    frame: rankWhoRef.current.frame ?? '',
+    level: level.level,
+    achievements: achievementCount,
+    best: Object.fromEntries(GAME_ORDER.map((g) => [g, stats[bestKey(g)]])) as Partial<Record<GameType, number>>,
+  };
+
+  const refreshFriendBadge = useCallback(() => {
+    const u = userRef.current;
+    if (!u) return;
+    friendsApi()
+      .then((api) => api.pendingCount(u.uid))
+      .then((n) => userRef.current?.uid === u.uid && setFriendBadge(n))
+      .catch(() => {});
+  }, []);
+
+  // Create or refresh my public card a moment after changes (the rules allow one write per 2 s)
+  const playerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const schedulePlayerSync = useCallback(() => {
+    if (playerTimer.current) clearTimeout(playerTimer.current);
+    playerTimer.current = setTimeout(() => {
+      const u = userRef.current;
+      if (!u) return;
+      const c = cardRef.current;
+      friendsApi()
+        .then((api) => api.ensurePlayer(u.uid, { ...c, title: c.title || undefined, frame: c.frame || undefined }))
+        .then((code) => userRef.current?.uid === u.uid && setMyCode(code))
+        .catch((err) => console.warn('Failed to update the player card:', err));
+    }, 3000);
+  }, []);
+
+  // New friend requests and gifts: checked in the lobby when a window closes, when the app
+  // comes back to the front, and every minute while it stays open
+  useEffect(() => {
+    if (screen === 'lobby' && modal === null) refreshFriendBadge();
+  }, [screen, modal, refreshFriendBadge]);
+
+  useEffect(() => {
+    if (!user) return;
+    const onFront = () => document.visibilityState === 'visible' && refreshFriendBadge();
+    const timer = setInterval(onFront, 60_000);
+    document.addEventListener('visibilitychange', onFront);
+    window.addEventListener('focus', onFront);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onFront);
+      window.removeEventListener('focus', onFront);
+    };
+  }, [user, refreshFriendBadge]);
+
   const scheduleLookSync = () => {
+    schedulePlayerSync();
     if (lookTimer.current) clearTimeout(lookTimer.current);
     lookTimer.current = setTimeout(() => {
       const u = userRef.current;
@@ -350,6 +413,45 @@ export default function App() {
       cloudWrite((api) => api.saveProfileCustom(u.uid, next)).catch(() => {});
       scheduleLookSync();
     }
+  };
+
+  // ───────── friends: coin gifts ─────────
+
+  /** Sync my coins up first, send in one transaction, then take the new totals back */
+  const sendCoins = async (to: string, amount: number): Promise<SendResult> => {
+    const u = userRef.current;
+    if (!u) return 'error';
+    try {
+      await cloudWrite(async (api) => {
+        if (!isAdmin) await api.pushMergedStats(u.uid, statsRef.current);
+        const f = await friendsApi();
+        await f.sendCoins(u.uid, to, amount, isAdmin);
+        if (!isAdmin) commitStats(await api.pushMergedStats(u.uid, statsRef.current));
+      });
+      playSound('star', settings);
+      return 'ok';
+    } catch (err) {
+      const msg = (err as Error)?.message;
+      if (msg === 'limit' || msg === 'coins') return msg;
+      console.warn('Failed to send coins:', err);
+      return 'error';
+    }
+  };
+
+  const claimGifts = async (ids: string[]): Promise<number> => {
+    const u = userRef.current;
+    if (!u) return 0;
+    const total = await cloudWrite(async (api) => {
+      await api.pushMergedStats(u.uid, statsRef.current);
+      const f = await friendsApi();
+      let sum = 0;
+      for (const id of ids) sum += await f.claimGift(u.uid, id);
+      commitStats(await api.pushMergedStats(u.uid, statsRef.current));
+      return sum;
+    });
+    if (total > 0) playSound('levelup', settings);
+    refreshFriendBadge();
+    return total;
   };
 
   // ───────── streak reminders ─────────
@@ -569,6 +671,8 @@ export default function App() {
         if (!u) return;
         syncCloud(u);
         wakeScoreServer();
+        schedulePlayerSync();
+        refreshFriendBadge();
         if (loadReminderState().on) remindersApi().then((api) => api.refreshReminders(u.uid, loadStreak())).catch(() => {});
         rankApi()
           .then((api) => api.checkAdmin())
@@ -642,6 +746,8 @@ export default function App() {
     historyRef.current = [];
     setHistory([]);
     setModal(null);
+    setMyCode('');
+    setFriendBadge(0);
     pushToast({ icon: '👋', title: '로그아웃했어요' });
   };
 
@@ -726,6 +832,7 @@ export default function App() {
         communityApi()
           .then((api) => api.recordActivity(u.uid, result.seconds))
           .catch((err) => console.warn('Failed to record activity:', err));
+        schedulePlayerSync();
         // Played today: no reminder tonight
         if (loadReminderState().on) remindersApi().then((api) => api.refreshReminders(u.uid, nextStreak)).catch(() => {});
       }
@@ -968,6 +1075,7 @@ export default function App() {
         level={level}
         challenge={activeChallenge && SCREEN_GAME[screen] === activeChallenge.g ? activeChallenge : null}
         isAdmin={isAdmin}
+        friendBadge={friendBadge}
         onHome={() => goTo(screen === 'memory-play' ? 'memory-setup' : 'lobby')}
         onPause={() => setIsPaused(true)}
         onToggleSound={handleToggleSound}
@@ -996,6 +1104,7 @@ export default function App() {
                     level={level}
                     achievementCount={achievementCount}
                     coins={coins}
+                    friendBadge={friendBadge}
                     onPlay={playGame}
                     onOpen={openModal}
                   />
@@ -1123,6 +1232,39 @@ export default function App() {
         uid={user?.uid ?? null}
         isAdmin={isAdmin}
         onLogin={() => setModal('profile')}
+        onViewPlayer={(id) => {
+          setViewUid(id);
+          setModal('player');
+        }}
+      />
+      <FriendsModal
+        isOpen={modal === 'friends'}
+        onClose={() => {
+          setModal(null);
+          refreshFriendBadge();
+        }}
+        uid={user?.uid ?? null}
+        isAdmin={isAdmin}
+        myCode={myCode}
+        balance={coins}
+        onLogin={() => setModal('profile')}
+        onSendCoins={sendCoins}
+        onClaimGifts={claimGifts}
+        onViewPlayer={(id) => {
+          setViewUid(id);
+          setModal('player');
+        }}
+        onChanged={refreshFriendBadge}
+        onNotify={(icon, title, sub) => pushToast({ icon, title, ...(sub ? { sub } : {}), tone: icon === '⚠️' ? 'berry' : 'soda' })}
+      />
+      <PlayerModal
+        isOpen={modal === 'player'}
+        onClose={() => setModal(null)}
+        viewerUid={user?.uid ?? null}
+        targetUid={viewUid}
+        onNotify={(icon, title) => pushToast({ icon, title, tone: icon === '⚠️' ? 'berry' : 'soda' })}
+        onChanged={refreshFriendBadge}
+        onOpenFriends={() => setModal('friends')}
       />
       <ShopModal
         isOpen={modal === 'shop'}

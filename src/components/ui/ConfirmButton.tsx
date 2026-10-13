@@ -6,6 +6,10 @@ interface ConfirmButtonProps {
   confirmLabel?: string;
   onConfirm: () => void;
   className?: string;
+  disabled?: boolean;
+  ariaLabel?: string;
+  /** Extra classes for the question box (e.g. basis-full inside a wrapping row) */
+  panelClassName?: string;
 }
 
 /** A button that asks "are you sure?" inline instead of using window.confirm. */
@@ -15,6 +19,9 @@ export const ConfirmButton: React.FC<ConfirmButtonProps> = ({
   confirmLabel = '네, 할게요',
   onConfirm,
   className = 'btn',
+  disabled,
+  ariaLabel,
+  panelClassName = '',
 }) => {
   const [asking, setAsking] = useState(false);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
@@ -25,14 +32,14 @@ export const ConfirmButton: React.FC<ConfirmButtonProps> = ({
 
   if (!asking) {
     return (
-      <button type="button" className={className} onClick={() => setAsking(true)}>
+      <button type="button" className={className} onClick={() => setAsking(true)} disabled={disabled} aria-label={ariaLabel}>
         {children}
       </button>
     );
   }
 
   return (
-    <div role="alertdialog" aria-label={question} className="space-y-2 rounded-2xl border-2 border-line bg-berry-soft p-3">
+    <div role="alertdialog" aria-label={question} className={`space-y-2 rounded-2xl border-2 border-line bg-berry-soft p-3 ${panelClassName}`}>
       <p className="text-sm font-bold text-berry-ink">{question}</p>
       <div className="flex gap-2">
         <button

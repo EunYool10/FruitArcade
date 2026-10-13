@@ -14,7 +14,9 @@ interface PlayerCardProps {
   stats: UserStatistics;
   achievementCount: number;
   coins: number;
+  friendBadge: number;
   onOpenShop: () => void;
+  onOpenFriends: () => void;
   onOpenProfile: () => void;
   onOpenAchievements: () => void;
   onOpenRecords: () => void;
@@ -51,7 +53,9 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   stats,
   achievementCount,
   coins,
+  friendBadge,
   onOpenShop,
+  onOpenFriends,
   onOpenProfile,
   onOpenAchievements,
   onOpenRecords,
@@ -71,6 +75,15 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             {player.title && <TitleTag title={player.title} />}
             <button type="button" className="chip bg-mango text-on-bright transition-transform hover:-translate-y-0.5" onClick={onOpenShop} aria-label={`${Number.isFinite(coins) ? `코인 ${formatNumber(coins)}개` : '코인 무한'} · 상점 열기`}>
               🪙 {formatNumber(coins)}
+            </button>
+            <button
+              type="button"
+              className="chip relative bg-soda-soft transition-transform hover:-translate-y-0.5"
+              onClick={onOpenFriends}
+              aria-label={friendBadge ? `친구 (새 소식 ${friendBadge}개)` : '친구'}
+            >
+              👥 친구
+              {friendBadge > 0 && <span className="rounded-full bg-berry px-1.5 text-[10px] font-bold text-white">{friendBadge > 9 ? '9+' : friendBadge}</span>}
             </button>
           </div>
         </div>

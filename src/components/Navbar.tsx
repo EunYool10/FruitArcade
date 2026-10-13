@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, BarChart3, Crown, Pause, Settings, Shield, ShoppingBag, Trophy, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, BarChart3, Crown, Pause, Settings, Shield, ShoppingBag, Trophy, Users, Volume2, VolumeX } from 'lucide-react';
 import { GameSettings, ScreenType } from '../types';
 import { GAMES, SCREEN_GAME } from '../constants';
 import { LevelInfo } from '../utils/progress';
@@ -7,7 +7,7 @@ import { Avatar, PlayerView } from './ui/Avatar';
 import { Challenge } from '../utils/challenge';
 import { formatNumber } from '../utils/format';
 
-export type NavTarget = 'settings' | 'profile' | 'achievements' | 'records' | 'leaderboard' | 'admin' | 'shop';
+export type NavTarget = 'settings' | 'profile' | 'achievements' | 'records' | 'leaderboard' | 'admin' | 'shop' | 'friends';
 
 interface Props {
   screen: ScreenType;
@@ -19,6 +19,8 @@ interface Props {
   challenge: Challenge | null;
   /** Shows the admin screen button */
   isAdmin: boolean;
+  /** Friend requests and gifts waiting */
+  friendBadge: number;
   onHome: () => void;
   onPause: () => void;
   onToggleSound: () => void;
@@ -35,6 +37,7 @@ export const Navbar: React.FC<Props> = ({
   level,
   challenge,
   isAdmin,
+  friendBadge,
   onHome,
   onPause,
   onToggleSound,
@@ -90,6 +93,19 @@ export const Navbar: React.FC<Props> = ({
           )}
           {inLobby && (
             <>
+              <button
+                type="button"
+                className="btn btn-icon relative hidden sm:inline-flex"
+                onClick={() => onOpen('friends')}
+                aria-label={friendBadge ? `친구 (새 소식 ${friendBadge}개)` : '친구'}
+              >
+                <Users className={ICON} strokeWidth={2.5} />
+                {friendBadge > 0 && (
+                  <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full border-2 border-line bg-berry px-1 text-[10px] font-bold text-white">
+                    {friendBadge > 9 ? '9+' : friendBadge}
+                  </span>
+                )}
+              </button>
               <button type="button" className="btn btn-icon hidden sm:inline-flex" onClick={() => onOpen('shop')} aria-label="상점">
                 <ShoppingBag className={ICON} strokeWidth={2.5} />
               </button>

@@ -23,6 +23,8 @@ interface Props {
   /** Shows moderation tools (the server rules decide what actually goes through) */
   isAdmin: boolean;
   onLogin: () => void;
+  /** Opens a player's card (signed in) */
+  onViewPlayer?: (uid: string) => void;
 }
 
 interface Board {
@@ -66,6 +68,8 @@ interface RowProps {
   action?: React.ReactNode;
   /** Opens under the row */
   panel?: React.ReactNode;
+  /** Tapping the player opens their card */
+  onView?: () => void;
 }
 
 /** Name with the 👑 for last week's winner and the worn title underneath */
@@ -87,7 +91,7 @@ const NameBlock: React.FC<{ entry: RankEntry; mine?: boolean; champion?: boolean
   );
 };
 
-const Row: React.FC<RowProps> = ({ entry, place, mine, champion, action, panel }) => (
+const Row: React.FC<RowProps> = ({ entry, place, mine, champion, action, panel, onView }) => (
   <li
     className={`rounded-2xl border-2 px-3 py-2 ${mine ? 'border-line bg-mango-soft shadow-hard-sm' : 'border-transparent bg-surface-2'}`}
     aria-current={mine ? 'true' : undefined}
@@ -96,12 +100,25 @@ const Row: React.FC<RowProps> = ({ entry, place, mine, champion, action, panel }
       <span className="w-8 shrink-0 text-center font-display text-lg tabular-nums">
         {place <= 3 ? <span aria-label={`${place}위`}>{MEDAL[place - 1]}</span> : place}
       </span>
-      <Framed frame={entry.frame} shape="sticker">
-        <span className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" aria-hidden="true">
-          {entry.avatar}
-        </span>
-      </Framed>
-      <NameBlock entry={entry} mine={mine} champion={champion} />
+      {onView ? (
+        <button type="button" className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left hover:bg-surface-3" onClick={onView} aria-label={`${entry.name} 프로필 보기`}>
+          <Framed frame={entry.frame} shape="sticker">
+            <span className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" aria-hidden="true">
+              {entry.avatar}
+            </span>
+          </Framed>
+          <NameBlock entry={entry} mine={mine} champion={champion} />
+        </button>
+      ) : (
+        <>
+          <Framed frame={entry.frame} shape="sticker">
+            <span className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" aria-hidden="true">
+              {entry.avatar}
+            </span>
+          </Framed>
+          <NameBlock entry={entry} mine={mine} champion={champion} />
+        </>
+      )}
       <span className="shrink-0 font-display text-lg tabular-nums">{formatNumber(entry.score)}</span>
       {action}
     </div>
@@ -176,7 +193,7 @@ const ReportForm: React.FC<{ entry: RankEntry; onSend: (reason: ReportReason, no
   );
 };
 
-export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initialGame, uid, isAdmin, onLogin }) => {
+export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initialGame, uid, isAdmin, onLogin, onViewPlayer }) => {
   const [game, setGame] = useState<GameType>(initialGame);
   const [period, setPeriod] = useState<RankPeriod>('day');
   const [status, setStatus] = useState<Status>('loading');
@@ -485,7 +502,15 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
           <>
             <ol className="space-y-1.5">
               {board.entries.map((e, i) => (
-                <Row key={e.uid} entry={e} place={places[i]} mine={e.uid === uid} champion={champs[game]?.uid === e.uid} {...rowProps(e)} />
+                <Row
+                  key={e.uid}
+                  entry={e}
+                  place={places[i]}
+                  mine={e.uid === uid}
+                  champion={champs[game]?.uid === e.uid}
+                  onView={uid && onViewPlayer ? () => onViewPlayer(e.uid) : undefined}
+                  {...rowProps(e)}
+                />
               ))}
             </ol>
             {board.me && (
@@ -494,7 +519,14 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
                   ···
                 </p>
                 <ol>
-                  <Row entry={board.me.entry} place={board.me.place} mine champion={champs[game]?.uid === board.me.entry.uid} {...rowProps(board.me.entry)} />
+                  <Row
+                    entry={board.me.entry}
+                    place={board.me.place}
+                    mine
+                    champion={champs[game]?.uid === board.me.entry.uid}
+                    onView={uid && onViewPlayer ? () => onViewPlayer(board.me!.entry.uid) : undefined}
+                    {...rowProps(board.me.entry)}
+                  />
                 </ol>
               </>
             )}

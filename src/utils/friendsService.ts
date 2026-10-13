@@ -1,0 +1,287 @@
+import {
+  DocumentData,
+  collection,
+  deleteDoc,
+  deleteField,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  runTransaction,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+  writeBatch,
+} from 'firebase/firestore';
+import { db } from '../firestore';
+import { GameType } from '../types';
+import { GAME_ORDER } from '../constants';
+import { kstDay } from './ranking';
+
+// Friends and coin gifts (signed-in players only).
+//   players/{uid}       public card: name, avatar, title, frame, level, achievements, best scores, friend code
+//   friendCodes/{code}  code → uid, claimed once
+//   friendships/{a_b}   one doc per pair (uids sorted): pending until the other side accepts
+//   gifts/{from_day_n}  coins sent to a friend; at most a few a day, the receiver claims them
+// firestore.rules check all of it, including that a player's coins really go down when they send.
+
+export interface PublicPlayer {
+  uid: string;
+  code: string;
+  name: string;
+  avatar: string;
+  title?: string;
+  frame?: string;
+  level: number;
+  achievements: number;
+  best: Partial<Record<GameType, number>>;
+}
+
+/** What the app keeps current on the player's card */
+export type PlayerCard = Omit<PublicPlayer, 'uid' | 'code'>;
+
+export interface FriendLink {
+  pair: string;
+  otherUid: string;
+  other: PublicPlayer | null;
+  status: 'pending' | 'accepted';
+  /** I sent the request */
+  fromMe: boolean;
+}
+
+export interface Gift {
+  id: string;
+  from: string;
+  to: string;
+  amount: number;
+  at: number;
+  claimed: boolean;
+}
+
+/** Per sender and Korean day; admins can send far more (their coins don't run out) */
+export const GIFT_LIMITS = {
+  player: { perDay: 5, max: 300 },
+  admin: { perDay: 20, max: Number.MAX_SAFE_INTEGER },
+};
+
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export const cleanCode = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+export const showCode = (code: string) => (code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code);
+
+const playerRef = (uid: string) => doc(db, 'players', uid);
+const codeRef = (code: string) => doc(db, 'friendCodes', code);
+export const pairId = (a: string, b: string) => (a < b ? `${a}_${b}` : `${b}_${a}`);
+
+function newCode(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => CODE_ALPHABET[b % 32]).join('');
+}
+
+function toPlayer(uid: string, d: DocumentData): PublicPlayer {
+  const best: Partial<Record<GameType, number>> = {};
+  for (const g of GAME_ORDER) if (typeof d.best?.[g] === 'number') best[g] = d.best[g];
+  return {
+    uid,
+    code: typeof d.code === 'string' ? d.code : '',
+    name: typeof d.name === 'string' ? d.name : '???',
+    avatar: typeof d.avatar === 'string' ? d.avatar : '🍓',
+    ...(typeof d.title === 'string' ? { title: d.title } : {}),
+    ...(typeof d.frame === 'string' ? { frame: d.frame } : {}),
+    level: typeof d.level === 'number' ? d.level : 1,
+    achievements: typeof d.achievements === 'number' ? d.achievements : 0,
+    best,
+  };
+}
+
+const sameCard = (a: PlayerCard, b: PlayerCard) =>
+  a.name === b.name &&
+  a.avatar === b.avatar &&
+  (a.title ?? '') === (b.title ?? '') &&
+  (a.frame ?? '') === (b.frame ?? '') &&
+  a.level === b.level &&
+  a.achievements === b.achievements &&
+  GAME_ORDER.every((g) => (a.best[g] ?? 0) === (b.best[g] ?? 0));
+
+/** Same caps as the rules (and the leaderboards): a card over them would be refused */
+const BEST_CAP: Record<GameType, number> = { memory: 2000, suika: 100000, dash: 100000, puzzle: 100000, slice: 100000 };
+
+const cardFields = (card: PlayerCard) => ({
+  name: card.name,
+  avatar: card.avatar,
+  level: Math.max(1, Math.min(999, Math.round(card.level))),
+  achievements: Math.max(0, Math.min(500, Math.round(card.achievements))),
+  best: Object.fromEntries(GAME_ORDER.map((g) => [g, Math.max(0, Math.min(BEST_CAP[g], Math.round(card.best[g] ?? 0)))])),
+});
+
+/** Make sure the player has a public card (claiming a friend code the first time); returns the code */
+export async function ensurePlayer(uid: string, card: PlayerCard): Promise<string> {
+  const snap = await getDoc(playerRef(uid));
+  if (snap.exists()) {
+    const current = toPlayer(uid, snap.data());
+    if (!sameCard(current, { ...card, ...cardFields(card) })) {
+      await updateDoc(playerRef(uid), {
+        ...cardFields(card),
+        title: card.title ? card.title : deleteField(),
+        frame: card.frame ? card.frame : deleteField(),
+        at: serverTimestamp(),
+      });
+    }
+    return current.code;
+  }
+  // A code that someone else already has makes the batch fail: try another one
+  for (let attempt = 1; ; attempt++) {
+    const code = newCode();
+    const batch = writeBatch(db);
+    batch.set(codeRef(code), { uid });
+    batch.set(playerRef(uid), {
+      uid,
+      code,
+      ...cardFields(card),
+      ...(card.title ? { title: card.title } : {}),
+      ...(card.frame ? { frame: card.frame } : {}),
+      at: serverTimestamp(),
+    });
+    try {
+      await batch.commit();
+      return code;
+    } catch (err) {
+      if (attempt >= 4) throw err;
+    }
+  }
+}
+
+export async function getPlayer(uid: string): Promise<PublicPlayer | null> {
+  const snap = await getDoc(playerRef(uid));
+  return snap.exists() ? toPlayer(uid, snap.data()) : null;
+}
+
+export async function findByCode(code: string): Promise<PublicPlayer | null> {
+  const snap = await getDoc(codeRef(cleanCode(code)));
+  return snap.exists() ? getPlayer(String(snap.data().uid)) : null;
+}
+
+/** Friends, requests to me and my requests, with the other player's card */
+export async function loadFriends(uid: string): Promise<FriendLink[]> {
+  const snap = await getDocs(query(collection(db, 'friendships'), where('users', 'array-contains', uid)));
+  const links = snap.docs.map((d) => {
+    const data = d.data();
+    const users: string[] = Array.isArray(data.users) ? data.users : [];
+    return {
+      pair: d.id,
+      otherUid: users.find((u) => u !== uid) ?? '',
+      status: data.status === 'accepted' ? ('accepted' as const) : ('pending' as const),
+      fromMe: data.from === uid,
+    };
+  });
+  const others = await Promise.all(links.map((l) => getPlayer(l.otherUid).catch(() => null)));
+  return links.map((l, i) => ({ ...l, other: others[i] }));
+}
+
+/** sent: a new request; accepted: they had asked me already; exists: already friends or asked */
+export async function requestFriend(uid: string, otherUid: string): Promise<'sent' | 'accepted' | 'exists'> {
+  const ref = doc(db, 'friendships', pairId(uid, otherUid));
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    const d = snap.data();
+    if (d.status === 'pending' && d.from === otherUid) {
+      await acceptFriend(snap.id);
+      return 'accepted';
+    }
+    return 'exists';
+  }
+  await setDoc(ref, { users: [uid, otherUid].sort(), from: uid, status: 'pending', at: serverTimestamp() });
+  return 'sent';
+}
+
+/** none, sent (I asked), received (they asked me), friends */
+export async function friendStatus(uid: string, otherUid: string): Promise<'none' | 'sent' | 'received' | 'friends'> {
+  const snap = await getDoc(doc(db, 'friendships', pairId(uid, otherUid)));
+  if (!snap.exists()) return 'none';
+  const d = snap.data();
+  if (d.status === 'accepted') return 'friends';
+  return d.from === uid ? 'sent' : 'received';
+}
+
+export const acceptFriend = (pair: string) => updateDoc(doc(db, 'friendships', pair), { status: 'accepted', at: serverTimestamp() });
+
+/** Decline, cancel or unfriend */
+export const removeFriend = (pair: string) => deleteDoc(doc(db, 'friendships', pair));
+
+const toGift = (id: string, d: DocumentData): Gift => ({
+  id,
+  from: String(d.from),
+  to: String(d.to),
+  amount: Number(d.amount) || 0,
+  at: d.at?.toMillis?.() ?? 0,
+  claimed: !!d.claimed,
+});
+
+/** Unclaimed gifts to me, recent gifts both ways, and how many I sent today */
+export async function loadGifts(uid: string) {
+  const gifts = collection(db, 'gifts');
+  const [inbox, received, sent, today] = await Promise.all([
+    getDocs(query(gifts, where('to', '==', uid), where('claimed', '==', false), limit(50))),
+    getDocs(query(gifts, where('to', '==', uid), orderBy('at', 'desc'), limit(20))),
+    getDocs(query(gifts, where('from', '==', uid), orderBy('at', 'desc'), limit(20))),
+    getDocs(query(gifts, where('from', '==', uid), where('day', '==', kstDay()))),
+  ]);
+  return {
+    inbox: inbox.docs.map((d) => toGift(d.id, d.data())).sort((a, b) => b.at - a.at),
+    received: received.docs.map((d) => toGift(d.id, d.data())),
+    sent: sent.docs.map((d) => toGift(d.id, d.data())),
+    sentToday: today.size,
+  };
+}
+
+/** Requests waiting for me plus unclaimed gifts (the badge on the friends button) */
+export async function pendingCount(uid: string): Promise<number> {
+  const [links, inbox] = await Promise.all([
+    getDocs(query(collection(db, 'friendships'), where('users', 'array-contains', uid))),
+    getDocs(query(collection(db, 'gifts'), where('to', '==', uid), where('claimed', '==', false), limit(50))),
+  ]);
+  return links.docs.filter((d) => d.data().status === 'pending' && d.data().from !== uid).length + inbox.size;
+}
+
+/**
+ * Send coins to a friend. The gift and the sender's spent coins go in one transaction
+ * (admins don't pay). Throws 'limit' after today's gifts, 'coins' when the balance is short.
+ */
+export async function sendCoins(uid: string, to: string, amount: number, isAdmin: boolean): Promise<void> {
+  const day = kstDay();
+  const mine = await getDocs(query(collection(db, 'gifts'), where('from', '==', uid), where('day', '==', day)));
+  const used = new Set(mine.docs.map((d) => d.id));
+  const cap = (isAdmin ? GIFT_LIMITS.admin : GIFT_LIMITS.player).perDay;
+  let n = 1;
+  while (used.has(`${uid}_${day}_${n}`)) n++;
+  if (n > cap) throw new Error('limit');
+  const giftRef = doc(db, 'gifts', `${uid}_${day}_${n}`);
+  const userRef = doc(db, 'users', uid);
+  await runTransaction(db, async (tx) => {
+    const user = await tx.get(userRef);
+    if (!isAdmin) {
+      const st = user.data()?.statistics ?? {};
+      const earned = Number(st.coinsEarned) || 0;
+      const spent = Number(st.coinsSpent) || 0;
+      if (earned - spent < amount) throw new Error('coins');
+      tx.update(userRef, { 'statistics.coinsSpent': spent + amount });
+    }
+    tx.set(giftRef, { from: uid, to, amount, day, at: serverTimestamp(), claimed: false });
+  });
+}
+
+/** Claim a gift: it is marked claimed and the coins are added in one transaction. Returns the coins. */
+export async function claimGift(uid: string, giftId: string): Promise<number> {
+  const giftRef = doc(db, 'gifts', giftId);
+  const userRef = doc(db, 'users', uid);
+  return runTransaction(db, async (tx) => {
+    const [gift, user] = [await tx.get(giftRef), await tx.get(userRef)];
+    const g = gift.data();
+    if (!g || g.to !== uid || g.claimed) return 0;
+    const earned = Number(user.data()?.statistics?.coinsEarned) || 0;
+    tx.update(giftRef, { claimed: true });
+    tx.update(userRef, { 'statistics.coinsEarned': earned + Number(g.amount) });
+    return Number(g.amount);
+  });
+}

@@ -69,6 +69,24 @@ rules_version = '2';
 // Readable by anyone because the sender (GitHub Actions) has no sign-in; it learns nothing else.
 // Docs not refreshed for 40 days may be deleted by anyone (the sender cleans them up).
 //
+// Collection: players  (public card for friends; signed-in players can look one up, never list)
+// Document ID: uid
+// Fields: uid, code (friend code, 8 of [A-HJ-NP-Z2-9], fixed once claimed), name (1-40, not
+//         staff-looking unless admin), avatar (1-16), title?, frame? (ids; staff_ only admins),
+//         level (1-999), achievements (0-500), best (map game -> best score), at (== request.time)
+//
+// Collection: friendCodes  (code -> { uid }, claimed once together with the player's card)
+//
+// Collection: friendships  (one doc per pair, readable by the two players only)
+// Document ID: <smaller uid>_<larger uid>
+// Fields: users [uid, uid] (sorted), from (who asked), status (pending -> accepted by the other), at
+//
+// Collection: gifts  (coins sent to a friend, readable by sender and receiver)
+// Document ID: <from>_<KST day>_<n>, n = 1..5 per day (admins 1..20)
+// Fields: from (== auth uid), to (an accepted friend), amount (int 1..300; admins up to
+//         9007199254740991), day (KST day), at (== request.time), claimed (false -> true by the receiver)
+// The sender's statistics.coinsSpent must grow by the amount in the same write (admins excepted).
+//
 // Collection: activity/{dayId}/players  (daily play counts for the admin stats)
 // Day ID: d<dayIndex> (KST), only today or yesterday can be written
 // Document ID: Firebase Auth uid
@@ -346,6 +364,87 @@ service cloud.firestore {
         && data.at == request.time;
     }
 
+    // ───────── friends ─────────
+
+    function isBest(best, game, cap) {
+      return !(game in best) || (best[game] is int && best[game] >= 0 && best[game] <= cap);
+    }
+
+    function isValidPlayerCard(uid, data) {
+      return data.keys().hasAll(['uid', 'code', 'name', 'avatar', 'level', 'achievements', 'best', 'at'])
+        && data.keys().hasOnly(['uid', 'code', 'name', 'avatar', 'level', 'achievements', 'best', 'title', 'frame', 'at'])
+        && data.uid == uid
+        && data.code is string && data.code.matches('^[A-HJ-NP-Z2-9]{8}$')
+        && isPlainText(data.name, 1, 40)
+        && (!isReservedName(data.name) || isAdmin())
+        && isPlainText(data.avatar, 1, 16)
+        && isOptionalId(data, 'title')
+        && isOptionalId(data, 'frame')
+        && (!('title' in data) || !data.title.matches('^staff_.*') || isAdmin())
+        && (!('frame' in data) || !data.frame.matches('^staff_.*') || isAdmin())
+        && data.level is int && data.level >= 1 && data.level <= 999
+        && data.achievements is int && data.achievements >= 0 && data.achievements <= 500
+        && data.best is map
+        && data.best.keys().hasOnly(['memory', 'suika', 'dash', 'puzzle', 'slice'])
+        && isBest(data.best, 'memory', 2000)
+        && isBest(data.best, 'suika', 100000)
+        && isBest(data.best, 'dash', 100000)
+        && isBest(data.best, 'puzzle', 100000)
+        && isBest(data.best, 'slice', 100000)
+        && data.at == request.time;
+    }
+
+    function isFriendPair(pairId, users) {
+      return users is list && users.size() == 2
+        && users[0] is string && users[1] is string
+        && users[0] < users[1]
+        && pairId == users[0] + '_' + users[1];
+    }
+
+    function areFriends(a, b) {
+      let p1 = /databases/$(database)/documents/friendships/$(a + '_' + b);
+      let p2 = /databases/$(database)/documents/friendships/$(b + '_' + a);
+      return (exists(p1) && get(p1).data.status == 'accepted') || (exists(p2) && get(p2).data.status == 'accepted');
+    }
+
+    // "<me>_<today>_<n>": at most 5 gifts a day (admins 20)
+    function isGiftSlot(giftId, data) {
+      let parts = giftId.split('_');
+      return parts.size() == 3
+        && parts[0] == request.auth.uid
+        && parts[1] == string(dayIndex())
+        && data.day == dayIndex()
+        && (parts[2].matches('^[1-5]$') || (isAdmin() && parts[2].matches('^([6-9]|1[0-9]|20)$')));
+    }
+
+    function statsBefore(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.get('statistics', {});
+    }
+
+    function statsAfter(uid) {
+      return getAfter(/databases/$(database)/documents/users/$(uid)).data.get('statistics', {});
+    }
+
+    // Players pay for what they send in the same write, and can't go below zero
+    function paysFor(uid, amount) {
+      return statsAfter(uid).get('coinsSpent', 0) == statsBefore(uid).get('coinsSpent', 0) + amount
+        && statsAfter(uid).get('coinsEarned', 0) - statsAfter(uid).get('coinsSpent', 0) >= 0;
+    }
+
+    function isValidGift(giftId, data) {
+      return data.keys().hasAll(['from', 'to', 'amount', 'day', 'at', 'claimed'])
+        && data.keys().hasOnly(['from', 'to', 'amount', 'day', 'at', 'claimed'])
+        && data.from == request.auth.uid
+        && isValidId(data.to)
+        && data.to != request.auth.uid
+        && data.amount is int
+        && data.amount >= 1
+        && (data.amount <= 300 || (isAdmin() && data.amount <= 9007199254740991))
+        && data.claimed == false
+        && data.at == request.time
+        && isGiftSlot(giftId, data);
+    }
+
     // Only admins may flip the status field, nothing else
     function isStatusChange(allowed) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
@@ -444,6 +543,72 @@ service cloud.firestore {
         && request.time > resource.data.at + duration.value(2, 's');
       allow delete: if (isGoogleUser() && resource.data.uid == request.auth.uid)
         || request.time > resource.data.at + duration.value(40, 'd');
+    }
+
+    // Public cards: looked up one at a time (by uid or friend code), never listed
+    match /players/{uid} {
+      allow get: if isGoogleUser();
+      allow create: if isGoogleUser()
+        && isOwner(uid)
+        && isValidPlayerCard(uid, request.resource.data)
+        && getAfter(/databases/$(database)/documents/friendCodes/$(request.resource.data.code)).data.uid == uid;
+      allow update: if isGoogleUser()
+        && isOwner(uid)
+        && isValidPlayerCard(uid, request.resource.data)
+        && request.resource.data.code == resource.data.code
+        && request.time > resource.data.at + duration.value(2, 's');
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    // A friend code belongs to one player for good; claimed with their first card
+    match /friendCodes/{code} {
+      allow get: if isGoogleUser();
+      allow create: if isGoogleUser()
+        && code.matches('^[A-HJ-NP-Z2-9]{8}$')
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid
+        && !exists(/databases/$(database)/documents/players/$(request.auth.uid))
+        && getAfter(/databases/$(database)/documents/players/$(request.auth.uid)).data.code == code;
+    }
+
+    // Friend requests and friends: only the two players see or touch them
+    match /friendships/{pairId} {
+      allow get: if isGoogleUser() && (resource == null || request.auth.uid in resource.data.users);
+      allow list: if isGoogleUser() && request.auth.uid in resource.data.users;
+      allow create: if isGoogleUser()
+        && request.resource.data.keys().hasOnly(['users', 'from', 'status', 'at'])
+        && isFriendPair(pairId, request.resource.data.users)
+        && request.auth.uid in request.resource.data.users
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.at == request.time
+        && exists(/databases/$(database)/documents/players/$(request.resource.data.users[0]))
+        && exists(/databases/$(database)/documents/players/$(request.resource.data.users[1]))
+        && !isBanned();
+      allow update: if isGoogleUser()
+        && request.auth.uid in resource.data.users
+        && request.auth.uid != resource.data.from
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'at'])
+        && request.resource.data.status == 'accepted'
+        && request.resource.data.at == request.time;
+      allow delete: if isGoogleUser() && request.auth.uid in resource.data.users;
+    }
+
+    // Coins sent to friends: sender and receiver see them; the receiver claims once
+    match /gifts/{giftId} {
+      allow read: if isGoogleUser() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow create: if isGoogleUser()
+        && isValidGift(giftId, request.resource.data)
+        && areFriends(request.auth.uid, request.resource.data.to)
+        && (isAdmin() || paysFor(request.auth.uid, request.resource.data.amount))
+        && !isBanned();
+      allow update: if isGoogleUser()
+        && resource.data.to == request.auth.uid
+        && resource.data.claimed == false
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimed'])
+        && request.resource.data.claimed == true;
+      allow delete: if isAdmin();
     }
 
     // One doc per player per day: rounds played and time, counted for the admin stats

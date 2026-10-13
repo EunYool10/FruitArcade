@@ -40,17 +40,28 @@ function open(box) {
   return JSON.parse(Buffer.concat([decipher.update(data.subarray(0, data.length - 16)), decipher.final()]).toString('utf8'));
 }
 
+// A query, 300 docs at a time: Firestore refuses the plain list call without a sign-in
 async function listDocs() {
   const docs = [];
-  let pageToken = '';
-  do {
-    const res = await fetch(`${BASE}/push?pageSize=300${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`);
-    if (!res.ok) throw new Error(`listing push/ failed: ${res.status} ${await res.text()}`);
-    const body = await res.json();
-    docs.push(...(body.documents || []));
-    pageToken = body.nextPageToken || '';
-  } while (pageToken);
-  return docs;
+  for (let after = null; ; ) {
+    const res = await fetch(`${BASE}:runQuery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: 'push' }],
+          orderBy: [{ field: { fieldPath: '__name__' }, direction: 'ASCENDING' }],
+          limit: 300,
+          ...(after ? { startAt: { values: [{ referenceValue: after }], before: false } } : {}),
+        },
+      }),
+    });
+    if (!res.ok) throw new Error(`reading push/ failed: ${res.status} ${await res.text()}`);
+    const page = (await res.json()).map((r) => r.document).filter(Boolean);
+    docs.push(...page);
+    if (page.length < 300) return docs;
+    after = page[page.length - 1].name;
+  }
 }
 
 const docs = await listDocs();

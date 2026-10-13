@@ -1,0 +1,9 @@
+{
+  "name": "fruit-arcade-reminders",
+  "private": true,
+  "type": "module",
+  "description": "Daily streak reminder sender (GitHub Actions)",
+  "dependencies": {
+    "web-push": "3.6.7"
+  }
+}

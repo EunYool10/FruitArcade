@@ -1,0 +1,39 @@
+name: Streak reminders
+
+# Every evening (20:00 Korean time) push "오늘 한 판 해요!" to players whose streak ends at midnight.
+# See scripts/reminders/send.mjs. Run it by hand from the Actions tab; that is a dry run unless unticked.
+on:
+  schedule:
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Only report who would get a reminder
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reminders
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: scripts/reminders
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+      - run: node send.mjs
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_BOX_KEY: ${{ secrets.PUSH_BOX_KEY }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '' }}

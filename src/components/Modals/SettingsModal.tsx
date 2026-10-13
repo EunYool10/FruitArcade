@@ -8,6 +8,7 @@ import { Segmented } from '../ui/Segmented';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import { promptInstall, usePwa } from '../../utils/pwa';
 import { HAPTICS_SUPPORTED } from '../../utils/haptics';
+import { notificationsBlocked, reminderSupport } from '../../utils/reminderState';
 
 /** Install instructions that fit the browser */
 const AppInstall: React.FC = () => {
@@ -31,6 +32,32 @@ const AppInstall: React.FC = () => {
   );
 };
 
+/** "오늘 한 판 해요!" in the evening before a streak would end (needs sign-in and web push) */
+const Reminders: React.FC<{ loggedIn: boolean; on: boolean; busy: boolean; onToggle: (on: boolean) => void }> = ({
+  loggedIn,
+  on,
+  busy,
+  onToggle,
+}) => {
+  const support = reminderSupport();
+  const blocked = notificationsBlocked();
+  const desc = !loggedIn
+    ? '로그인하면 쓸 수 있어요'
+    : support === 'install'
+      ? '아이폰 · 아이패드는 홈 화면에 설치한 앱에서만 알림을 받을 수 있어요'
+      : support === 'unsupported'
+        ? '이 브라우저는 알림을 지원하지 않아요'
+        : blocked && !on
+          ? '알림이 차단되어 있어요. 브라우저 설정에서 이 사이트의 알림을 허용해 주세요'
+          : '그날 아직 안 했으면 저녁 8시에 "오늘 한 판 해요!" 알림이 와요';
+  const usable = loggedIn && support === 'ok' && (on || !blocked);
+  return (
+    <SettingRow title="연속 출석 알림" desc={desc}>
+      <Toggle checked={loggedIn && on} onChange={onToggle} label="연속 출석 알림" disabled={!usable || busy} />
+    </SettingRow>
+  );
+};
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -41,6 +68,8 @@ interface Props {
   onResetRecords: () => void;
   onNotify: (msg: string) => void;
   onOpenFeedback: () => void;
+  reminders: { on: boolean; busy: boolean };
+  onToggleReminders: (on: boolean) => void;
 }
 
 type BoolKey = { [K in keyof GameSettings]: GameSettings[K] extends boolean ? K : never }[keyof GameSettings];
@@ -73,6 +102,8 @@ export const SettingsModal: React.FC<Props> = ({
   onResetRecords,
   onNotify,
   onOpenFeedback,
+  reminders,
+  onToggleReminders,
 }) => {
   const set = <K extends keyof GameSettings>(key: K, value: GameSettings[K]) => onUpdateSettings({ ...settings, [key]: value });
 
@@ -195,6 +226,10 @@ export const SettingsModal: React.FC<Props> = ({
               </div>
             ))}
           </dl>
+        </Section>
+
+        <Section icon="🔔" title="알림">
+          <Reminders loggedIn={loggedIn} on={reminders.on} busy={reminders.busy} onToggle={onToggleReminders} />
         </Section>
 
         <Section icon="📲" title="앱">

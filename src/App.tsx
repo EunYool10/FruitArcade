@@ -73,6 +73,7 @@ import { DailyState, applyDaily, loadDaily, saveDaily, todayKey } from './utils/
 import { playSound } from './utils/audio';
 import { TrackName, music } from './utils/music';
 import { proveRound, startScoredRound, wakeScoreServer } from './utils/scoreServer';
+import { loadReminderState } from './utils/reminderState';
 
 // Games are code-split so the lobby loads fast
 const MemoryGameBoard = lazy(() =>
@@ -94,6 +95,7 @@ const cloudApi = () => import('./utils/userDataService');
 type CloudApi = Awaited<ReturnType<typeof cloudApi>>;
 const rankApi = () => import('./utils/leaderboardService');
 const communityApi = () => import('./utils/communityService');
+const remindersApi = () => import('./utils/reminders');
 
 const SETTINGS_KEY = 'fruit_arcade_settings';
 const MEMORY_CFG_KEY = 'fruit_arcade_memory';
@@ -145,6 +147,9 @@ export default function App() {
   userRef.current = user;
   const screenRef = useRef(screen);
   screenRef.current = screen;
+  // Streak reminders (web push) on this device
+  const [remindersOn, setRemindersOn] = useState(() => loadReminderState().on);
+  const [remindersBusy, setRemindersBusy] = useState(false);
 
   const [stats, setStats] = useState<UserStatistics>(loadLocalStats);
   const statsRef = useRef(stats);
@@ -324,6 +329,36 @@ export default function App() {
     }
   };
 
+  // ───────── streak reminders ─────────
+
+  const toggleReminders = async (on: boolean) => {
+    const u = userRef.current;
+    if (!u || remindersBusy) return;
+    setRemindersBusy(true);
+    try {
+      const api = await remindersApi();
+      if (!on) {
+        await api.disableReminders(u.uid);
+        setRemindersOn(false);
+        pushToast({ icon: '🔕', title: '연속 출석 알림을 껐어요' });
+        return;
+      }
+      const result = await api.enableReminders(u.uid, loadStreak());
+      if (result === 'on') {
+        setRemindersOn(true);
+        pushToast({ icon: '🔔', title: '연속 출석 알림을 켰어요', sub: '그날 아직 안 했으면 저녁 8시에 알려 드려요', tone: 'melon' });
+      } else if (result === 'denied') {
+        pushToast({ icon: '🔕', title: '알림이 꺼져 있어요', sub: '브라우저 설정에서 이 사이트의 알림을 허용해 주세요', tone: 'berry' });
+      } else {
+        pushToast({ icon: '⚠️', title: '알림을 켜지 못했어요', sub: '잠시 뒤에 다시 해 주세요', tone: 'berry' });
+      }
+    } catch {
+      pushToast({ icon: '⚠️', title: '알림을 켜지 못했어요', tone: 'berry' });
+    } finally {
+      setRemindersBusy(false);
+    }
+  };
+
   // ───────── puzzle stages ─────────
 
   const handleStageClear = (no: number, stars: number) => {
@@ -469,6 +504,7 @@ export default function App() {
         if (!u) return;
         syncCloud(u);
         wakeScoreServer();
+        if (loadReminderState().on) remindersApi().then((api) => api.refreshReminders(u.uid, loadStreak())).catch(() => {});
         rankApi()
           .then((api) => api.checkAdmin())
           .then((ok) => {
@@ -506,6 +542,14 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    // Reminders belong to this account; removing them needs the sign-in, so do it first
+    const leaving = userRef.current;
+    if (leaving && loadReminderState().on) {
+      await remindersApi()
+        .then((api) => api.disableReminders(leaving.uid))
+        .catch(() => {});
+      setRemindersOn(false);
+    }
     try {
       const authApi = authApiRef.current ?? (await loadAuthApi());
       await authApi.signOut(authApi.auth);
@@ -617,6 +661,8 @@ export default function App() {
         communityApi()
           .then((api) => api.recordActivity(u.uid, result.seconds))
           .catch((err) => console.warn('Failed to record activity:', err));
+        // Played today: no reminder tonight
+        if (loadReminderState().on) remindersApi().then((api) => api.refreshReminders(u.uid, nextStreak)).catch(() => {});
       }
 
       // Leaderboards: post the round, then look up today's and the all-time place
@@ -992,6 +1038,8 @@ export default function App() {
         onResetRecords={resetAllRecords}
         onNotify={(msg) => pushToast({ icon: '✅', title: msg, tone: 'melon' })}
         onOpenFeedback={() => setModal('feedback')}
+        reminders={{ on: remindersOn, busy: remindersBusy }}
+        onToggleReminders={toggleReminders}
       />
       <LeaderboardModal
         isOpen={modal === 'leaderboard'}

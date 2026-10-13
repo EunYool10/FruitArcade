@@ -9,6 +9,14 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.9.0',
+    title: '연속 출석 알림',
+    items: [
+      ['🔔 연속 출석 알림', '설정 → 알림에서 켜면, 그날 아직 한 판도 안 했을 때 저녁 8시에 "오늘 한 판 해요!" 알림이 와요. 연속 기록이 끊기기 전에 챙겨 드려요.'],
+      ['📱 어디서 되나요?', 'Google 로그인이 필요해요. 안드로이드와 PC 브라우저는 바로, 아이폰 · 아이패드는 홈 화면에 설치한 앱에서 켤 수 있어요.'],
+    ],
+  },
+  {
     version: '3.8.0',
     title: '점수 검증 서버',
     items: [

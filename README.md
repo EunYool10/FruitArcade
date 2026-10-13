@@ -18,6 +18,7 @@
 - **레벨 & 경험치:** 플레이 1판 20 XP, 30초마다 5 XP, 업적 50 XP, 미션 도장 100 XP. 레벨은 🌱 새싹부터 🍉 수박 마스터까지
 - **오늘의 미션:** 날짜마다 정해지는 미션 3개. 모두 깨면 도장 1개
 - **연속 출석:** 매일 한 판씩 하면 🔥 연속 일수가 쌓여요. 3 · 7 · 30일 업적
+- **연속 출석 알림:** 설정 → 알림에서 켜면(Google 로그인 필요), 그날 아직 안 했을 때 저녁 8시에 "오늘 한 판 해요!" 웹 푸시가 옵니다. 아이폰 · 아이패드는 홈 화면에 설치한 앱에서만 됩니다
 - **관리자:** 관리자 화면(상단 방패 버튼)에서 오늘 플레이어 · 판 수 통계, 신고 · 의견 처리, 차단 관리. 랭킹 창에서도 기록 삭제 · 차단
 - **신고 · 의견:** 랭킹의 깃발 버튼으로 기록 신고, "의견 보내기"로 버그 · 아이디어 제보(Google 로그인 필요)
 - **칭호 · 명예의 전당:** 업적마다 칭호를 달 수 있고(이름 옆 · 랭킹에 표시), 지난주 게임별 1등은 왕관과 "주간 챔피언" 칭호. 랭킹의 명예의 전당 탭에서 최근 8주 1등을 봅니다
@@ -55,6 +56,9 @@ npm run lint     # 타입 검사
   - 환경 변수 **`SCORE_SECRET`**(32자 이상)이 있어야 점수 검증이 켜집니다. Firestore `config/scoreKey` 문서의 `secret`과 같은 값이어야 하고, `/api/health`의 `key`(비밀 값 SHA-256 앞 8자리)로 맞는지 확인할 수 있습니다.
   - 무료 인스턴스는 한동안 접속이 없으면 잠들어서 첫 접속에 50초 정도 걸릴 수 있습니다. 앱은 로그인할 때 서버를 미리 깨우고, 점수 확인은 최대 90초까지 기다립니다.
 - **GitHub Pages**: https://eunyool10.github.io/FruitArcade/ (GitHub Actions [`deploy.yml`](.github/workflows/deploy.yml)가 타입 검사와 빌드 후 배포)
+- **연속 출석 알림**은 GitHub Actions [`reminders.yml`](.github/workflows/reminders.yml)이 매일 11:00 UTC(한국 20:00)에 [`scripts/reminders/send.mjs`](scripts/reminders/send.mjs)를 돌려 보냅니다. 저장소 Secrets에 `VAPID_PRIVATE_KEY`(웹 푸시 서명 키)와 `PUSH_BOX_KEY`(구독 정보 봉인을 여는 RSA 키)가 있어야 합니다. Actions 탭에서 손으로 돌리면 기본은 보내지 않고 대상만 세는 연습 실행입니다.
+  - 공개 저장소의 예약 실행은 저장소에 60일 동안 활동이 없으면 GitHub가 멈춥니다. 그때는 Actions 탭에서 다시 켜세요.
+  - 키를 바꾸려면 새 VAPID 키와 RSA 키를 만들어 공개 키를 [`src/utils/reminders.ts`](src/utils/reminders.ts)와 `send.mjs`에, 비밀 키를 Secrets에 넣으세요. 앱이 다음에 열릴 때 새 키로 다시 구독하고 다시 봉인합니다.
 - Google 로그인을 쓰려면 Firebase 콘솔 → Authentication → 설정 → **승인된 도메인**에 `fruitarcade.onrender.com`과 `eunyool10.github.io`가 있어야 합니다.
 - 보안 규칙([`firestore.rules`](firestore.rules))은 자동 배포되지 않습니다. 바꾼 뒤에는 Firebase 콘솔 → Firestore → 데이터베이스 `ai-studio-9fb7cc09-…` → **규칙** 탭에 붙여 넣고 게시하거나, Firebase CLI로 배포하세요. 규칙을 게시하기 전에는 랭킹 창에 "준비하고 있어요"가 표시됩니다.
 
@@ -111,8 +115,11 @@ src/
     leaderboardService.ts  랭킹 점수 등록 · 순위 · 목록 (Firestore)
     challenge.ts · rng.ts  친구 대결 링크(#c=…)와 시드 난수
     audio.ts · music.ts  효과음, 배경음악 시퀀서
+    scoreServer.ts      점수 서버(티켓 · 서명) 호출
+    reminders.ts · reminderState.ts  연속 출석 알림: 웹 푸시 구독, 봉인해서 Firestore에 저장 · 이 기기의 켜짐 상태
     pwa.ts · haptics.ts · profile.ts · shareImage.ts · fx.ts · format.ts
-pwa/sw.js                서비스 워커 템플릿
+pwa/sw.js                서비스 워커 템플릿 (오프라인 캐시, 알림 표시)
+scripts/reminders/       연속 출석 알림 발송기 (GitHub Actions에서 실행)
 server.mjs               npm start용 정적 서버 + /api/ (Render)
 server/
   api.mjs                점수 API: Google 로그인 토큰 확인, 판 티켓, 서명, 요청 제한
@@ -131,6 +138,7 @@ server/
 - 접근 규칙은 [`firestore.rules`](firestore.rules)에 있습니다.
   - `users/{uid}`: 본인만 읽고 쓸 수 있습니다(이메일이 들어 있음). 정해진 필드(profile · statistics · achievements · settings · inventory · stages)만 크기 제한 안에서 쓸 수 있고, uid · 이메일 · 가입일은 바꿀 수 없습니다. 코인은 statistics의 coinsEarned · coinsSpent(둘 다 늘기만 해서 기기끼리 큰 값으로 합침), 산 물건은 inventory에 있습니다.
   - 랭킹: 누구나 읽을 수 있고, Google 로그인 사용자가 자기 칸에만 쓸 수 있습니다. 점수는 정수, 게임별 상한 이하, 올라갈 때만(3초에 한 번까지) 바뀌고(점수가 같으면 닉네임 · 아바타 · 칭호 · 테두리만 바꿀 수 있음), 오늘 · 어제 · 이번 주 · 지난주 · 전체 보드에만 쓸 수 있습니다. 운영진처럼 보이는 이름(Tester, QA, 관리자 …)과 차단된 계정은 올라가지 않습니다.
+  - 연속 출석 알림(`push/{uid}~{기기}`): 브라우저의 푸시 구독, 마지막으로 한 날, 연속 일수를 발송기의 공개 키로 봉인(RSA-OAEP + AES-GCM)해서 저장합니다. 발송기(GitHub Actions)는 로그인이 없어서 이 컬렉션은 누구나 읽을 수 있지만, 봉인을 열 수 있는 건 발송기뿐입니다. 쓰기는 본인만, 40일 넘게 갱신되지 않은 문서는 발송기가 지웁니다. 알림을 끄거나 로그아웃하면 문서가 지워집니다.
   - 신고(`reports`)는 한 사람이 같은 기록을 한 번만, 의견(`feedback`)은 5분에 한 번 보낼 수 있고 관리자만 읽습니다. `activity/{날짜}/players/{uid}`에는 로그인한 플레이어의 하루 판 수 · 플레이 시간만 쌓여 관리자 통계에 쓰입니다.
   - 관리자: Firestore `config/admins` 문서의 `emails` 배열에 있는 Google 계정(이메일 인증된 계정만)입니다. 랭킹 창의 방패 버튼으로 기록을 지우거나 계정을 차단(`bans/{uid}`)하고 풀 수 있습니다. 관리자를 추가 · 삭제하려면 Firebase 콘솔에서 이 배열을 고치세요(앱에서는 못 바꿉니다).
   - 점수 서명: 랭킹 기록에는 점수 서버가 만든 `proof`(SHA-256 "<secret>|<uid>|<게임>|<점수>|<한국 날짜>|<secret>")가 붙습니다. 규칙이 `config/scoreKey`(클라이언트는 못 읽음)의 secret으로 같은 값을 계산해 맞는지 봅니다. `enforce`가 `true`면 서명 없는 점수는 올라가지 않고, `false`면 서명 없이도 받습니다(서명이 붙어 있으면 언제나 맞아야 함). Render에 `SCORE_SECRET`을 넣고 서명된 기록이 올라오는 것을 확인한 뒤 `enforce`를 켜세요.

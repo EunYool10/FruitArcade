@@ -60,6 +60,14 @@ rules_version = '2';
 //         message (1-1000 chars, may contain line breaks), version (1-20),
 //         device (0-200), at (== request.time), status (new -> done by admins)
 //
+// Collection: push  (streak reminders, one doc per signed-in device that turned them on)
+// Document ID: <uid>~<device id, 12 of [a-z0-9]>
+// Fields: uid (== auth uid), at (== request.time),
+//         box: map { ek, iv, ct } (base64) - the browser's push subscription, last play day and
+//         streak, sealed (RSA-OAEP + AES-GCM) for the reminder sender, which alone can open it.
+// Readable by anyone because the sender (GitHub Actions) has no sign-in; it learns nothing else.
+// Docs not refreshed for 40 days may be deleted by anyone (the sender cleans them up).
+//
 // Collection: activity/{dayId}/players  (daily play counts for the admin stats)
 // Day ID: d<dayIndex> (KST), only today or yesterday can be written
 // Document ID: Firebase Auth uid
@@ -318,6 +326,23 @@ service cloud.firestore {
         && data.at == request.time;
     }
 
+    function isValidPush(docId, data) {
+      let parts = docId.split('~');
+      return data.keys().hasAll(['uid', 'box', 'at'])
+        && data.keys().hasOnly(['uid', 'box', 'at'])
+        && data.uid == request.auth.uid
+        && parts.size() == 2
+        && parts[0] == request.auth.uid
+        && parts[1].matches('^[a-z0-9]{12}$')
+        && data.box is map
+        && data.box.keys().hasAll(['ek', 'iv', 'ct'])
+        && data.box.keys().hasOnly(['ek', 'iv', 'ct'])
+        && data.box.ek is string && data.box.ek.size() > 0 && data.box.ek.size() <= 400
+        && data.box.iv is string && data.box.iv.size() > 0 && data.box.iv.size() <= 32
+        && data.box.ct is string && data.box.ct.size() > 0 && data.box.ct.size() <= 3000
+        && data.at == request.time;
+    }
+
     // Only admins may flip the status field, nothing else
     function isStatusChange(allowed) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
@@ -404,6 +429,18 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow update: if isAdmin() && isStatusChange(['new', 'done']);
       allow delete: if isAdmin();
+    }
+
+    // Streak reminder subscriptions: the owner writes a sealed copy, the sender reads them all
+    match /push/{docId} {
+      allow read: if true;
+      allow create: if isGoogleUser() && isValidPush(docId, request.resource.data);
+      allow update: if isGoogleUser()
+        && resource.data.uid == request.auth.uid
+        && isValidPush(docId, request.resource.data)
+        && request.time > resource.data.at + duration.value(2, 's');
+      allow delete: if (isGoogleUser() && resource.data.uid == request.auth.uid)
+        || request.time > resource.data.at + duration.value(40, 'd');
     }
 
     // One doc per player per day: rounds played and time, counted for the admin stats

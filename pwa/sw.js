@@ -18,6 +18,35 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Streak reminders from scripts/reminders: show the message, open the app when it's tapped
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'FRUIT ARCADE', {
+      body: data.body || '오늘 한 판 해요!',
+      icon: 'icons/icon-192.png',
+      badge: 'icons/icon-192.png',
+      tag: data.tag || 'streak',
+      lang: 'ko',
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      const open = wins.find((w) => w.url.startsWith(self.registration.scope));
+      return open ? open.focus() : self.clients.openWindow(self.registration.scope);
+    })
+  );
+});
+
 // The page asks for this when the player taps "새로고침" on the update banner
 self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();

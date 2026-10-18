@@ -5,7 +5,7 @@ import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
 import { Avatar, PlayerView } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
 import { Meter } from '../ui/Meter';
-import { formatNumber } from '../../utils/format';
+import { formatCompact, formatNumber } from '../../utils/format';
 
 interface PlayerCardProps {
   player: PlayerView;
@@ -74,7 +74,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             </span>
             {player.title && <TitleTag title={player.title} />}
             <button type="button" className="chip bg-mango text-on-bright transition-transform hover:-translate-y-0.5" onClick={onOpenShop} aria-label={`${Number.isFinite(coins) ? `코인 ${formatNumber(coins)}개` : '코인 무한'} · 상점 열기`}>
-              🪙 {formatNumber(coins)}
+              🪙 {formatCompact(coins)}
             </button>
             <button
               type="button"

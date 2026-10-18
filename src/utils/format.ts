@@ -13,6 +13,23 @@ export const formatTime = (sec: number, showTenths = false): string => {
 
 export const formatNumber = (n: number): string => Math.round(n).toLocaleString('ko-KR');
 
+/**
+ * Short form for big amounts so coin chips stay one line: 99,999 · 12.3만 · 4,567만 · 999.9억 · ∞.
+ * Rounds down, so it never shows more than there is.
+ */
+export function formatCompact(n: number): string {
+  if (!Number.isFinite(n)) return '∞';
+  const v = Math.max(0, Math.floor(n));
+  if (v < 100_000) return v.toLocaleString('ko-KR');
+  for (const [unit, name] of [[1e12, '조'], [1e8, '억'], [1e4, '만']] as const) {
+    if (v < unit) continue;
+    const x = v / unit;
+    const shown = x >= 1000 ? Math.floor(x).toLocaleString('ko-KR') : (Math.floor(x * 10) / 10).toLocaleString('ko-KR');
+    return shown + name;
+  }
+  return v.toLocaleString('ko-KR');
+}
+
 /** Korean particle that fits the word's last syllable: josa('테두리', '을', '를') → '를' */
 export function josa(word: string, afterConsonant: string, afterVowel: string): string {
   const code = word.trim().charCodeAt(word.trim().length - 1) - 0xac00;

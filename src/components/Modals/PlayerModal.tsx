@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, UserPlus } from 'lucide-react';
 import { Modal } from '../ui/Modal';
-import { Framed } from '../ui/Avatar';
+import { AvatarFace, Framed } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
 import { GAMES, GAME_ORDER, TONE } from '../../constants';
 import { titleDef } from '../../utils/titles';
@@ -88,9 +88,7 @@ export const PlayerModal: React.FC<Props> = ({ isOpen, onClose, viewerUid, targe
         <div className="space-y-3">
           <div className="well flex items-center gap-3 p-4">
             <Framed frame={p.frame}>
-              <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft text-3xl" aria-hidden="true">
-                {p.avatar}
-              </span>
+              <AvatarFace emoji={p.avatar} photo={p.photo} className="grid h-16 w-16 shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft text-3xl" />
             </Framed>
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-xl">{p.name}</p>

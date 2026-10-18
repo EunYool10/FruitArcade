@@ -14,6 +14,7 @@ import {
 } from './types';
 import { DEFAULT_SETTINGS, GAMES, GAME_ORDER, PLAY_SCREENS, SCREEN_GAME } from './constants';
 import { Navbar, NavTarget } from './components/Navbar';
+import { MobileTabBar } from './components/MobileTabBar';
 import { Lobby, LobbyTarget } from './components/lobby/Lobby';
 import { MemorySetup } from './components/MemoryGame/MemorySetup';
 import { AchievementsModal } from './components/Modals/AchievementsModal';
@@ -50,7 +51,8 @@ import {
   usableItems,
 } from './utils/shop';
 import { RankContext } from './components/RankContext';
-import { RankResult, kstWeek, publicName } from './utils/ranking';
+import { RankResult, cleanPhoto, kstWeek, publicName } from './utils/ranking';
+import { maskBadWords } from './utils/badWords';
 import { earnedTitles, wornTitle } from './utils/titles';
 import { josa } from './utils/format';
 import { StageProgress, clearStageProgress, loadStageProgress, mergeStageProgress, saveStageProgress } from './components/PuzzleGame/stages';
@@ -231,22 +233,23 @@ export default function App() {
   // A bought avatar shows while it's owned; the free fruit always do
   const avatar = !profile.avatar || AVATARS.includes(profile.avatar) || owned[avatarItem(profile.avatar)?.id ?? ''] ? profile.avatar : '';
   const player: PlayerView = {
-    name: profile.nickname || user?.displayName || '게스트',
+    name: maskBadWords(profile.nickname) || user?.displayName || '게스트',
     emoji: avatar || level.emoji,
     photo: avatar ? null : user?.photoURL ?? null,
     isGuest: !user,
     title,
     frame: owned[profile.frame] ? profile.frame : '',
     // Shared links and images carry the same public name as the boards, not the Google name
-    shareName: user ? publicName(profile.nickname, user.uid, isAdmin) : profile.nickname || '게스트',
+    shareName: user ? publicName(profile.nickname, user.uid, isAdmin) : maskBadWords(profile.nickname) || '게스트',
   };
-  /** How the player appears on public boards (nickname only, never the Google name) */
-  const rankWhoRef = useRef<{ name: string; avatar: string; title?: string; frame?: string }>({ name: '', avatar: '' });
+  /** How the player appears on public boards: nickname (never the Google name), and the Google photo unless a fruit avatar is picked */
+  const rankWhoRef = useRef<{ name: string; avatar: string; title?: string; frame?: string; photo?: string }>({ name: '', avatar: '' });
   rankWhoRef.current = {
     name: publicName(profile.nickname, user?.uid ?? '', isAdmin),
     avatar: avatar || level.emoji,
     ...(title ? { title: title.id } : {}),
     ...(player.frame ? { frame: player.frame } : {}),
+    ...(cleanPhoto(player.photo) ? { photo: player.photo! } : {}),
   };
 
   // ───────── helpers ─────────
@@ -339,12 +342,13 @@ export default function App() {
   // shortly after (debounced, so flipping through titles makes one update)
   const lookTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** What friends see on my card (same public name as the boards) */
-  const cardRef = useRef({ name: '', avatar: '', level: 1, achievements: 0, best: {} as Partial<Record<GameType, number>>, title: '', frame: '' });
+  const cardRef = useRef({ name: '', avatar: '', level: 1, achievements: 0, best: {} as Partial<Record<GameType, number>>, title: '', frame: '', photo: '' });
   cardRef.current = {
     name: rankWhoRef.current.name,
     avatar: rankWhoRef.current.avatar,
     title: rankWhoRef.current.title ?? '',
     frame: rankWhoRef.current.frame ?? '',
+    photo: rankWhoRef.current.photo ?? '',
     level: level.level,
     achievements: achievementCount,
     best: Object.fromEntries(GAME_ORDER.map((g) => [g, stats[bestKey(g)]])) as Partial<Record<GameType, number>>,
@@ -368,7 +372,7 @@ export default function App() {
       if (!u) return;
       const c = cardRef.current;
       friendsApi()
-        .then((api) => api.ensurePlayer(u.uid, { ...c, title: c.title || undefined, frame: c.frame || undefined }))
+        .then((api) => api.ensurePlayer(u.uid, { ...c, title: c.title || undefined, frame: c.frame || undefined, photo: c.photo || undefined }))
         .then((code) => userRef.current?.uid === u.uid && setMyCode(code))
         .catch((err) => console.warn('Failed to update the player card:', err));
     }, 3000);
@@ -414,6 +418,13 @@ export default function App() {
       scheduleLookSync();
     }
   };
+
+  // The Google photo goes onto the boards and the card after sign-in (or when it changes)
+  const boardPhoto = rankWhoRef.current.photo ?? '';
+  useEffect(() => {
+    if (user && boardPhoto) scheduleLookSync();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, boardPhoto]);
 
   // ───────── friends: coin gifts ─────────
 
@@ -1064,7 +1075,7 @@ export default function App() {
     <PlayerContext.Provider value={player}>
     <ChallengeContext.Provider value={challengeApi}>
     <RankContext.Provider value={rankCtx}>
-    <div className="flex h-dvh w-full flex-col overflow-hidden">
+    <div className="flex h-dvh w-full flex-col overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]">
       <ToastHost toast={toasts[0]} />
 
       <Navbar
@@ -1189,6 +1200,8 @@ export default function App() {
           </AnimatePresence>
         </div>
       </main>
+
+      {screen === 'lobby' && <MobileTabBar friendBadge={friendBadge} onOpen={openModal} />}
 
       <ProfileModal
         isOpen={modal === 'profile'}

@@ -67,7 +67,7 @@ export const MemorySetup: React.FC<Props> = ({ initial, settings, onStart, onBac
                   type="button"
                   aria-pressed={active}
                   onClick={() => pickMode(m.value)}
-                  className={`flex items-center gap-3 rounded-2xl border-2 border-line p-3 text-left transition-all ${
+                  className={`flex items-center gap-3 rounded-2xl border-2 border-line p-3 text-left transition-all max-[400px]:flex-col max-[400px]:items-start max-[400px]:gap-2 ${
                     active ? '-translate-y-0.5 bg-berry-soft shadow-hard' : 'bg-surface-2 hover:bg-surface-3'
                   }`}
                 >
@@ -78,7 +78,7 @@ export const MemorySetup: React.FC<Props> = ({ initial, settings, onStart, onBac
                     {m.emoji}
                   </span>
                   <span className="min-w-0">
-                    <span className="block font-display text-lg leading-tight">{m.label}</span>
+                    <span className="block font-display text-lg leading-tight max-[400px]:text-base">{m.label}</span>
                     <span className="block text-xs text-ink-3">{m.sub}</span>
                   </span>
                 </button>

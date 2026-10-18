@@ -911,7 +911,7 @@ export const FruitSliceGame: React.FC<Props> = ({
             <HudStat label="최고" value={formatNumber(Math.max(best, score))} tone={best > 0 && score > best ? 'hot' : 'default'} />
             <HudStat
               label="목숨"
-              value={<span className="text-[0.8em]" aria-label={`${lives}개 남음`}>{hearts(lives)}</span>}
+              value={<span className="text-[0.7em] tracking-[-0.12em]" aria-label={`${lives}개 남음`}>{hearts(lives)}</span>}
               tone={lives === 1 && gameState === 'PLAYING' ? 'warn' : 'default'}
             />
             <HudStat label="자른 과일" value={`${cutCount}개`} />

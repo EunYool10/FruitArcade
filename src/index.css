@@ -3,6 +3,9 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 /* Phones held sideways: use the side-by-side game layout */
 @custom-variant short (@media (max-height: 560px) and (orientation: landscape));
+/* Start cards inside short game boards (BoardOverlay is a size container named "board") */
+@custom-variant board-short (@container board (max-height: 560px));
+@custom-variant board-tiny (@container board (max-height: 430px));
 
 /* ───────────── Design tokens ───────────── */
 

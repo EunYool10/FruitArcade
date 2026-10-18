@@ -1,4 +1,5 @@
 import { GameResult, GameType, HistoryEntry, UserStatistics } from '../types';
+import { COIN_MAX } from './coins';
 
 export const GAME_TYPES: GameType[] = ['memory', 'suika', 'dash', 'puzzle', 'slice'];
 
@@ -72,6 +73,12 @@ export function loadLocalStats(): UserStatistics {
 
 export const saveLocalStats = (stats: UserStatistics) => write(STATS_KEY, stats);
 
+/** Coins past COIN_MAX are dropped by counting them as spent (both counters only grow, so devices still merge) */
+export function capCoins(s: UserStatistics): UserStatistics {
+  const over = (s.coinsEarned || 0) - (s.coinsSpent || 0) - COIN_MAX;
+  return over > 0 ? { ...s, coinsSpent: (s.coinsSpent || 0) + over } : s;
+}
+
 /** Fold one finished round into the statistics. Shared by local and cloud saves. */
 export function applyResult(stats: UserStatistics, r: GameResult, stamp = false, streak = 0, coins = 0): UserStatistics {
   const next = { ...stats };
@@ -83,11 +90,11 @@ export function applyResult(stats: UserStatistics, r: GameResult, stamp = false,
   next.bestStreak = Math.max(next.bestStreak, streak);
   next.coinsEarned += Math.max(0, Math.round(coins));
   next.lastPlayedAt = new Date().toISOString();
-  return next;
+  return capCoins(next);
 }
 
 /** Coins left to spend in the shop */
-export const coinBalance = (s: UserStatistics) => Math.max(0, (s.coinsEarned || 0) - (s.coinsSpent || 0));
+export const coinBalance = (s: UserStatistics) => Math.min(COIN_MAX, Math.max(0, (s.coinsEarned || 0) - (s.coinsSpent || 0)));
 
 /** Field-wise maximum, so merging never loses progress from either side. */
 export function mergeStats(a: Partial<UserStatistics>, b: Partial<UserStatistics>): UserStatistics {
@@ -96,7 +103,7 @@ export function mergeStats(a: Partial<UserStatistics>, b: Partial<UserStatistics
     out[key] = Math.max(Number(a[key]) || 0, Number(b[key]) || 0);
   }
   out.lastPlayedAt = [a.lastPlayedAt || '', b.lastPlayedAt || ''].sort().pop() || '';
-  return out;
+  return capCoins(out);
 }
 
 export const sameStats = (a: UserStatistics, b: UserStatistics) =>

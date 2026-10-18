@@ -1,6 +1,7 @@
 import { GameType } from '../types';
 import { GAMES } from '../constants';
 import { isReservedNickname } from './profile';
+import { maskBadWords } from './badWords';
 
 // Leaderboard ids and labels. Kept free of Firebase so the lobby can import it.
 
@@ -66,7 +67,15 @@ export interface RankEntry {
   title?: string;
   /** Avatar frame id from the shop */
   frame?: string;
+  /** Google profile photo, shown instead of the emoji (players who kept the default avatar) */
+  photo?: string;
 }
+
+// Google account photos only (same pattern as isOptionalPhoto in firestore.rules)
+const PHOTO_URL = /^https:\/\/lh[3-6]\.googleusercontent\.com\/[A-Za-z0-9_\-.\/=]{1,400}$/;
+
+/** The URL when it is a Google profile photo, otherwise undefined */
+export const cleanPhoto = (url: unknown): string | undefined => (typeof url === 'string' && PHOTO_URL.test(url) ? url : undefined);
 
 /** The player's place on the boards after a round, for the result card */
 export interface RankResult {
@@ -78,11 +87,11 @@ export interface RankResult {
 }
 
 /**
- * Name shown on public boards: the in-app nickname, never the Google account name.
+ * Name shown on public boards: the in-app nickname (swearing masked), never the Google account name.
  * Without a usable nickname it's "과일러 0421" (digits only, so it can never spell a staff word).
  */
 export function publicName(nickname: string, uid: string, allowReserved = false): string {
-  if (nickname && (allowReserved || !isReservedNickname(nickname))) return nickname;
+  if (nickname && (allowReserved || !isReservedNickname(nickname))) return maskBadWords(nickname);
   let tag = 7;
   for (const c of uid) tag = (tag * 31 + c.charCodeAt(0)) % 10000;
   return `과일러 ${String(tag).padStart(4, '0')}`;

@@ -8,7 +8,7 @@ import { titleDef } from '../../utils/titles';
 import type { ReportReason } from '../../utils/communityService';
 import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
-import { Framed } from '../ui/Avatar';
+import { AvatarFace, Framed } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
 
 const rankApi = () => import('../../utils/leaderboardService');
@@ -103,18 +103,14 @@ const Row: React.FC<RowProps> = ({ entry, place, mine, champion, action, panel, 
       {onView ? (
         <button type="button" className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left hover:bg-surface-3" onClick={onView} aria-label={`${entry.name} 프로필 보기`}>
           <Framed frame={entry.frame} shape="sticker">
-            <span className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" aria-hidden="true">
-              {entry.avatar}
-            </span>
+            <AvatarFace emoji={entry.avatar} photo={entry.photo} className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" />
           </Framed>
           <NameBlock entry={entry} mine={mine} champion={champion} />
         </button>
       ) : (
         <>
           <Framed frame={entry.frame} shape="sticker">
-            <span className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" aria-hidden="true">
-              {entry.avatar}
-            </span>
+            <AvatarFace emoji={entry.avatar} photo={entry.photo} className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" />
           </Framed>
           <NameBlock entry={entry} mine={mine} champion={champion} />
         </>
@@ -452,9 +448,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
                   {entry ? (
                     <>
                       <Framed frame={entry.frame} shape="sticker">
-                        <span className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" aria-hidden="true">
-                          {entry.avatar}
-                        </span>
+                        <AvatarFace emoji={entry.avatar} photo={entry.photo} className="sticker h-9 w-9 shrink-0 bg-surface text-xl shadow-none" />
                       </Framed>
                       <NameBlock entry={entry} mine={entry.uid === uid} champion />
                       <span className="shrink-0 font-display text-lg tabular-nums">{formatNumber(entry.score)}</span>

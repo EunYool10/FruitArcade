@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Copy, Gift, Loader2, Search, UserPlus, X } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
-import { Framed } from '../ui/Avatar';
+import { AvatarFace, Framed } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
 import { titleDef } from '../../utils/titles';
-import { formatNumber, josa, relativeTime } from '../../utils/format';
+import { formatCompact, formatNumber, josa, relativeTime } from '../../utils/format';
+import { COIN_MAX, GIFT_LIMITS } from '../../utils/coins';
 import type { FriendLink, Gift as GiftDoc, PublicPlayer } from '../../utils/friendsService';
 
 const friendsApi = () => import('../../utils/friendsService');
@@ -35,16 +36,14 @@ interface Props {
 type Tab = 'friends' | 'requests' | 'gifts';
 
 const PLAYER_AMOUNTS = [10, 50, 100, 300];
-const ADMIN_AMOUNTS = [1_000, 1_000_000, 100_000_000, Number.MAX_SAFE_INTEGER];
+const ADMIN_AMOUNTS = [1_000, 1_000_000, 100_000_000, COIN_MAX];
 
 const PlayerBadge: React.FC<{ p: PublicPlayer | null; fallback?: string }> = ({ p, fallback = '알 수 없는 플레이어' }) => {
   const t = titleDef(p?.title);
   return (
     <span className="flex min-w-0 flex-1 items-center gap-2.5">
       <Framed frame={p?.frame}>
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft text-xl" aria-hidden="true">
-          {p?.avatar ?? '❔'}
-        </span>
+        <AvatarFace emoji={p?.avatar ?? '❔'} photo={p?.photo} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft text-xl" />
       </Framed>
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-center gap-1.5">
@@ -83,7 +82,7 @@ export const FriendsModal: React.FC<Props> = ({
   const [amount, setAmount] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const limits = isAdmin ? { perDay: 20, max: Number.MAX_SAFE_INTEGER } : { perDay: 5, max: 300 };
+  const limits = isAdmin ? GIFT_LIMITS.admin : GIFT_LIMITS.player;
 
   const load = useCallback(async () => {
     if (!uid) return;
@@ -313,8 +312,8 @@ export const FriendsModal: React.FC<Props> = ({
           ) : (
             <>
               <p className="text-xs text-ink-3">
-                🪙 오늘 보낸 선물 {sentToday}/{limits.perDay}번 · 한 번에 {isAdmin ? `최대 ${formatNumber(limits.max)}` : `1~${limits.max}`}코인
-                {Number.isFinite(balance) && ` · 내 코인 ${formatNumber(balance)}`}
+                🪙 오늘 보낸 선물 {sentToday}/{limits.perDay}번 · 한 번에 {isAdmin ? `최대 ${formatCompact(limits.max)}` : `1~${limits.max}`}코인
+                {Number.isFinite(balance) && ` · 내 코인 ${formatCompact(balance)}`}
               </p>
               <ul className="space-y-2">
                 {friends.map((l) => (
@@ -360,16 +359,16 @@ export const FriendsModal: React.FC<Props> = ({
                               className={`chip h-8 px-2.5 text-xs ${amount === String(a) ? 'bg-mango text-on-bright shadow-hard-sm' : 'bg-surface hover:bg-surface-3'}`}
                               onClick={() => setAmount(String(a))}
                             >
-                              🪙 {a === Number.MAX_SAFE_INTEGER ? '최대' : formatNumber(a)}
+                              🪙 {a === COIN_MAX ? '최대' : formatCompact(a)}
                             </button>
                           ))}
                         </div>
                         <div className="space-y-2">
                           <input
                             value={amount ? formatNumber(Number(amount.replace(/[^0-9]/g, '')) || 0) : ''}
-                            onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, '').slice(0, 16))}
+                            onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, '').slice(0, String(limits.max).length))}
                             inputMode="numeric"
-                            placeholder={`보낼 코인 (최대 ${formatNumber(limits.max)})`}
+                            placeholder={`보낼 코인 (최대 ${formatCompact(limits.max)})`}
                             aria-label="보낼 코인"
                             className="w-full rounded-2xl border-2 border-line bg-surface px-3 py-2 text-sm tabular-nums outline-none focus:border-mango"
                           />
@@ -489,7 +488,7 @@ export const FriendsModal: React.FC<Props> = ({
                       🎁
                     </span>
                     <p className="min-w-0 flex-1 text-sm">
-                      <b>{nameOf(g.from)}</b>님이 <b className="tabular-nums">🪙 {formatNumber(g.amount)}</b>
+                      <b>{nameOf(g.from)}</b>님이 <b className="tabular-nums">🪙 {formatCompact(g.amount)}</b>
                       <span className="block text-[11px] text-ink-3">{g.at ? relativeTime(g.at) : ''}</span>
                     </p>
                     <button type="button" className="btn btn-sm btn-mango shrink-0" disabled={busy === 'claim'} onClick={() => claim([g.id])}>
@@ -515,7 +514,7 @@ export const FriendsModal: React.FC<Props> = ({
                       <span className="min-w-0 flex-1 truncate">
                         {g.from === uid ? `${nameOf(g.to)}님에게` : `${nameOf(g.from)}님에게서`}
                       </span>
-                      <span className="shrink-0 font-bold tabular-nums">🪙 {formatNumber(g.amount)}</span>
+                      <span className="shrink-0 font-bold tabular-nums">🪙 {formatCompact(g.amount)}</span>
                       <span className="shrink-0 text-[11px] text-ink-3">{g.at ? relativeTime(g.at) : ''}</span>
                     </li>
                   ))}

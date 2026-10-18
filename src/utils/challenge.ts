@@ -1,6 +1,7 @@
 // Friend challenges: "beat my score on the same board", carried in the link's #hash (no server)
 import { DashDifficulty, GameType, MemoryConfig } from '../types';
 import { isReservedNickname } from './profile';
+import { maskBadWords } from './badWords';
 
 export interface Challenge {
   /** game */
@@ -43,7 +44,7 @@ export function decodeChallenge(code: string): Challenge | null {
     if (typeof c.sc !== 'number' || !Number.isFinite(c.sc)) return null;
     // No control characters and no staff-looking names ("QA", "관리자" ...)
     const raw = typeof c.n === 'string' ? c.n.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 12) : '';
-    const name = raw && !isReservedNickname(raw) ? raw : '친구';
+    const name = raw && !isReservedNickname(raw) ? maskBadWords(raw) : '친구';
     const out: Challenge = { g: c.g, s: c.s, sc: Math.min(10_000_000, Math.max(0, Math.round(c.sc))), n: name };
     if (c.g === 'memory' && c.m && ['4', '6', '8', '8-joker'].includes(c.m.mode)) {
       out.m = {

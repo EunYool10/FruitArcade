@@ -127,24 +127,6 @@ export interface SuikaFruitDef {
   color: string;
 }
 
-export interface SuikaBody {
-  id: string;
-  lv: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  r: number;
-  mass: number;
-  angle: number;
-  aVel: number;
-  scale: number;
-  sleeping: boolean;
-  sleepT: number;
-  /** Has touched the floor or the pile (falling fruit never count as overflowing) */
-  landed?: boolean;
-}
-
 export interface SuikaParticle {
   x: number;
   y: number;

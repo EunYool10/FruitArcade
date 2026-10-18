@@ -9,6 +9,7 @@ import { formatNumber, formatTime } from '../../utils/format';
 import { Modal } from '../ui/Modal';
 import { Avatar, PlayerView } from '../ui/Avatar';
 import { AVATARS, NICKNAME_MAX, PlayerProfile, cleanNickname, isReservedNickname } from '../../utils/profile';
+import { hasBadWords } from '../../utils/badWords';
 import { Meter } from '../ui/Meter';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import type { TitleDef } from '../../utils/titles';
@@ -90,6 +91,11 @@ export const ProfileModal: React.FC<Props> = ({
       setNickDraft(profile.nickname);
       return;
     }
+    if (nickname && hasBadWords(nickname)) {
+      setNickError('욕설이나 성적인 말이 들어간 닉네임은 쓸 수 없어요.');
+      setNickDraft(profile.nickname);
+      return;
+    }
     setNickError(null);
     setNickDraft(nickname);
     if (nickname !== profile.nickname) onUpdateProfile({ ...profile, nickname });
@@ -166,7 +172,7 @@ export const ProfileModal: React.FC<Props> = ({
                 <span className="truncate">{user.email}</span>
               </p>
             )}
-            {user && <p className="mt-0.5 text-[11px] text-ink-3">🏆 랭킹에는 닉네임 · 아바타 · 칭호 · 테두리만 보여요</p>}
+            {user && <p className="mt-0.5 text-[11px] text-ink-3">🏆 랭킹에는 닉네임 · 아바타 · 칭호 · 테두리가 보여요. 기본 아바타는 Google 사진이에요</p>}
           </div>
         </div>
         <div>

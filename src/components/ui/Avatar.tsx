@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { TitleDef } from '../../utils/titles';
 import { FRAME_CLASS } from '../../utils/shop';
 
@@ -31,6 +31,23 @@ export const Framed: React.FC<{ frame?: string; shape?: 'circle' | 'sticker'; ch
   const ring = frame ? FRAME_CLASS[frame] : undefined;
   if (!ring) return <>{children}</>;
   return <span className={`inline-grid shrink-0 p-[3px] ${shape === 'circle' ? 'rounded-full' : 'rounded-[1.2rem]'} ${ring}`}>{children}</span>;
+};
+
+/**
+ * Another player's face: their Google photo when they show one, otherwise their emoji.
+ * `className` sets the size and shape; a photo that fails to load falls back to the emoji.
+ */
+export const AvatarFace: React.FC<{ emoji: string; photo?: string; className: string }> = ({ emoji, photo, className }) => {
+  const [broken, setBroken] = useState('');
+  return photo && broken !== photo ? (
+    <span className={`${className} overflow-hidden p-0`} aria-hidden="true">
+      <img src={photo} alt="" referrerPolicy="no-referrer" loading="lazy" className="h-full w-full object-cover" onError={() => setBroken(photo)} />
+    </span>
+  ) : (
+    <span className={className} aria-hidden="true">
+      {emoji}
+    </span>
+  );
 };
 
 export const Avatar: React.FC<{ player: PlayerView; size?: keyof typeof SIZES }> = ({ player, size = 'md' }) => (

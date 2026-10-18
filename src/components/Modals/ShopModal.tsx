@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Check, Gift } from 'lucide-react';
 import { ItemKind, Inventory, SHOP_ITEMS, ShopItem, bladeStyle, cardBackStyle, runnerStyle } from '../../utils/shop';
 import { titleDef } from '../../utils/titles';
-import { formatNumber, josa } from '../../utils/format';
+import { formatCompact, formatNumber, josa } from '../../utils/format';
 import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import { Framed, PlayerView } from '../ui/Avatar';
@@ -146,7 +146,7 @@ export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, 
       isOpen={isOpen}
       onClose={onClose}
       title="상점"
-      subtitle={unlimited ? '🪙 ∞ 코인 · 운영자는 무엇이든 무료로 받아요' : `🪙 ${formatNumber(balance)} 코인 · 게임을 하면 코인이 쌓여요`}
+      subtitle={unlimited ? '🪙 ∞ 코인 · 운영자는 무엇이든 무료로 받아요' : `🪙 ${formatCompact(balance)} 코인 · 게임을 하면 코인이 쌓여요`}
       icon="🛍️"
       tone="mango"
       size="lg"

@@ -19,7 +19,8 @@ import {
 import { db } from '../firestore';
 import { GameType } from '../types';
 import { GAME_ORDER } from '../constants';
-import { RANK_PERIODS, RankEntry, RankPeriod, boardId } from './ranking';
+import { RANK_PERIODS, RankEntry, RankPeriod, boardId, cleanPhoto } from './ranking';
+import { maskBadWords } from './badWords';
 
 // Public boards: leaderboards/{game}_{period}/scores/{uid}, one best score per player
 
@@ -29,11 +30,13 @@ const TITLE_ID = /^[a-z0-9_]{1,32}$/;
 
 const toEntry = (uid: string, d: DocumentData): RankEntry => ({
   uid,
-  name: typeof d.name === 'string' ? d.name : '???',
+  // Names written before the filter (or by a modified app) still show masked
+  name: typeof d.name === 'string' ? maskBadWords(d.name) : '???',
   avatar: typeof d.avatar === 'string' ? d.avatar : '🍓',
   score: typeof d.score === 'number' ? d.score : 0,
   ...(typeof d.title === 'string' && TITLE_ID.test(d.title) ? { title: d.title } : {}),
   ...(typeof d.frame === 'string' && TITLE_ID.test(d.frame) ? { frame: d.frame } : {}),
+  ...(cleanPhoto(d.photo) ? { photo: d.photo } : {}),
 });
 
 /**
@@ -44,7 +47,7 @@ const toEntry = (uid: string, d: DocumentData): RankEntry => ({
 export function submitScore(
   uid: string,
   game: GameType,
-  who: { name: string; avatar: string; title?: string; frame?: string },
+  who: Look,
   score: number,
   proof?: string
 ): Promise<Record<RankPeriod, number>> {
@@ -58,7 +61,8 @@ export function submitScore(
       const title = who.title && TITLE_ID.test(who.title) ? { title: who.title } : {};
       const frame = who.frame && TITLE_ID.test(who.frame) ? { frame: who.frame } : {};
       const signed = proof ? { proof } : {};
-      if (score > prev) tx.set(refs[i], { uid, name: who.name, avatar: who.avatar, score, at: serverTimestamp(), ...title, ...frame, ...signed });
+      const photo = cleanPhoto(who.photo) ? { photo: who.photo } : {};
+      if (score > prev) tx.set(refs[i], { uid, name: who.name, avatar: who.avatar, score, at: serverTimestamp(), ...title, ...frame, ...photo, ...signed });
       best[RANK_PERIODS[i]] = Math.max(prev, score);
     });
     return best;
@@ -70,6 +74,7 @@ export interface Look {
   avatar: string;
   title?: string;
   frame?: string;
+  photo?: string;
 }
 
 /**
@@ -82,16 +87,18 @@ export async function syncLook(uid: string, look: Look): Promise<number> {
   const snaps = await Promise.all(refs.map((r) => getDoc(r)));
   const title = look.title && TITLE_ID.test(look.title) ? look.title : '';
   const frame = look.frame && TITLE_ID.test(look.frame) ? look.frame : '';
+  const photo = cleanPhoto(look.photo) ?? '';
   const writes = snaps.flatMap((snap, i) => {
     if (!snap.exists()) return [];
     const d = snap.data();
-    if (d.name === look.name && d.avatar === look.avatar && (d.title ?? '') === title && (d.frame ?? '') === frame) return [];
+    if (d.name === look.name && d.avatar === look.avatar && (d.title ?? '') === title && (d.frame ?? '') === frame && (d.photo ?? '') === photo) return [];
     return [
       updateDoc(refs[i], {
         name: look.name,
         avatar: look.avatar,
         title: title || deleteField(),
         frame: frame || deleteField(),
+        photo: photo || deleteField(),
         at: serverTimestamp(),
       }),
     ];

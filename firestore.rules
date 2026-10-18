@@ -25,7 +25,7 @@ rules_version = '2';
 //             d<dayIndex>    -> daily board, days since 1970-01-01 in KST (UTC+9)
 //             w<weekIndex>   -> weekly board, Monday-start weeks since 1969-12-29 in KST
 // Document ID: Firebase Auth uid (one entry per player per board)
-// Fields (public, no email or Google profile data):
+// Fields (public, no email or Google name):
 //   - uid: string (== document id == request.auth.uid, immutable)
 //   - name: string (1-40 chars, no control characters, may not pose as staff
 //           like "Tester", "QA", "관리자" unless written by an admin)
@@ -35,6 +35,8 @@ rules_version = '2';
 //   - at: timestamp (== request.time)
 //   - title, frame: optional ids ([a-z0-9_], 1-32) of the worn title and avatar frame;
 //           ids starting with "staff_" (the 운영진 series) only on admins' entries
+//   - photo: optional Google profile photo URL (https://lh3-6.googleusercontent.com/...),
+//           shown instead of the emoji for players who kept the default avatar
 //   - proof: optional 64-char hex from the score server (server.mjs) that checked the round:
 //           SHA-256 of "<secret>|<uid>|<game>|<score>|<KST day>|<secret>". Required once
 //           config/scoreKey.enforce is true; a proof that is there must always match.
@@ -72,7 +74,7 @@ rules_version = '2';
 // Collection: players  (public card for friends; signed-in players can look one up, never list)
 // Document ID: uid
 // Fields: uid, code (friend code, 8 of [A-HJ-NP-Z2-9], fixed once claimed), name (1-40, not
-//         staff-looking unless admin), avatar (1-16), title?, frame? (ids; staff_ only admins),
+//         staff-looking unless admin), avatar (1-16), title?, frame? (ids; staff_ only admins), photo? (as above),
 //         level (1-999), achievements (0-500), best (map game -> best score), at (== request.time)
 //
 // Collection: friendCodes  (code -> { uid }, claimed once together with the player's card)
@@ -84,7 +86,7 @@ rules_version = '2';
 // Collection: gifts  (coins sent to a friend, readable by sender and receiver)
 // Document ID: <from>_<KST day>_<n>, n = 1..5 per day (admins 1..20)
 // Fields: from (== auth uid), to (an accepted friend), amount (int 1..300; admins up to
-//         9007199254740991), day (KST day), at (== request.time), claimed (false -> true by the receiver)
+//         99999999999 = COIN_MAX in src/utils/coins.ts), day (KST day), at (== request.time), claimed (false -> true by the receiver)
 // The sender's statistics.coinsSpent must grow by the amount in the same write (admins excepted).
 //
 // Collection: activity/{dayId}/players  (daily play counts for the admin stats)
@@ -157,6 +159,14 @@ service cloud.firestore {
     // Missing, or an id like "suika_10000" (titles, frames)
     function isOptionalId(m, key) {
       return !(key in m) || (m[key] is string && m[key].matches('^[a-z0-9_]{1,32}$'));
+    }
+
+    // Missing, or a Google profile photo URL
+    function isOptionalPhoto(m) {
+      return !('photo' in m)
+        || (m.photo is string
+          && m.photo.size() <= 450
+          && m.photo.matches('^https://lh[3-6][.]googleusercontent[.]com/[A-Za-z0-9_./=-]{1,400}$'));
     }
 
     // Missing, null, or a string up to maxLen
@@ -288,13 +298,14 @@ service cloud.firestore {
 
     function isValidScoreEntry(boardId, uid, data) {
       return hasRequiredFields(['uid', 'name', 'avatar', 'score', 'at'])
-        && hasOnlyAllowedFields(['uid', 'name', 'avatar', 'score', 'at', 'title', 'frame', 'proof'])
+        && hasOnlyAllowedFields(['uid', 'name', 'avatar', 'score', 'at', 'title', 'frame', 'photo', 'proof'])
         && data.uid == uid
         && data.uid == request.auth.uid
         && isPlainText(data.name, 1, 40)
         && isPlainText(data.avatar, 1, 16)
         && isOptionalId(data, 'title')
         && isOptionalId(data, 'frame')
+        && isOptionalPhoto(data)
         && (!('title' in data) || !data.title.matches('^staff_.*') || isAdmin())
         && (!('frame' in data) || !data.frame.matches('^staff_.*') || isAdmin())
         && (!('proof' in data) || (data.proof is string && data.proof.size() == 64))
@@ -372,7 +383,7 @@ service cloud.firestore {
 
     function isValidPlayerCard(uid, data) {
       return data.keys().hasAll(['uid', 'code', 'name', 'avatar', 'level', 'achievements', 'best', 'at'])
-        && data.keys().hasOnly(['uid', 'code', 'name', 'avatar', 'level', 'achievements', 'best', 'title', 'frame', 'at'])
+        && data.keys().hasOnly(['uid', 'code', 'name', 'avatar', 'level', 'achievements', 'best', 'title', 'frame', 'photo', 'at'])
         && data.uid == uid
         && data.code is string && data.code.matches('^[A-HJ-NP-Z2-9]{8}$')
         && isPlainText(data.name, 1, 40)
@@ -380,6 +391,7 @@ service cloud.firestore {
         && isPlainText(data.avatar, 1, 16)
         && isOptionalId(data, 'title')
         && isOptionalId(data, 'frame')
+        && isOptionalPhoto(data)
         && (!('title' in data) || !data.title.matches('^staff_.*') || isAdmin())
         && (!('frame' in data) || !data.frame.matches('^staff_.*') || isAdmin())
         && data.level is int && data.level >= 1 && data.level <= 999
@@ -439,7 +451,7 @@ service cloud.firestore {
         && data.to != request.auth.uid
         && data.amount is int
         && data.amount >= 1
-        && (data.amount <= 300 || (isAdmin() && data.amount <= 9007199254740991))
+        && (data.amount <= 300 || (isAdmin() && data.amount <= 99999999999))
         && data.claimed == false
         && data.at == request.time
         && isGiftSlot(giftId, data);
@@ -475,7 +487,7 @@ service cloud.firestore {
 
     // Public leaderboards: anyone can view, players can only post their own best
     match /leaderboards/{boardId}/scores/{uid} {
-      // Public by design: entries hold only a nickname, emoji avatar and score
+      // Public by design: entries hold only a nickname, avatar (emoji or Google photo) and score
       allow read: if true;
 
       allow create: if isGoogleUser()
@@ -486,7 +498,7 @@ service cloud.firestore {
         && !isBanned();
 
       // A higher score (with its proof) replaces the entry; with the same score only the look
-      // (name, avatar, title, frame) may change. Either way at most every 3 seconds, and the uid never changes.
+      // (name, avatar, title, frame, photo) may change. Either way at most every 3 seconds, and the uid never changes.
       allow update: if isGoogleUser()
         && isOwner(uid)
         && resource.data.uid == uid
@@ -494,7 +506,7 @@ service cloud.firestore {
         && isValidScoreEntry(boardId, uid, request.resource.data)
         && ((request.resource.data.score > resource.data.score && hasValidProof(boardId, uid, request.resource.data))
           || (request.resource.data.score == resource.data.score
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'avatar', 'title', 'frame', 'at'])))
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'avatar', 'title', 'frame', 'photo', 'at'])))
         && request.time > resource.data.at + duration.value(3, 's')
         && !isBanned();
 

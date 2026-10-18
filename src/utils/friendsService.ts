@@ -19,7 +19,9 @@ import {
 import { db } from '../firestore';
 import { GameType } from '../types';
 import { GAME_ORDER } from '../constants';
-import { kstDay } from './ranking';
+import { cleanPhoto, kstDay } from './ranking';
+import { COIN_MAX, GIFT_LIMITS } from './coins';
+import { maskBadWords } from './badWords';
 
 // Friends and coin gifts (signed-in players only).
 //   players/{uid}       public card: name, avatar, title, frame, level, achievements, best scores, friend code
@@ -35,6 +37,8 @@ export interface PublicPlayer {
   avatar: string;
   title?: string;
   frame?: string;
+  /** Google profile photo (players who kept the default avatar) */
+  photo?: string;
   level: number;
   achievements: number;
   best: Partial<Record<GameType, number>>;
@@ -61,12 +65,6 @@ export interface Gift {
   claimed: boolean;
 }
 
-/** Per sender and Korean day; admins can send far more (their coins don't run out) */
-export const GIFT_LIMITS = {
-  player: { perDay: 5, max: 300 },
-  admin: { perDay: 20, max: Number.MAX_SAFE_INTEGER },
-};
-
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const cleanCode = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
 export const showCode = (code: string) => (code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code);
@@ -85,10 +83,11 @@ function toPlayer(uid: string, d: DocumentData): PublicPlayer {
   return {
     uid,
     code: typeof d.code === 'string' ? d.code : '',
-    name: typeof d.name === 'string' ? d.name : '???',
+    name: typeof d.name === 'string' ? maskBadWords(d.name) : '???',
     avatar: typeof d.avatar === 'string' ? d.avatar : '🍓',
     ...(typeof d.title === 'string' ? { title: d.title } : {}),
     ...(typeof d.frame === 'string' ? { frame: d.frame } : {}),
+    ...(cleanPhoto(d.photo) ? { photo: d.photo } : {}),
     level: typeof d.level === 'number' ? d.level : 1,
     achievements: typeof d.achievements === 'number' ? d.achievements : 0,
     best,
@@ -100,6 +99,7 @@ const sameCard = (a: PlayerCard, b: PlayerCard) =>
   a.avatar === b.avatar &&
   (a.title ?? '') === (b.title ?? '') &&
   (a.frame ?? '') === (b.frame ?? '') &&
+  (cleanPhoto(a.photo) ?? '') === (cleanPhoto(b.photo) ?? '') &&
   a.level === b.level &&
   a.achievements === b.achievements &&
   GAME_ORDER.every((g) => (a.best[g] ?? 0) === (b.best[g] ?? 0));
@@ -125,6 +125,7 @@ export async function ensurePlayer(uid: string, card: PlayerCard): Promise<strin
         ...cardFields(card),
         title: card.title ? card.title : deleteField(),
         frame: card.frame ? card.frame : deleteField(),
+        photo: cleanPhoto(card.photo) ?? deleteField(),
         at: serverTimestamp(),
       });
     }
@@ -141,6 +142,7 @@ export async function ensurePlayer(uid: string, card: PlayerCard): Promise<strin
       ...cardFields(card),
       ...(card.title ? { title: card.title } : {}),
       ...(card.frame ? { frame: card.frame } : {}),
+      ...(cleanPhoto(card.photo) ? { photo: card.photo } : {}),
       at: serverTimestamp(),
     });
     try {
@@ -271,7 +273,10 @@ export async function sendCoins(uid: string, to: string, amount: number, isAdmin
   });
 }
 
-/** Claim a gift: it is marked claimed and the coins are added in one transaction. Returns the coins. */
+/**
+ * Claim a gift: it is marked claimed and the coins are added in one transaction.
+ * Coins past COIN_MAX are left out. Returns the coins added.
+ */
 export async function claimGift(uid: string, giftId: string): Promise<number> {
   const giftRef = doc(db, 'gifts', giftId);
   const userRef = doc(db, 'users', uid);
@@ -279,9 +284,12 @@ export async function claimGift(uid: string, giftId: string): Promise<number> {
     const [gift, user] = [await tx.get(giftRef), await tx.get(userRef)];
     const g = gift.data();
     if (!g || g.to !== uid || g.claimed) return 0;
-    const earned = Number(user.data()?.statistics?.coinsEarned) || 0;
+    const st = user.data()?.statistics ?? {};
+    const earned = Number(st.coinsEarned) || 0;
+    const room = Math.max(0, COIN_MAX - (earned - (Number(st.coinsSpent) || 0)));
+    const added = Math.min(Number(g.amount) || 0, room);
     tx.update(giftRef, { claimed: true });
-    tx.update(userRef, { 'statistics.coinsEarned': earned + Number(g.amount) });
-    return Number(g.amount);
+    if (added > 0) tx.update(userRef, { 'statistics.coinsEarned': earned + added });
+    return added;
   });
 }

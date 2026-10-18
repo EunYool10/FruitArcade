@@ -47,16 +47,20 @@ export const HudStat: React.FC<{ label: string; value: React.ReactNode; tone?: S
   </div>
 );
 
-/** Covers the board (used for the start card). */
+// Both overlays centre their card with an auto margin rather than grid centring: when the card
+// is taller than the space (small phones, phones held sideways) it then starts at the top and
+// scrolls, instead of spilling over both edges with its top cut off.
+
+/** Covers the board (used for the start card). Start cards shrink to fit short boards (board-short / board-tiny). */
 export const BoardOverlay: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="absolute inset-0 z-20 grid place-items-center overflow-y-auto bg-surface/70 p-3 backdrop-blur-[2px] animate-fade-in">
-    {children}
+  <div className="absolute inset-0 z-20 flex overflow-y-auto bg-surface/70 p-3 backdrop-blur-[2px] animate-fade-in [container:board/size]">
+    <div className="m-auto flex w-full justify-center">{children}</div>
   </div>
 );
 
 /** Covers the whole screen (used for result cards). */
 export const ScreenOverlay: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="fixed inset-0 z-40 grid place-items-center overflow-y-auto bg-[rgb(18_12_28/0.5)] p-4 animate-fade-in">
-    {children}
+  <div className="fixed inset-0 z-40 flex overflow-y-auto bg-[rgb(18_12_28/0.5)] p-4 animate-fade-in">
+    <div className="m-auto flex w-full justify-center">{children}</div>
   </div>
 );

@@ -50,13 +50,17 @@ export const AvatarFace: React.FC<{ emoji: string; photo?: string; className: st
   );
 };
 
-export const Avatar: React.FC<{ player: PlayerView; size?: keyof typeof SIZES }> = ({ player, size = 'md' }) => (
+export const Avatar: React.FC<{ player: PlayerView; size?: keyof typeof SIZES }> = ({ player, size = 'md' }) => {
+  // A Google photo that no longer loads (changed or removed) falls back to the fruit
+  const [broken, setBroken] = useState('');
+  return (
   <Framed frame={player.frame}>
-    {player.photo ? (
+    {player.photo && broken !== player.photo ? (
       <img
         src={player.photo}
         alt=""
         referrerPolicy="no-referrer"
+        onError={() => setBroken(player.photo ?? '')}
         className={`${SIZES[size]} shrink-0 rounded-full border-2 border-line bg-surface-2 object-cover`}
       />
     ) : (
@@ -65,4 +69,5 @@ export const Avatar: React.FC<{ player: PlayerView; size?: keyof typeof SIZES }>
       </span>
     )}
   </Framed>
-);
+  );
+};

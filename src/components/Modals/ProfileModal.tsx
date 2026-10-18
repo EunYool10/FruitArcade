@@ -10,6 +10,7 @@ import { Modal } from '../ui/Modal';
 import { Avatar, PlayerView } from '../ui/Avatar';
 import { AVATARS, NICKNAME_MAX, PlayerProfile, cleanNickname, isReservedNickname } from '../../utils/profile';
 import { hasBadWords } from '../../utils/badWords';
+import { googlePhotoOf } from '../../utils/ranking';
 import { Meter } from '../ui/Meter';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import type { TitleDef } from '../../utils/titles';
@@ -101,7 +102,7 @@ export const ProfileModal: React.FC<Props> = ({
     if (nickname !== profile.nickname) onUpdateProfile({ ...profile, nickname });
   };
   // The default avatar: Google photo when signed in, otherwise the level fruit
-  const defaultLook: PlayerView = { ...player, emoji: level.emoji, photo: user?.photoURL ?? null };
+  const defaultLook: PlayerView = { ...player, emoji: level.emoji, photo: googlePhotoOf(user) };
 
   const signIn = async () => {
     setError(null);

@@ -51,7 +51,7 @@ import {
   usableItems,
 } from './utils/shop';
 import { RankContext } from './components/RankContext';
-import { RankResult, cleanPhoto, kstWeek, publicName } from './utils/ranking';
+import { RankResult, cleanPhoto, googlePhotoOf, kstWeek, publicName } from './utils/ranking';
 import { maskBadWords } from './utils/badWords';
 import { earnedTitles, wornTitle } from './utils/titles';
 import { josa } from './utils/format';
@@ -162,6 +162,8 @@ export default function App() {
   const [memoryCfg, setMemoryCfg] = useState<MemoryConfig>(() => readJSON(MEMORY_CFG_KEY, DEFAULT_MEMORY));
 
   const [user, setUser] = useState<User | null>(null);
+  /** Bumped when the signed-in user's details are refreshed in place (newest Google photo) */
+  const [, setUserTick] = useState(0);
   /** On the admin list (config/admins); the server rules check this again for every admin action */
   const [isAdmin, setIsAdmin] = useState(false);
   const userRef = useRef<User | null>(null);
@@ -235,7 +237,7 @@ export default function App() {
   const player: PlayerView = {
     name: maskBadWords(profile.nickname) || user?.displayName || '게스트',
     emoji: avatar || level.emoji,
-    photo: avatar ? null : user?.photoURL ?? null,
+    photo: avatar ? null : googlePhotoOf(user),
     isGuest: !user,
     title,
     frame: owned[profile.frame] ? profile.frame : '',
@@ -680,6 +682,10 @@ export default function App() {
         setUser(u);
         setIsAdmin(false);
         if (!u) return;
+        // A newer Google photo from a sign-in on another device: fetch the account again
+        u.reload()
+          .then(() => authApi.auth.currentUser?.uid === u.uid && setUserTick((t) => t + 1))
+          .catch(() => {});
         syncCloud(u);
         wakeScoreServer();
         schedulePlayerSync();

@@ -4,6 +4,7 @@ import { db } from '../firestore';
 import { GameResult, GameSettings, UnlockedAchievements, UserStatistics } from '../types';
 import { EMPTY_STATS, applyResult, mergeStats, sameStats } from './progress';
 import { PlayerProfile } from './profile';
+import { googlePhotoOf } from './ranking';
 
 /** Raw cloud values; the app merges them with what this device already has. */
 export interface CloudData {
@@ -33,7 +34,7 @@ export async function loadUserData(user: User): Promise<CloudData> {
     await updateDoc(ref, {
       'profile.lastLoginAt': now,
       'profile.displayName': displayName,
-      'profile.photoURL': user.photoURL,
+      'profile.photoURL': googlePhotoOf(user),
     }).catch(() => {});
     return {
       statistics: data.statistics || {},
@@ -46,7 +47,7 @@ export async function loadUserData(user: User): Promise<CloudData> {
   }
 
   await setDoc(ref, {
-    profile: { uid: user.uid, displayName, email: user.email, photoURL: user.photoURL, createdAt: now, lastLoginAt: now },
+    profile: { uid: user.uid, displayName, email: user.email, photoURL: googlePhotoOf(user), createdAt: now, lastLoginAt: now },
     statistics: EMPTY_STATS,
     achievements: {},
     settings: {},

@@ -77,6 +77,23 @@ const PHOTO_URL = /^https:\/\/lh[3-6]\.googleusercontent\.com\/[A-Za-z0-9_\-.\/=
 /** The URL when it is a Google profile photo, otherwise undefined */
 export const cleanPhoto = (url: unknown): string | undefined => (typeof url === 'string' && PHOTO_URL.test(url) ? url : undefined);
 
+interface PhotoSource {
+  photoURL: string | null;
+  providerData: { providerId: string; photoURL: string | null }[];
+}
+
+/**
+ * The player's current Google photo. Firebase keeps the photo from the first sign-in on the
+ * account itself, but refreshes the Google entry in providerData on every Google sign-in, so a
+ * photo changed in the Google account shows up here. Asks for a 192 px copy so avatars stay sharp.
+ */
+export function googlePhotoOf(user: PhotoSource | null): string | null {
+  if (!user) return null;
+  const url = user.providerData.find((p) => p.providerId === 'google.com')?.photoURL || user.photoURL;
+  if (!url) return null;
+  return /googleusercontent\.com\/.*=s\d+(-c)?$/.test(url) ? url.replace(/=s\d+(-c)?$/, '=s192-c') : url;
+}
+
 /** The player's place on the boards after a round, for the result card */
 export interface RankResult {
   game: GameType;

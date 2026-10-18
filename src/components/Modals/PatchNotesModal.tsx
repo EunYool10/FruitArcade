@@ -9,6 +9,14 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.13.1',
+    title: 'Google 사진 동기화',
+    items: [
+      ['🖼️ 최신 Google 사진', 'Google 계정에서 프로필 사진을 바꾸면, 다음에 Google로 로그인할 때(다른 기기에서 해도) 게임 아바타 · 랭킹 · 친구 프로필의 사진도 새 사진으로 바뀌어요.'],
+      ['✨ 더 선명하게', '아바타 사진을 더 큰 크기로 받아서 또렷하게 보여요. 사진을 못 불러오면 과일 아바타로 보여요.'],
+    ],
+  },
+  {
     version: '3.13.0',
     title: '수박 게임 물리 · 모바일 메뉴',
     items: [

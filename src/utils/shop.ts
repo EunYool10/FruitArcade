@@ -42,6 +42,14 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'frame_fire', kind: 'frame', name: '불꽃 테두리', price: 500 },
   { id: 'frame_rainbow', kind: 'frame', name: '무지개 테두리', price: 600 },
   { id: 'frame_diamond', kind: 'frame', name: '다이아몬드 테두리', price: 900 },
+  { id: 'frame_lime', kind: 'frame', name: '라임 테두리', price: 120 },
+  { id: 'frame_cocoa', kind: 'frame', name: '코코아 테두리', price: 150 },
+  { id: 'frame_sakura', kind: 'frame', name: '벚꽃 테두리', price: 250 },
+  { id: 'frame_pastel', kind: 'frame', name: '파스텔 테두리', price: 300 },
+  { id: 'frame_ruby', kind: 'frame', name: '루비 테두리', price: 450 },
+  { id: 'frame_emerald', kind: 'frame', name: '에메랄드 테두리', price: 450 },
+  { id: 'frame_galaxy', kind: 'frame', name: '은하수 테두리', price: 700 },
+  { id: 'frame_holo', kind: 'frame', name: '홀로그램 테두리', price: 1000 },
 
   // Avatars beyond the free fruit
   { id: 'av_chick', kind: 'avatar', name: '병아리', icon: '🐥', price: 100 },
@@ -68,6 +76,18 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'av_fire', kind: 'avatar', name: '불꽃', icon: '🔥', price: 300 },
   { id: 'av_dino', kind: 'avatar', name: '공룡', icon: '🦖', price: 350 },
   { id: 'av_unicorn', kind: 'avatar', name: '유니콘', icon: '🦄', price: 400 },
+  { id: 'av_hamster', kind: 'avatar', name: '햄스터', icon: '🐹', price: 100 },
+  { id: 'av_koala', kind: 'avatar', name: '코알라', icon: '🐨', price: 120 },
+  { id: 'av_ladybug', kind: 'avatar', name: '무당벌레', icon: '🐞', price: 120 },
+  { id: 'av_cake', kind: 'avatar', name: '조각 케이크', icon: '🍰', price: 150 },
+  { id: 'av_taco', kind: 'avatar', name: '타코', icon: '🌮', price: 150 },
+  { id: 'av_owl', kind: 'avatar', name: '부엉이', icon: '🦉', price: 180 },
+  { id: 'av_mushroom', kind: 'avatar', name: '버섯', icon: '🍄', price: 180 },
+  { id: 'av_whale', kind: 'avatar', name: '고래', icon: '🐳', price: 200 },
+  { id: 'av_butterfly', kind: 'avatar', name: '나비', icon: '🦋', price: 220 },
+  { id: 'av_sloth', kind: 'avatar', name: '나무늘보', icon: '🦥', price: 250 },
+  { id: 'av_ninja', kind: 'avatar', name: '닌자', icon: '🥷', price: 350 },
+  { id: 'av_dragon', kind: 'avatar', name: '용', icon: '🐉', price: 500 },
 
   // Titles to wear next to the name (achievements give more)
   { id: 'title_juicy', kind: 'title', name: '과즙 팡팡', icon: '🧃', price: 150 },
@@ -84,6 +104,14 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'title_rich', kind: 'title', name: '코인 부자', icon: '💰', price: 800 },
   { id: 'title_boss', kind: 'title', name: '과일 대장', icon: '🦁', price: 1000 },
   { id: 'title_legend', kind: 'title', name: '아케이드 전설', icon: '🏆', price: 1500 },
+  { id: 'title_sleepy', kind: 'title', name: '졸린 과일', icon: '😪', price: 150 },
+  { id: 'title_smoothie', kind: 'title', name: '스무디 장인', icon: '🥤', price: 200 },
+  { id: 'title_farmer', kind: 'title', name: '과수원 농부', icon: '🧑‍🌾', price: 250 },
+  { id: 'title_combo', kind: 'title', name: '콤보 장인', icon: '💥', price: 350 },
+  { id: 'title_sniper', kind: 'title', name: '정조준', icon: '🎯', price: 400 },
+  { id: 'title_runner', kind: 'title', name: '질주 본능', icon: '💨', price: 400 },
+  { id: 'title_star', kind: 'title', name: '빛나는 별', icon: '🌟', price: 600 },
+  { id: 'title_king', kind: 'title', name: '과일 왕', icon: '👑', price: 2000 },
 
   // Memory card backs
   { id: 'back_stripes', kind: 'cardBack', name: '소다 줄무늬', price: 150 },
@@ -98,6 +126,12 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'back_space', kind: 'cardBack', name: '우주 여행', price: 350 },
   { id: 'back_gold', kind: 'cardBack', name: '황금 왕관', price: 500 },
   { id: 'back_rainbow', kind: 'cardBack', name: '무지개', price: 600 },
+  { id: 'back_milk', kind: 'cardBack', name: '딸기우유', price: 150 },
+  { id: 'back_peach', kind: 'cardBack', name: '복숭아 체크', price: 200 },
+  { id: 'back_forest', kind: 'cardBack', name: '숲속 버섯', price: 250 },
+  { id: 'back_sunset', kind: 'cardBack', name: '노을 바다', price: 300 },
+  { id: 'back_galaxy', kind: 'cardBack', name: '은하수', price: 450 },
+  { id: 'back_diamond', kind: 'cardBack', name: '다이아몬드', price: 800 },
 
   // 과일 자르기 blade trails
   { id: 'blade_berry', kind: 'blade', name: '딸기 칼날', price: 150 },
@@ -106,6 +140,10 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'blade_gold', kind: 'blade', name: '황금 칼날', price: 350 },
   { id: 'blade_fire', kind: 'blade', name: '불꽃 칼날', price: 400 },
   { id: 'blade_rainbow', kind: 'blade', name: '무지개 칼날', price: 700 },
+  { id: 'blade_lime', kind: 'blade', name: '라임 칼날', price: 150 },
+  { id: 'blade_sakura', kind: 'blade', name: '벚꽃 칼날', price: 250 },
+  { id: 'blade_ice', kind: 'blade', name: '얼음 칼날', price: 350 },
+  { id: 'blade_shadow', kind: 'blade', name: '그림자 칼날', price: 500 },
 
   // FRUIT DASH runners
   { id: 'runner_berry', kind: 'runner', name: '딸기 러너', price: 200 },
@@ -114,6 +152,10 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'runner_grape', kind: 'runner', name: '포도 러너', price: 250 },
   { id: 'runner_peach', kind: 'runner', name: '복숭아 러너', price: 300 },
   { id: 'runner_blueberry', kind: 'runner', name: '블루베리 러너', price: 350 },
+  { id: 'runner_kiwi', kind: 'runner', name: '키위 러너', price: 250 },
+  { id: 'runner_melon', kind: 'runner', name: '수박 러너', price: 300 },
+  { id: 'runner_cherry', kind: 'runner', name: '체리 러너', price: 300 },
+  { id: 'runner_gold', kind: 'runner', name: '황금 러너', price: 800 },
 
   // 운영진 series
   staff({ id: 'staff_admin', kind: 'title', name: '운영자', icon: '🛡️' }),
@@ -127,6 +169,23 @@ export const SHOP_ITEMS: ShopItem[] = [
   staff({ id: 'staff_back', kind: 'cardBack', name: '운영진 카드' }),
   staff({ id: 'staff_blade', kind: 'blade', name: '운영진 번개 칼날' }),
   staff({ id: 'staff_runner', kind: 'runner', name: '운영진 러너' }),
+  staff({ id: 'staff_chief', kind: 'title', name: '운영 총괄', icon: '👑' }),
+  staff({ id: 'staff_bughunter', kind: 'title', name: '버그 사냥꾼', icon: '🐛' }),
+  staff({ id: 'staff_notice', kind: 'title', name: '공지 요정', icon: '📢' }),
+  staff({ id: 'staff_event', kind: 'title', name: '이벤트 담당', icon: '🎉' }),
+  staff({ id: 'staff_patrol', kind: 'title', name: '야간 순찰대', icon: '🔦' }),
+  staff({ id: 'staff_judge', kind: 'title', name: '과일 감별사', icon: '🔍' }),
+  staff({ id: 'staff_av_shield', kind: 'avatar', name: '운영진 방패', icon: '🛡️' }),
+  staff({ id: 'staff_av_crown', kind: 'avatar', name: '운영진 왕관', icon: '👑' }),
+  staff({ id: 'staff_av_star', kind: 'avatar', name: '운영진 별', icon: '💫' }),
+  staff({ id: 'staff_frame_crown', kind: 'frame', name: '운영진 왕관 테두리' }),
+  staff({ id: 'staff_frame_galaxy', kind: 'frame', name: '운영진 은하 테두리' }),
+  staff({ id: 'staff_back_gold', kind: 'cardBack', name: '운영진 황금 카드' }),
+  staff({ id: 'staff_back_galaxy', kind: 'cardBack', name: '운영진 은하 카드' }),
+  staff({ id: 'staff_blade_aurora', kind: 'blade', name: '운영진 오로라 칼날' }),
+  staff({ id: 'staff_blade_ice', kind: 'blade', name: '운영진 얼음 칼날' }),
+  staff({ id: 'staff_runner_gold', kind: 'runner', name: '운영진 황금 러너' }),
+  staff({ id: 'staff_runner_night', kind: 'runner', name: '운영진 밤 러너' }),
 ];
 
 export const shopItem = (id: string | null | undefined) => (id ? (SHOP_ITEMS.find((i) => i.id === id) ?? null) : null);
@@ -151,6 +210,16 @@ export const FRAME_CLASS: Record<string, string> = {
   frame_diamond: 'bg-[conic-gradient(#e0f7ff,#9be7ff,#ffffff,#b39dff,#e0f7ff)]',
   staff_frame_shield: 'bg-[linear-gradient(135deg,#1e3a8a,#3b82f6_45%,#ffd23f_55%,#b45309)]',
   staff_frame_aurora: 'bg-[conic-gradient(#00ffa3,#00b3ff,#7a5cff,#ff4fd8,#ffd23f,#00ffa3)]',
+  frame_lime: 'bg-[linear-gradient(135deg,#e9ff70,#9be15d_55%,#3fa34d)]',
+  frame_cocoa: 'bg-[linear-gradient(135deg,#d4a373,#8d5524_55%,#4a2c17)]',
+  frame_sakura: 'bg-[linear-gradient(135deg,#fff0f5,#ffb7c5_50%,#ff7aa2)]',
+  frame_pastel: 'bg-[conic-gradient(#ffd6e0,#fff1b8,#c9f2d6,#c7e5ff,#e3d4ff,#ffd6e0)]',
+  frame_ruby: 'bg-[linear-gradient(135deg,#ffb3c1,#e0115f_50%,#7a0026)]',
+  frame_emerald: 'bg-[linear-gradient(135deg,#b7ffd8,#10b981_50%,#065f46)]',
+  frame_galaxy: 'bg-[conic-gradient(#1b1464,#7a5cff,#ff4fd8,#1b1464,#2ea9ff,#1b1464)]',
+  frame_holo: 'bg-[conic-gradient(#ffd1f7,#c2f0ff,#d6ffd1,#fff6c2,#e6d1ff,#ffd1f7)]',
+  staff_frame_crown: 'bg-[repeating-linear-gradient(45deg,#ffd23f_0_6px,#1e3a8a_6px_12px)]',
+  staff_frame_galaxy: 'bg-[conic-gradient(#0b0b2b,#3b82f6,#ffd23f,#0b0b2b,#7a5cff,#0b0b2b)]',
 };
 
 /** Memory card backs: background pattern + the mark in the middle */
@@ -169,6 +238,14 @@ export const CARD_BACKS: Record<string, { className: string; mark: string }> = {
   back_gold: { className: 'stripes bg-mango', mark: '👑' },
   back_rainbow: { className: 'bg-[linear-gradient(135deg,#ff4778,#ffb627,#2ec27e,#2ea9ff,#7a5cff)]', mark: '🌈' },
   staff_back: { className: 'checker bg-[#1e3a8a]', mark: '🛡️' },
+  back_milk: { className: 'dots bg-[#ffc2d1]', mark: '🍓' },
+  back_peach: { className: 'checker bg-[#ffb4a2]', mark: '🍑' },
+  back_forest: { className: 'dots bg-[#3a7d44]', mark: '🍄' },
+  back_sunset: { className: 'waves bg-[#ff7a59]', mark: '🌅' },
+  back_galaxy: { className: 'dots bg-[#2a1b5e]', mark: '🌌' },
+  back_diamond: { className: 'checker bg-[#9be7ff]', mark: '💎' },
+  staff_back_gold: { className: 'stripes bg-[#b45309]', mark: '👑' },
+  staff_back_galaxy: { className: 'dots bg-[#0b0b2b]', mark: '💫' },
 };
 
 export const cardBackStyle = (id: string) => CARD_BACKS[id] ?? CARD_BACKS[''];
@@ -183,6 +260,12 @@ export const BLADES: Record<string, { glow: string; core: string; rainbow?: bool
   blade_fire: { glow: '255, 90, 20', core: '255, 230, 120' },
   blade_rainbow: { glow: '255, 255, 255', core: '255, 255, 255', rainbow: true },
   staff_blade: { glow: '59, 130, 246', core: '255, 215, 63' },
+  blade_lime: { glow: '155, 225, 93', core: '245, 255, 225' },
+  blade_sakura: { glow: '255, 140, 180', core: '255, 240, 245' },
+  blade_ice: { glow: '120, 220, 255', core: '235, 250, 255' },
+  blade_shadow: { glow: '60, 40, 90', core: '200, 180, 255' },
+  staff_blade_aurora: { glow: '0, 255, 163', core: '255, 255, 255', rainbow: true },
+  staff_blade_ice: { glow: '59, 130, 246', core: '220, 245, 255' },
 };
 
 export const bladeStyle = (id: string) => BLADES[id] ?? BLADES[''];
@@ -197,6 +280,12 @@ export const RUNNERS: Record<string, { body: string; feet: string; leaf: string;
   runner_peach: { body: '#ffb4a2', feet: '#e5737a', leaf: '#2ec27e', face: '#2b2140' },
   runner_blueberry: { body: '#4f6df5', feet: '#2a3eb1', leaf: '#2ec27e', face: '#ffffff' },
   staff_runner: { body: '#1e3a8a', feet: '#ffd23f', leaf: '#ffd23f', face: '#ffffff' },
+  runner_kiwi: { body: '#8bb93b', feet: '#6b4226', leaf: '#4c8c2b', face: '#2b2140' },
+  runner_melon: { body: '#ff5a6e', feet: '#2e9e5b', leaf: '#2ec27e', face: '#2b2140' },
+  runner_cherry: { body: '#d90429', feet: '#8d0801', leaf: '#2ec27e', face: '#ffffff' },
+  runner_gold: { body: '#ffd23f', feet: '#e27d00', leaf: '#fff1a8', face: '#2b2140' },
+  staff_runner_gold: { body: '#ffd23f', feet: '#1e3a8a', leaf: '#3b82f6', face: '#1e3a8a' },
+  staff_runner_night: { body: '#0b0b2b', feet: '#7a5cff', leaf: '#ffd23f', face: '#ffd23f' },
 };
 
 export const runnerStyle = (id: string) => RUNNERS[id] ?? RUNNERS[''];

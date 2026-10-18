@@ -14,7 +14,7 @@ rules_version = '2';
 //   - statistics: map (<= 40 keys) - play counts / high scores (older versions left extra keys)
 //   - achievements: map (<= 100 keys) - unlocked achievement id -> date
 //   - settings: map (<= 40 keys) - game settings
-//   - inventory: map (<= 100 keys) - shop item id -> purchase date (coins live in statistics)
+//   - inventory: map (<= 200 keys) - shop item id -> purchase date (coins live in statistics; 120 items as of v3.14.0)
 //   - stages: map (<= 100 keys) - puzzle stage number -> best stars
 //   No other top-level fields and no subcollections.
 //
@@ -283,7 +283,7 @@ service cloud.firestore {
         && (!('statistics' in data) || (data.statistics is map && data.statistics.size() <= 40))
         && (!('achievements' in data) || (data.achievements is map && data.achievements.size() <= 100))
         && (!('settings' in data) || (data.settings is map && data.settings.size() <= 40))
-        && (!('inventory' in data) || (data.inventory is map && data.inventory.size() <= 100))
+        && (!('inventory' in data) || (data.inventory is map && data.inventory.size() <= 200))
         && (!('stages' in data) || (data.stages is map && data.stages.size() <= 100));
     }
 

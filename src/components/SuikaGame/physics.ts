@@ -21,6 +21,8 @@ const CONTACT_DAMP = 0.9;
 const AIR_DAMP = 0.995;
 /** Same fruit merge when they touch or come this close (px) */
 const MERGE_GAP = 1.5;
+/** A push from another fruit can make a fruit at most this much faster (px per frame) */
+const MAX_KICK = 4;
 /** How fast a new fruit grows to full size (scale per tick) */
 const GROW = 0.03;
 
@@ -52,6 +54,8 @@ export interface Body {
   // Scratch for the solver
   ox: number;
   oy: number;
+  /** Speed before contacts were solved this substep */
+  sp0: number;
   touching: boolean;
   floor: boolean;
   wallL: boolean;
@@ -64,6 +68,8 @@ export interface World {
   /** Radius of each fruit level */
   radii: number[];
   nextId: number;
+  /** Same fruit that touched during this tick ("a:b" ids): they merge at its end */
+  met: Set<string>;
 }
 
 /** Two fruit of level `lv` met. `made` is the new fruit, or null when two watermelons vanish. */
@@ -77,7 +83,7 @@ export interface Merge {
 }
 
 export function createWorld(bounds: Bounds, radii: number[]): World {
-  return { bodies: [], bounds, radii, nextId: 1 };
+  return { bodies: [], bounds, radii, nextId: 1, met: new Set() };
 }
 
 export function addBody(world: World, lv: number, x: number, y: number, opts: Partial<Pick<Body, 'vx' | 'vy' | 'scale' | 'landed' | 'angle'>> = {}): Body {
@@ -102,6 +108,7 @@ export function addBody(world: World, lv: number, x: number, y: number, opts: Pa
     landed: opts.landed ?? false,
     ox: cx,
     oy: cy,
+    sp0: 0,
     touching: false,
     floor: false,
     wallL: false,
@@ -167,6 +174,14 @@ function solveContacts(world: World) {
         const min = ra + rb;
         let d2 = dx * dx + dy * dy;
         if (d2 >= min * min) continue;
+        a.touching = b.touching = true;
+        // Touching the pile means the fruit has landed (two fruit still in the air do not count)
+        if (a.landed || b.landed) a.landed = b.landed = true;
+        // Twins are not pushed apart: they merge when the tick ends, even if they met fast
+        if (a.lv === b.lv) {
+          world.met.add(a.id < b.id ? `${a.id}:${b.id}` : `${b.id}:${a.id}`);
+          continue;
+        }
         if (d2 < 1e-6) {
           // Exactly on top of each other: nudge apart sideways
           dx = a.id < b.id ? -0.01 : 0.01;
@@ -185,9 +200,6 @@ function solveContacts(world: World) {
         const kb = overlap - ka + lostA;
         const lostB = kb - push(b, nx, ny, kb, bounds);
         if (lostB > 1e-3) push(a, -nx, -ny, lostB, bounds);
-        a.touching = b.touching = true;
-        // Touching the pile means the fruit has landed (two fruit still in the air do not count)
-        if (a.landed || b.landed) a.landed = b.landed = true;
       }
     }
   }
@@ -198,6 +210,21 @@ function findMerges(world: World): Merge[] {
   sortByLeft(bodies);
   const used = new Set<number>();
   const merges: Merge[] = [];
+  const pair = (a: Body, b: Body) => {
+    used.add(a.id);
+    used.add(b.id);
+    merges.push({ lv: a.lv, a, b, made: null, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+  };
+  // Twins that touched while contacts were solved
+  if (world.met.size) {
+    const byId = new Map(bodies.map((b) => [b.id, b]));
+    for (const key of world.met) {
+      const [a, b] = key.split(':').map((id) => byId.get(Number(id)));
+      if (a && b && !used.has(a.id) && !used.has(b.id)) pair(a, b);
+    }
+    world.met.clear();
+  }
+  // Twins resting a hair apart
   for (let i = 0; i < bodies.length; i++) {
     const a = bodies[i];
     if (used.has(a.id)) continue;
@@ -212,9 +239,7 @@ function findMerges(world: World): Merge[] {
       const dy = b.y - a.y;
       const near = ra + rb + MERGE_GAP;
       if (dx * dx + dy * dy > near * near) continue;
-      used.add(a.id);
-      used.add(b.id);
-      merges.push({ lv: a.lv, a, b, made: null, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+      pair(a, b);
       break;
     }
   }
@@ -228,7 +253,8 @@ function findMerges(world: World): Merge[] {
       vy: Math.min(0, (m.a.vy + m.b.vy) * 0.25) - 1.2,
       angle: (m.a.angle + m.b.angle) / 2,
       scale: 0.7,
-      landed: true,
+      // Two fruit that meet in mid-air make a falling fruit, not part of the pile
+      landed: m.a.landed || m.b.landed,
     });
     m.x = m.made.x;
     m.y = m.made.y;
@@ -247,6 +273,7 @@ export function stepWorld(world: World): Merge[] {
   for (let s = 0; s < SUBSTEPS; s++) {
     for (const b of world.bodies) {
       b.vy += GRAVITY * H;
+      b.sp0 = Math.hypot(b.vx, b.vy);
       b.ox = b.x;
       b.oy = b.y;
       b.x += b.vx * H;
@@ -261,10 +288,13 @@ export function stepWorld(world: World): Merge[] {
       const damp = Math.pow(resting ? CONTACT_DAMP : AIR_DAMP, H);
       vx *= damp;
       vy *= resting ? damp : 1;
+      // Being shoved out of an overlap (a drop into a full jar, a fruit growing after a merge)
+      // only nudges: never a burst faster than the fruit already moved, plus a little
       const sp = Math.hypot(vx, vy);
-      if (sp > MAX_SPEED) {
-        vx *= MAX_SPEED / sp;
-        vy *= MAX_SPEED / sp;
+      const cap = Math.min(MAX_SPEED, b.sp0 + MAX_KICK);
+      if (sp > cap) {
+        vx *= cap / sp;
+        vy *= cap / sp;
       }
       b.vx = vx;
       b.vy = vy;

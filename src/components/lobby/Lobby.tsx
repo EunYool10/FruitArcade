@@ -29,6 +29,9 @@ interface LobbyProps {
   onOpen: (target: LobbyTarget) => void;
 }
 
+/** Plain text links along the bottom of the lobby */
+const FOOTER_LINK = 'underline-offset-4 hover:text-ink hover:underline';
+
 const tilt = (deg: number, delay = 0) => ({ '--tilt': `${deg}deg`, animationDelay: `${delay}s` }) as React.CSSProperties;
 
 export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, daily, level, achievementCount, coins, friendBadge, onPlay, onOpen }) => {
@@ -128,28 +131,24 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
       </section>
 
       <footer className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 pb-2 text-sm font-semibold text-ink-3">
-        <button type="button" className="underline-offset-4 hover:text-ink hover:underline" onClick={() => onOpen('patch')}>
+        <button type="button" className={FOOTER_LINK} onClick={() => onOpen('patch')}>
           패치노트
         </button>
-        <button type="button" className="underline-offset-4 hover:text-ink hover:underline" onClick={() => onOpen('credits')}>
+        <button type="button" className={FOOTER_LINK} onClick={() => onOpen('credits')}>
           크레딧
         </button>
-        <button type="button" className="underline-offset-4 hover:text-ink hover:underline" onClick={() => onOpen('feedback')}>
+        <button type="button" className={FOOTER_LINK} onClick={() => onOpen('feedback')}>
           의견 보내기
         </button>
-        <button type="button" className="underline-offset-4 hover:text-ink hover:underline" onClick={() => onOpen('terms')}>
+        <button type="button" className={FOOTER_LINK} onClick={() => onOpen('terms')}>
           약관 · 개인정보
         </button>
-        <button type="button" className="chip bg-grape-soft text-ink hover:bg-grape hover:text-white" onClick={() => onOpen('apps')}>
-          ✨ 은율이의 다른 앱 보기
+        <button type="button" className={FOOTER_LINK} onClick={() => onOpen('apps')}>
+          은율이의 다른 앱
         </button>
         {!pwa.installed && (pwa.canInstall || pwa.ios) && (
-          <button
-            type="button"
-            className="chip bg-soda-soft text-ink hover:bg-soda"
-            onClick={() => (pwa.canInstall ? promptInstall() : onOpen('settings'))}
-          >
-            📲 앱으로 설치
+          <button type="button" className={FOOTER_LINK} onClick={() => (pwa.canInstall ? promptInstall() : onOpen('settings'))}>
+            앱으로 설치
           </button>
         )}
         <span className="font-display">v{APP_VERSION}</span>

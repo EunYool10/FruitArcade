@@ -24,6 +24,7 @@ import { FriendsModal, SendResult } from './components/Modals/FriendsModal';
 import { PlayerModal } from './components/Modals/PlayerModal';
 import { SettingsModal } from './components/Modals/SettingsModal';
 import { CreditsModal } from './components/Modals/CreditsModal';
+import { AppsModal } from './components/Modals/AppsModal';
 import { PauseModal } from './components/Modals/PauseModal';
 import { ProfileModal } from './components/Modals/ProfileModal';
 import { RecordsModal } from './components/Modals/RecordsModal';
@@ -1316,6 +1317,7 @@ export default function App() {
       <PatchNotesModal isOpen={modal === 'patch'} onClose={() => setModal(null)} />
       <TermsModal isOpen={modal === 'terms'} onClose={() => setModal(null)} />
       <CreditsModal isOpen={modal === 'credits'} onClose={() => setModal(null)} />
+      <AppsModal isOpen={modal === 'apps'} onClose={() => setModal(null)} />
       <ChallengeModal challenge={incomingChallenge} onAccept={acceptChallenge} onDismiss={() => setIncomingChallenge(null)} />
       <Tutorial game={tutorialGame} onClose={() => setTutorialGame(null)} />
       <PauseModal

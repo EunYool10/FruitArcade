@@ -11,7 +11,7 @@ import { MissionsCard } from './MissionsCard';
 import { RecentPlays } from './RecentPlays';
 import { applyUpdate, promptInstall, usePwa } from '../../utils/pwa';
 
-export type LobbyTarget = 'profile' | 'achievements' | 'records' | 'patch' | 'credits' | 'settings' | 'leaderboard' | 'feedback' | 'shop' | 'terms' | 'friends';
+export type LobbyTarget = 'profile' | 'achievements' | 'records' | 'patch' | 'credits' | 'settings' | 'leaderboard' | 'feedback' | 'shop' | 'terms' | 'friends' | 'apps';
 
 interface LobbyProps {
   player: PlayerView;
@@ -139,6 +139,9 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
         </button>
         <button type="button" className="underline-offset-4 hover:text-ink hover:underline" onClick={() => onOpen('terms')}>
           약관 · 개인정보
+        </button>
+        <button type="button" className="chip bg-grape-soft text-ink hover:bg-grape hover:text-white" onClick={() => onOpen('apps')}>
+          ✨ 은율이의 다른 앱 보기
         </button>
         {!pwa.installed && (pwa.canInstall || pwa.ios) && (
           <button

@@ -36,6 +36,13 @@ const RIGHT = CW - WALL_MARGIN;
 const BOTTOM = 580;
 const DEADLINE = 115;
 const JAR_TOP = DEADLINE - 30;
+/** The fruit waiting to drop hangs this far above the line, and falls from right there */
+const HOLD_GAP = 6;
+const holdY = (lv: number) => DEADLINE - HOLD_GAP - FRUITS[lv].r;
+/** Seconds a fruit may stay over the line */
+const DANGER_SECONDS = 3;
+/** Below this speed (px per frame) a fruit over the line counts as overflowing */
+const SETTLED_SPEED = 1;
 const COOLDOWN_MS = 550;
 /** One physics tick in seconds and in 60 fps frames (effect speeds are per frame) */
 const TICK_SEC = TICK_MS / 1000;
@@ -54,7 +61,7 @@ const PALETTE = {
     jarBottom: '#ffe9c4',
     wall: '#2b2140',
     outline: '#2b2140',
-    deadline: 'rgba(43, 33, 64, 0.32)',
+    deadline: 'rgba(43, 33, 64, 0.45)',
     danger: '#e3285f',
     guide: 'rgba(43, 33, 64, 0.3)',
     textStroke: '#ffffff',
@@ -64,7 +71,7 @@ const PALETTE = {
     jarBottom: '#1d1729',
     wall: '#ffb627',
     outline: '#07050c',
-    deadline: 'rgba(255, 244, 228, 0.32)',
+    deadline: 'rgba(255, 244, 228, 0.45)',
     danger: '#ff4778',
     guide: 'rgba(255, 244, 228, 0.3)',
     textStroke: '#07050c',
@@ -145,7 +152,7 @@ export const SuikaGame: React.FC<Props> = ({
   const [curLevel, setCurLevel] = useState(0);
   const [nextLevel, setNextLevel] = useState(1);
   const [highestFruit, setHighestFruit] = useState(0);
-  const [dangerTime, setDangerTime] = useState(3.0);
+  const [dangerTime, setDangerTime] = useState(DANGER_SECONDS);
   const [isDanger, setIsDanger] = useState(false);
   const [isCooldown, setIsCooldown] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -157,8 +164,10 @@ export const SuikaGame: React.FC<Props> = ({
   const floatTextsRef = useRef<SuikaFloatText[]>([]);
   const dropXRef = useRef(CW / 2);
   const shakeRef = useRef(0);
-  const dangerTimerRef = useRef(3.0);
+  const dangerTimerRef = useRef(DANGER_SECONDS);
   const dangerRef = useRef(false);
+  /** Seconds since nothing was over the line (the warning waits a moment before it goes away) */
+  const calmRef = useRef(0);
   const warnCdRef = useRef(0);
   const curLevelRef = useRef(0);
   const nextLevelRef = useRef(1);
@@ -172,7 +181,7 @@ export const SuikaGame: React.FC<Props> = ({
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const keysRef = useRef({ left: false, right: false });
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const shownDangerRef = useRef(3.0);
+  const shownDangerRef = useRef(DANGER_SECONDS);
 
   // Report the finished round once
   useEffect(() => {
@@ -226,12 +235,12 @@ export const SuikaGame: React.FC<Props> = ({
     particlesRef.current = [];
     floatTextsRef.current = [];
     shakeRef.current = 0;
-    dangerTimerRef.current = 3.0;
+    dangerTimerRef.current = DANGER_SECONDS;
     dangerRef.current = false;
     warnCdRef.current = 0;
     keysRef.current = { left: false, right: false };
     if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
-    shownDangerRef.current = 3.0;
+    shownDangerRef.current = DANGER_SECONDS;
 
     const cLv = randLevel();
     const nLv = randLevel();
@@ -247,7 +256,7 @@ export const SuikaGame: React.FC<Props> = ({
     setScore(0);
     setElapsedTime(0);
     setIsDanger(false);
-    setDangerTime(3.0);
+    setDangerTime(DANGER_SECONDS);
     setIsCooldown(false);
     setReward(null);
     setGameState('PLAYING');
@@ -270,7 +279,7 @@ export const SuikaGame: React.FC<Props> = ({
     const f = FRUITS[curLevelRef.current];
     const clampedX = Math.max(LEFT + f.r + 2, Math.min(RIGHT - f.r - 2, dropXRef.current));
 
-    addBody(worldRef.current, curLevelRef.current, clampedX, DEADLINE - 22, { vy: 1.2, scale: 0.95 });
+    addBody(worldRef.current, curLevelRef.current, clampedX, holdY(curLevelRef.current), { vy: 1.2 });
 
     playSound('drop', settings);
     vibrate(HAPTIC.tap, settings);
@@ -364,9 +373,13 @@ export const SuikaGame: React.FC<Props> = ({
 
       stepWorld(worldRef.current).forEach(onMerge);
 
-      // Danger deadline check
-      const isHazard = worldRef.current.bodies.some((b) => b.landed && b.scale >= 0.85 && b.y - b.r * b.scale < DEADLINE);
+      // Danger deadline check: a fruit that has come to rest over the line. One still falling
+      // into the pile pokes over it for a moment as it lands; that is not overflowing.
+      const isHazard = worldRef.current.bodies.some(
+        (b) => b.landed && b.scale >= 0.85 && b.y - b.r * b.scale < DEADLINE && Math.hypot(b.vx, b.vy) < SETTLED_SPEED
+      );
       if (isHazard) {
+        calmRef.current = 0;
         dangerTimerRef.current = Math.max(0, dangerTimerRef.current - TICK_SEC);
         if (!dangerRef.current) {
           dangerRef.current = true;
@@ -391,8 +404,10 @@ export const SuikaGame: React.FC<Props> = ({
           vibrate(HAPTIC.over, settings);
         }
       } else {
-        dangerTimerRef.current = Math.min(3.0, dangerTimerRef.current + TICK_SEC * 1.6);
-        if (dangerRef.current) {
+        dangerTimerRef.current = Math.min(DANGER_SECONDS, dangerTimerRef.current + TICK_SEC * 1.6);
+        calmRef.current += TICK_SEC;
+        // A fruit dipping over the line for an instant shouldn't make the warning flicker
+        if (dangerRef.current && calmRef.current > 0.25) {
           dangerRef.current = false;
           setIsDanger(false);
         }
@@ -456,20 +471,41 @@ export const SuikaGame: React.FC<Props> = ({
       ctx.roundRect(LEFT, JAR_TOP, RIGHT - LEFT, BOTTOM - JAR_TOP, [0, 0, 24, 24]);
       ctx.fill();
 
-      // Deadline
+      // Overflow line. In danger: the space above it pulses red and a red bar on the line
+      // shrinks toward the middle as the seconds run out.
       ctx.save();
-      ctx.setLineDash([8, 7]);
-      ctx.lineWidth = 2.5;
+      const lineL = LEFT + 6;
+      const lineR = RIGHT - 6;
       if (dangerRef.current) {
-        ctx.strokeStyle = P.danger;
-        ctx.globalAlpha = 0.55 + Math.sin(time * 0.012) * 0.45;
-      } else {
-        ctx.strokeStyle = P.deadline;
+        ctx.fillStyle = P.danger;
+        ctx.globalAlpha = 0.1 + (Math.sin(time * 0.012) + 1) * 0.06;
+        ctx.fillRect(LEFT, JAR_TOP, RIGHT - LEFT, DEADLINE - JAR_TOP);
+        ctx.globalAlpha = 1;
       }
+      ctx.setLineDash([8, 7]);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = dangerRef.current ? P.danger : P.deadline;
       ctx.beginPath();
-      ctx.moveTo(LEFT + 6, DEADLINE);
-      ctx.lineTo(RIGHT - 6, DEADLINE);
+      ctx.moveTo(lineL, DEADLINE);
+      ctx.lineTo(lineR, DEADLINE);
       ctx.stroke();
+      if (dangerRef.current) {
+        const half = ((lineR - lineL) / 2) * Math.max(0, Math.min(1, dangerTimerRef.current / DANGER_SECONDS));
+        const mid = (lineL + lineR) / 2;
+        ctx.setLineDash([]);
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(mid - half, DEADLINE);
+        ctx.lineTo(mid + half, DEADLINE);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = P.deadline;
+        ctx.font = '700 12px Pretendard, Jua, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('넘침 선', lineR, DEADLINE - 5);
+      }
       ctx.restore();
 
       const aiming = isPlayingRef.current && !isCooldownRef.current;
@@ -483,7 +519,7 @@ export const SuikaGame: React.FC<Props> = ({
         ctx.setLineDash([3, 7]);
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(aimX, JAR_TOP + aimFruit.r);
+        ctx.moveTo(aimX, DEADLINE);
         ctx.lineTo(aimX, BOTTOM);
         ctx.stroke();
         ctx.restore();
@@ -506,7 +542,7 @@ export const SuikaGame: React.FC<Props> = ({
       // Fruit waiting to be dropped
       if (aiming) {
         ctx.save();
-        ctx.translate(aimX, JAR_TOP);
+        ctx.translate(aimX, holdY(curLevelRef.current));
         drawFruit(ctx, aimFruit, aimFruit.r, 0, P, false);
         ctx.restore();
       }
@@ -648,8 +684,7 @@ export const SuikaGame: React.FC<Props> = ({
               {isDanger && gameState === 'PLAYING' && (
                 <div
                   role="alert"
-                  style={{ top: `calc(${(DEADLINE / CH) * 100}% + 10px)` }}
-                  className="chip pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 animate-pulse bg-berry-deep text-white shadow-hard-sm"
+                  className="chip pointer-events-none absolute right-2 top-2 z-10 bg-berry-deep text-white shadow-hard-sm"
                 >
                   <AlertTriangle className="h-3.5 w-3.5" strokeWidth={3} /> 넘치기 직전! {dangerTime.toFixed(1)}초
                 </div>

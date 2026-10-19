@@ -11,7 +11,7 @@ export const TICK_MS = 1000 / 120;
 /** One tick measured in 60 fps frames: the speeds below are in px per frame */
 const TICK = 0.5;
 const SUBSTEPS = 2;
-const ITERATIONS = 6;
+const ITERATIONS = 16;
 const H = TICK / SUBSTEPS;
 
 const GRAVITY = 0.38;
@@ -21,8 +21,11 @@ const CONTACT_DAMP = 0.9;
 const AIR_DAMP = 0.995;
 /** Same fruit merge when they touch or come this close (px) */
 const MERGE_GAP = 1.5;
-/** A push from another fruit can make a fruit at most this much faster (px per frame) */
-const MAX_KICK = 4;
+/**
+ * Fastest a fruit may move away from what pushed it out of an overlap (px per frame).
+ * Pushes stop a fruit and let it roll, but never fling it: that was the bouncing.
+ */
+const MAX_SEPARATION = 0.5;
 /** How fast a new fruit grows to full size (scale per tick) */
 const GROW = 0.03;
 
@@ -54,8 +57,9 @@ export interface Body {
   // Scratch for the solver
   ox: number;
   oy: number;
-  /** Speed before contacts were solved this substep */
-  sp0: number;
+  /** Velocity before contacts were solved this substep */
+  vx0: number;
+  vy0: number;
   touching: boolean;
   floor: boolean;
   wallL: boolean;
@@ -108,7 +112,8 @@ export function addBody(world: World, lv: number, x: number, y: number, opts: Pa
     landed: opts.landed ?? false,
     ox: cx,
     oy: cy,
-    sp0: 0,
+    vx0: 0,
+    vy0: 0,
     touching: false,
     floor: false,
     wallL: false,
@@ -273,7 +278,8 @@ export function stepWorld(world: World): Merge[] {
   for (let s = 0; s < SUBSTEPS; s++) {
     for (const b of world.bodies) {
       b.vy += GRAVITY * H;
-      b.sp0 = Math.hypot(b.vx, b.vy);
+      b.vx0 = b.vx;
+      b.vy0 = b.vy;
       b.ox = b.x;
       b.oy = b.y;
       b.x += b.vx * H;
@@ -284,17 +290,26 @@ export function stepWorld(world: World): Merge[] {
     for (const b of world.bodies) {
       let vx = (b.x - b.ox) / H;
       let vy = (b.y - b.oy) / H;
+      // What the contacts did (beyond the planned move) may cancel motion into them,
+      // but must not throw the fruit back out
+      const cx = vx - b.vx0;
+      const cy = vy - b.vy0;
+      const cl = Math.hypot(cx, cy);
+      if (cl > 1e-9) {
+        const out = (vx * cx + vy * cy) / cl;
+        if (out > MAX_SEPARATION) {
+          vx -= ((out - MAX_SEPARATION) * cx) / cl;
+          vy -= ((out - MAX_SEPARATION) * cy) / cl;
+        }
+      }
       const resting = b.touching || b.floor;
       const damp = Math.pow(resting ? CONTACT_DAMP : AIR_DAMP, H);
       vx *= damp;
       vy *= resting ? damp : 1;
-      // Being shoved out of an overlap (a drop into a full jar, a fruit growing after a merge)
-      // only nudges: never a burst faster than the fruit already moved, plus a little
       const sp = Math.hypot(vx, vy);
-      const cap = Math.min(MAX_SPEED, b.sp0 + MAX_KICK);
-      if (sp > cap) {
-        vx *= cap / sp;
-        vy *= cap / sp;
+      if (sp > MAX_SPEED) {
+        vx *= MAX_SPEED / sp;
+        vy *= MAX_SPEED / sp;
       }
       b.vx = vx;
       b.vy = vy;

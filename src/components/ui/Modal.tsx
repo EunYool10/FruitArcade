@@ -1,6 +1,8 @@
 import React, { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 import { TONE, Tone } from '../../constants';
+import { Emoji } from './Emoji';
+import { useModalLayer } from './modalStack';
 
 interface ModalProps {
   isOpen: boolean;
@@ -32,6 +34,8 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
+  // Another window opened on top of this one: stay hidden until it closes
+  const onTop = useModalLayer(isOpen);
 
   // Move focus into the dialog while open, and give it back afterwards
   useEffect(() => {
@@ -41,11 +45,16 @@ export const Modal: React.FC<ModalProps> = ({
     return () => previous?.focus?.({ preventScroll: true });
   }, [isOpen]);
 
+  // Back on top after the window above closed: take the focus again
+  useEffect(() => {
+    if (isOpen && onTop && !panelRef.current?.contains(document.activeElement)) panelRef.current?.focus({ preventScroll: true });
+  }, [isOpen, onTop]);
+
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[rgb(18_12_28/0.55)] animate-fade-in sm:items-center sm:p-6"
+      className={`fixed inset-0 z-50 items-end justify-center bg-[rgb(18_12_28/0.55)] animate-fade-in sm:items-center sm:p-6 ${onTop ? 'flex' : 'hidden'}`}
       onMouseDown={(e) => {
         if (onClose && e.target === e.currentTarget) onClose();
       }}
@@ -62,7 +71,7 @@ export const Modal: React.FC<ModalProps> = ({
         <header className="flex shrink-0 items-start gap-3 px-5 pb-3 pt-3 sm:pt-5">
           {icon && (
             <span className={`sticker h-12 w-12 shrink-0 -rotate-6 text-2xl text-on-bright ${TONE[tone].bg}`} aria-hidden="true">
-              {icon}
+              {typeof icon === 'string' ? <Emoji e={icon} /> : icon}
             </span>
           )}
           <div className="min-w-0 flex-1 pt-0.5">

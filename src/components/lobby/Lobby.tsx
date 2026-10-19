@@ -10,6 +10,7 @@ import { GameCard } from './GameCard';
 import { MissionsCard } from './MissionsCard';
 import { RecentPlays } from './RecentPlays';
 import { applyUpdate, promptInstall, usePwa } from '../../utils/pwa';
+import { Emoji } from '../ui/Emoji';
 
 export type LobbyTarget = 'profile' | 'achievements' | 'records' | 'patch' | 'credits' | 'settings' | 'leaderboard' | 'feedback' | 'shop' | 'terms' | 'friends' | 'apps';
 
@@ -58,13 +59,13 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
         <div className="panel relative flex min-h-[250px] flex-col justify-center overflow-hidden bg-mango-soft p-6 sm:p-8">
           <div className="pointer-events-none absolute inset-0" aria-hidden="true">
             <span className="absolute right-5 top-4 text-5xl animate-float sm:right-10 sm:text-6xl" style={tilt(12)}>
-              🍉
+              <Emoji e="🍉" />
             </span>
             <span className="absolute bottom-5 right-20 text-4xl animate-float sm:right-32 sm:text-5xl" style={tilt(-10, -1.2)}>
-              🍊
+              <Emoji e="🍊" />
             </span>
             <span className="absolute bottom-16 right-4 text-3xl animate-float sm:right-10 sm:text-4xl" style={tilt(8, -2.1)}>
-              🍒
+              <Emoji e="🍒" />
             </span>
           </div>
           <span className="chip relative w-fit bg-surface">🍓 상큼 과일 아케이드 존</span>

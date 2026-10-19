@@ -6,6 +6,7 @@ import { Avatar, PlayerView } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
 import { Meter } from '../ui/Meter';
 import { formatCompact, formatNumber } from '../../utils/format';
+import { Emoji } from '../ui/Emoji';
 
 interface PlayerCardProps {
   player: PlayerView;
@@ -70,7 +71,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           <p className="truncate font-display text-xl">{player.name}</p>
           <div className="mt-1 flex flex-wrap gap-1">
             <span className="chip bg-mango-soft">
-              {level.emoji} Lv.{level.level} {level.title}
+              <Emoji e={level.emoji} /> Lv.{level.level} {level.title}
             </span>
             {player.title && <TitleTag title={player.title} />}
             <button type="button" className="chip bg-mango text-on-bright transition-transform hover:-translate-y-0.5" onClick={onOpenShop} aria-label={`${Number.isFinite(coins) ? `코인 ${formatNumber(coins)}개` : '코인 무한'} · 상점 열기`}>

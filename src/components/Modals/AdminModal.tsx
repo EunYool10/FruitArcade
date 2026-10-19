@@ -131,7 +131,7 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="관리자" subtitle="신고 · 의견 · 차단을 한곳에서" icon="🛡️" tone="grape" size="lg">
-      <div role="tablist" aria-label="관리 메뉴" className="mb-4 grid grid-cols-4 gap-1.5">
+      <div role="tablist" aria-label="관리 메뉴" className="mb-4 grid grid-cols-4 gap-1.5 pt-2.5">
         {TABS.map((t) => (
           <button
             key={t.id}

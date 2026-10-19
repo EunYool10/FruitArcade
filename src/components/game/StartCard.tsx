@@ -3,6 +3,7 @@ import { Play } from 'lucide-react';
 import { GameMeta, TONE } from '../../constants';
 import { formatNumber } from '../../utils/format';
 import { useChallenge } from '../ChallengeContext';
+import { Emoji } from '../ui/Emoji';
 
 interface StartCardProps {
   meta: GameMeta;
@@ -22,7 +23,7 @@ export const StartCard: React.FC<StartCardProps> = ({ meta, best, onStart, child
       className={`sticker h-20 w-20 -rotate-6 text-5xl board-short:h-14 board-short:w-14 board-short:text-3xl board-tiny:hidden ${TONE[meta.tone].bg}`}
       aria-hidden="true"
     >
-      {meta.emoji}
+      <Emoji e={meta.emoji} />
     </span>
     <h2 className="mt-3 font-display text-3xl board-short:mt-2 board-short:text-2xl board-tiny:mt-0">{meta.name}</h2>
     {/* Short boards skip the rules: the panel under the board and the ? button explain them */}

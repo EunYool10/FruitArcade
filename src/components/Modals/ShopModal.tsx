@@ -7,6 +7,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import { Framed, PlayerView } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
+import { Emoji } from '../ui/Emoji';
 
 type Tab = ItemKind | 'staff';
 
@@ -97,13 +98,13 @@ const Preview: React.FC<{ kind: ItemKind; id: string; player: PlayerView }> = ({
           {player.photo ? (
             <img src={player.photo} alt="" referrerPolicy="no-referrer" className="h-14 w-14 rounded-full border-2 border-line object-cover" />
           ) : (
-            <span className="grid h-14 w-14 place-items-center rounded-full border-2 border-line bg-mango-soft text-3xl">{player.emoji}</span>
+            <span className="grid h-14 w-14 place-items-center rounded-full border-2 border-line bg-mango-soft text-3xl"><Emoji e={player.emoji} /></span>
           )}
         </Framed>
       );
     case 'avatar': {
       const emoji = id ? SHOP_ITEMS.find((i) => i.id === id)?.icon : '🍓';
-      return <span className="grid h-14 w-14 place-items-center rounded-full border-2 border-line bg-mango-soft text-3xl">{emoji}</span>;
+      return <span className="grid h-14 w-14 place-items-center rounded-full border-2 border-line bg-mango-soft text-3xl"><Emoji e={emoji ?? ''} /></span>;
     }
     case 'title': {
       const t = titleDef(id);

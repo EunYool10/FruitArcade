@@ -10,6 +10,7 @@ import { Rng, randomSeed, seededRandom } from '../../utils/rng';
 import { formatTime } from '../../utils/format';
 import { GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
 import { ResultCard } from '../game/ResultCard';
+import { Emoji } from '../ui/Emoji';
 
 const FRUITS = [
   '🍎', '🍊', '🍌', '🍇', '🍓', '🍒', '🍑', '🍍', '🥝', '🍉',
@@ -663,7 +664,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
                         <span
                           className={`grid aspect-square w-[48%] place-items-center rounded-full border-2 border-line bg-surface font-display leading-none text-ink ${markSize}`}
                         >
-                          {back.mark}
+                          <Emoji e={back.mark} />
                         </span>
                       </div>
                       {/* Front */}
@@ -671,7 +672,9 @@ export const MemoryGameBoard: React.FC<Props> = ({
                         className={`card-face card-front grid place-items-center ${radius} ${border} border-line ${frontBg}`}
                         style={tint ? { backgroundColor: `color-mix(in srgb, ${tint} 24%, var(--surface))` } : undefined}
                       >
-                        <span className={`leading-none ${emojiSize} ${card.isMatched ? 'opacity-60' : ''}`}>{display}</span>
+                        <span className={`leading-none ${emojiSize} ${card.isMatched ? 'opacity-60' : ''}`}>
+                          <Emoji e={display} />
+                        </span>
                         {card.isSpecial && (
                           <span className="absolute bottom-0.5 text-[8px] font-black text-on-bright sm:text-[10px]">
                             {card.isSpecial === 'card-hint' ? '카드힌트' : '플래시'}

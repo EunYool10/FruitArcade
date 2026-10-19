@@ -10,6 +10,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import { AvatarFace, Framed } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
+import { Emoji } from '../ui/Emoji';
 
 const rankApi = () => import('../../utils/leaderboardService');
 const communityApi = () => import('../../utils/communityService');
@@ -368,7 +369,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
             }`}
           >
             <span className="text-xl" aria-hidden="true">
-              {GAMES[g].emoji}
+              <Emoji e={GAMES[g].emoji} />
             </span>
             <span className="font-display text-sm leading-tight">{GAMES[g].short}</span>
           </button>
@@ -484,7 +485,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
           <div className="well grid min-h-[200px] place-items-center p-6 text-center">
             <div>
               <p className="text-4xl" aria-hidden="true">
-                {meta.emoji}
+                <Emoji e={meta.emoji} />
               </p>
               <p className="mt-2 text-sm font-bold text-ink-2">
                 {period === 'all' ? '아직 기록이 없어요.' : `${PERIOD_LABEL[period]} 기록이 아직 없어요.`}

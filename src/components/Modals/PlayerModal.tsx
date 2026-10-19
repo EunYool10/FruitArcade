@@ -7,6 +7,7 @@ import { GAMES, GAME_ORDER, TONE } from '../../constants';
 import { titleDef } from '../../utils/titles';
 import { formatNumber } from '../../utils/format';
 import type { PublicPlayer } from '../../utils/friendsService';
+import { Emoji } from '../ui/Emoji';
 
 const friendsApi = () => import('../../utils/friendsService');
 
@@ -104,7 +105,7 @@ export const PlayerModal: React.FC<Props> = ({ isOpen, onClose, viewerUid, targe
             {GAME_ORDER.map((g) => (
               <div key={g} className={`min-w-0 rounded-xl border-2 border-line px-1 py-2 text-center ${TONE[GAMES[g].tone].soft}`}>
                 <p className="text-lg" aria-hidden="true">
-                  {GAMES[g].emoji}
+                  <Emoji e={GAMES[g].emoji} />
                 </p>
                 <p className="truncate text-[11px] font-bold text-ink-2">{GAMES[g].short}</p>
                 <p className="truncate font-display text-sm tabular-nums">{p.best[g] ? formatNumber(p.best[g]!) : '–'}</p>

@@ -12,6 +12,7 @@ import { StartCard } from '../game/StartCard';
 import { Segmented } from '../ui/Segmented';
 import { ResultCard } from '../game/ResultCard';
 import { runnerStyle } from '../../utils/shop';
+import { drawEmoji, preloadEmoji } from '../../utils/emoji';
 
 const CW = 440;
 const CH = 600;
@@ -43,6 +44,8 @@ const POWERS: Record<PowerKind, { emoji: string; color: string; label: string; f
   double: { emoji: '✨', color: '#ffb627', label: '점수 2배', frames: 480 },
 };
 const POWER_KINDS = Object.keys(POWERS) as PowerKind[];
+
+preloadEmoji([...FRUIT_TYPES.map((f) => f.emoji), ...Object.values(POWERS).map((p) => p.emoji)]);
 /** Frames between power-ups (about 13 to 20 seconds) */
 const POWER_GAP = [780, 1200];
 
@@ -82,7 +85,6 @@ export const DASH_DIFFICULTY: Record<DashDifficulty, { label: string; sub: strin
   hard: { label: '어려움', sub: '점수 1.5배', speed: 1.22, spawn: 0.8, dodge: 3, star: 80 },
 };
 
-const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 
 interface Props {
   settings: GameSettings;
@@ -655,11 +657,7 @@ export const FruitDashGame: React.FC<Props> = ({
         ctx.globalAlpha = 1;
 
         ctx.rotate(f.rot);
-        ctx.fillStyle = '#000'; // color emoji inherit the fill alpha
-        ctx.font = `${Math.round(f.r * 1.3)}px ${EMOJI_FONT}`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(f.emoji, 0, 2);
+        drawEmoji(ctx, f.emoji, 0, 1, f.r * 1.4);
         ctx.restore();
       }
 
@@ -815,11 +813,7 @@ export const FruitDashGame: React.FC<Props> = ({
         else ctx.rect(badgeX, 12, 36, 36);
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = '#000';
-        ctx.font = `20px ${EMOJI_FONT}`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(def.emoji, badgeX + 18, 29);
+        drawEmoji(ctx, def.emoji, badgeX + 18, 28, 22);
         ctx.fillStyle = def.color;
         ctx.fillRect(badgeX + 4, 41, 28 * Math.min(1, left / def.frames), 4);
         ctx.restore();

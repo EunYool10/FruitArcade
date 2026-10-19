@@ -7,6 +7,7 @@ import { downloadBlob, renderResultImage } from '../../utils/shareImage';
 import { usePlayer } from '../PlayerContext';
 import { useChallenge } from '../ChallengeContext';
 import { useRank } from '../RankContext';
+import { Emoji } from '../ui/Emoji';
 
 const TONE_HEX: Record<Tone, string> = { berry: '#ff4778', melon: '#2ec27e', mango: '#ffb627', grape: '#7a5cff', soda: '#2ea9ff' };
 
@@ -103,7 +104,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
   return (
     <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="panel w-full max-w-sm p-5 text-center animate-pop-in sm:p-6">
       <div className="text-6xl animate-bounce-in" aria-hidden="true">
-        {emoji}
+        <Emoji e={emoji} />
       </div>
       <h2 id={titleId} className={`mt-1 font-display text-4xl ${TONE[tone].ink}`}>
         {title}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAnyModalOpen } from '../ui/modalStack';
 
 /**
  * Game screen layout.
@@ -58,9 +59,15 @@ export const BoardOverlay: React.FC<{ children: React.ReactNode }> = ({ children
   </div>
 );
 
-/** Covers the whole screen (used for result cards). */
-export const ScreenOverlay: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="fixed inset-0 z-40 flex overflow-y-auto bg-[rgb(18_12_28/0.5)] p-4 animate-fade-in">
-    <div className="m-auto flex w-full justify-center">{children}</div>
-  </div>
-);
+/**
+ * Covers the whole screen (used for result cards). Hidden, not closed, while a window such as
+ * the leaderboard is open on top of it, so the two never show at once.
+ */
+export const ScreenOverlay: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const covered = useAnyModalOpen();
+  return (
+    <div className={`fixed inset-0 z-40 overflow-y-auto bg-[rgb(18_12_28/0.5)] p-4 animate-fade-in ${covered ? 'hidden' : 'flex'}`}>
+      <div className="m-auto flex w-full justify-center">{children}</div>
+    </div>
+  );
+};

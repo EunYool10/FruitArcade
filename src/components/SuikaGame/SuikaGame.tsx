@@ -11,6 +11,8 @@ import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/Ga
 import { StartCard } from '../game/StartCard';
 import { ResultCard } from '../game/ResultCard';
 import { Merge, TICK_MS, World, addBody, createWorld, drawPos, stepWorld } from './physics';
+import { drawEmoji, preloadEmoji } from '../../utils/emoji';
+import { Emoji } from '../ui/Emoji';
 
 const FRUITS: SuikaFruitDef[] = [
   { name: '체리', emoji: '🍒', r: 17, score: 1, color: '#ff334b' },
@@ -48,11 +50,22 @@ const COOLDOWN_MS = 550;
 const TICK_SEC = TICK_MS / 1000;
 const TICK_FRAMES = TICK_MS / (1000 / 60);
 const SHAKE_DECAY = Math.pow(0.88, TICK_FRAMES);
-// Chance of each droppable fruit (cherry, strawberry, grape, hallabong, persimmon)
-const DROP_WEIGHTS = [0.3, 0.25, 0.2, 0.15, 0.1];
+// Chance of each droppable fruit (cherry, strawberry, grape, hallabong, persimmon, apple).
+// The longer a round goes, the fewer cherries and the more big fruit: the mix slides from
+// EARLY to LATE between the 15th and the 135th fruit (counted, not timed, so a challenge
+// seed still gives everyone the same fruit).
+const EARLY_WEIGHTS = [0.3, 0.25, 0.2, 0.15, 0.1, 0];
+const LATE_WEIGHTS = [0.05, 0.12, 0.22, 0.28, 0.25, 0.08];
+const dropWeights = (n: number) => {
+  const t = Math.max(0, Math.min(1, (n - 15) / 120));
+  return EARLY_WEIGHTS.map((w, i) => w + (LATE_WEIGHTS[i] - w) * t);
+};
+/** Points multiplier for the time played: +0.1 every 30 seconds, ×2 from 5 minutes */
+const scoreMult = (seconds: number) => 1 + Math.min(10, Math.floor(seconds / 30)) / 10;
 const KEY_SPEED = 6.5;
 
 const RADII = FRUITS.map((f) => f.r);
+preloadEmoji(FRUITS.map((f) => f.emoji));
 const newWorld = () => createWorld({ left: LEFT, right: RIGHT, bottom: BOTTOM }, RADII);
 
 const PALETTE = {
@@ -79,7 +92,6 @@ const PALETTE = {
 };
 type Palette = (typeof PALETTE)['light'];
 
-const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 
 /** Cartoon fruit: flat fill, gloss, outline, then the emoji (which rotates). */
 function drawFruit(ctx: CanvasRenderingContext2D, f: SuikaFruitDef, r: number, angle: number, P: Palette, warn: boolean) {
@@ -102,11 +114,7 @@ function drawFruit(ctx: CanvasRenderingContext2D, f: SuikaFruitDef, r: number, a
 
   ctx.save();
   ctx.rotate(angle);
-  ctx.fillStyle = '#000'; // color emoji inherit the fill alpha
-  ctx.font = `${Math.round(r * 1.1)}px ${EMOJI_FONT}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(f.emoji, 0, r * 0.07);
+  drawEmoji(ctx, f.emoji, 0, r * 0.03, r * 1.2);
   ctx.restore();
 }
 
@@ -203,19 +211,25 @@ export const SuikaGame: React.FC<Props> = ({
     []
   );
 
+  /** How many fruit this round has rolled (the drop mix depends on it) */
+  const rollsRef = useRef(0);
   const randLevel = () => {
-    let roll = rngRef.current();
-    for (let lv = 0; lv < DROP_WEIGHTS.length; lv++) {
-      roll -= DROP_WEIGHTS[lv];
+    const weights = dropWeights(rollsRef.current++);
+    let roll = rngRef.current() * weights.reduce((a, b) => a + b, 0);
+    for (let lv = 0; lv < weights.length; lv++) {
+      roll -= weights[lv];
       if (roll < 0) return lv;
     }
     return 0;
   };
+  /** Seconds played, for the points multiplier inside the physics loop */
+  const elapsedRef = useRef(0);
 
   // Track elapsed play time
   useEffect(() => {
     if (gameState === 'PLAYING' && !isPaused) {
       timerIntervalRef.current = setInterval(() => {
+        elapsedRef.current += 1;
         setElapsedTime((t) => t + 1);
       }, 1000);
     } else {
@@ -231,6 +245,8 @@ export const SuikaGame: React.FC<Props> = ({
     const roundSeed = seed ?? randomSeed();
     rngRef.current = seededRandom(roundSeed);
     onRoundSeed?.(roundSeed);
+    rollsRef.current = 0;
+    elapsedRef.current = 0;
     worldRef.current = newWorld();
     particlesRef.current = [];
     floatTextsRef.current = [];
@@ -314,7 +330,7 @@ export const SuikaGame: React.FC<Props> = ({
       if (m.made) {
         const nl = m.made.lv;
         const nf = FRUITS[nl];
-        const pts = Math.round(m.a.r + m.b.r + nf.score);
+        const pts = Math.round((m.a.r + m.b.r + nf.score) * scoreMult(elapsedRef.current));
         setScore((s) => s + pts);
 
         playSound('merge', settings, { level: nl });
@@ -355,7 +371,7 @@ export const SuikaGame: React.FC<Props> = ({
         if (nl === FRUITS.length - 1) onUnlockRef.current('suika_watermelon');
       } else {
         // Watermelon + Watermelon Merge -> Huge bonus
-        setScore((s) => s + 5000);
+        setScore((s) => s + Math.round(5000 * scoreMult(elapsedRef.current)));
         playSound('victory', settings);
         vibrate(HAPTIC.over, settings);
         shakeRef.current = 12;
@@ -657,6 +673,7 @@ export const SuikaGame: React.FC<Props> = ({
   };
 
   const topFruit = FRUITS[highestFruit];
+  const mult = gameState === 'IDLE' ? 1 : scoreMult(elapsedTime);
 
   return (
     <>
@@ -665,8 +682,9 @@ export const SuikaGame: React.FC<Props> = ({
           <Hud>
             <HudStat label="점수" value={formatNumber(score)} />
             <HudStat label="최고" value={formatNumber(Math.max(best, score))} tone={best > 0 && score > best ? 'hot' : 'default'} />
-            <HudStat label="시간" value={formatTime(elapsedTime)} />
-            <HudStat label="다음" value={<span className="text-2xl leading-none">{FRUITS[nextLevel]?.emoji}</span>} />
+            {/* The points multiplier rides on the time: it grows the longer the round lasts */}
+            <HudStat label={mult > 1 ? `시간 ×${mult.toFixed(1)}` : '시간'} value={formatTime(elapsedTime)} tone={mult > 1 ? 'hot' : 'default'} />
+            <HudStat label="다음" value={<Emoji e={FRUITS[nextLevel]?.emoji ?? ''} className="text-2xl leading-none" />} />
           </Hud>
         }
         board={
@@ -701,9 +719,16 @@ export const SuikaGame: React.FC<Props> = ({
         panel={
           <div className="panel p-4">
             <div className="mb-2.5 flex items-center justify-between">
-              <h3 className="font-display text-lg">과일 진화</h3>
+              <h3 className="flex items-center gap-2 font-display text-lg">
+                과일 진화
+                {mult > 1 && (
+                  <span key={mult} className="chip h-6 bg-mango px-2 text-[11px] text-on-bright animate-pop-in" title="오래 버틸수록 점수가 올라요">
+                    점수 ×{mult.toFixed(1)}
+                  </span>
+                )}
+              </h3>
               <span className="text-xs font-bold text-ink-3">
-                최고: {topFruit.emoji} {topFruit.name}
+                최고: <Emoji e={topFruit.emoji} /> {topFruit.name}
               </span>
             </div>
             <ol className="grid grid-cols-6 gap-1.5">
@@ -718,7 +743,7 @@ export const SuikaGame: React.FC<Props> = ({
                       isTop ? '-translate-y-0.5 bg-mango-soft shadow-hard-sm' : reached ? 'bg-surface-2' : 'bg-surface-3 opacity-40 grayscale'
                     }`}
                   >
-                    {f.emoji}
+                    <Emoji e={f.emoji} />
                   </li>
                 );
               })}

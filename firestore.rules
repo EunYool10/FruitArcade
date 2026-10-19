@@ -254,7 +254,7 @@ service cloud.firestore {
 
     // Caps well above anything reachable in normal play
     function maxScore(game) {
-      return {'memory': 2000, 'suika': 100000, 'dash': 100000, 'puzzle': 100000, 'slice': 100000}[game];
+      return {'memory': 2000, 'suika': 500000, 'dash': 100000, 'puzzle': 100000, 'slice': 100000}[game];
     }
 
     // ===============================================================
@@ -399,7 +399,7 @@ service cloud.firestore {
         && data.best is map
         && data.best.keys().hasOnly(['memory', 'suika', 'dash', 'puzzle', 'slice'])
         && isBest(data.best, 'memory', 2000)
-        && isBest(data.best, 'suika', 100000)
+        && isBest(data.best, 'suika', 500000)
         && isBest(data.best, 'dash', 100000)
         && isBest(data.best, 'puzzle', 100000)
         && isBest(data.best, 'slice', 100000)

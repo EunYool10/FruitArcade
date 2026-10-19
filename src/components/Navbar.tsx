@@ -6,6 +6,7 @@ import { LevelInfo } from '../utils/progress';
 import { Avatar, PlayerView } from './ui/Avatar';
 import { Challenge } from '../utils/challenge';
 import { formatNumber } from '../utils/format';
+import { Emoji } from './ui/Emoji';
 
 export type NavTarget = 'settings' | 'profile' | 'achievements' | 'records' | 'leaderboard' | 'admin' | 'shop' | 'friends';
 
@@ -71,7 +72,7 @@ export const Navbar: React.FC<Props> = ({
             {game && (
               <span className="flex min-w-0 items-center gap-2">
                 <span className="text-2xl" aria-hidden="true">
-                  {GAMES[game].emoji}
+                  <Emoji e={GAMES[game].emoji} />
                 </span>
                 {challenge ? (
                   <span className="chip truncate bg-berry-soft text-sm">

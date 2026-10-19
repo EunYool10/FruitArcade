@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { TitleDef } from '../../utils/titles';
 import { FRAME_CLASS } from '../../utils/shop';
+import { Emoji } from './Emoji';
 
 const SIZES = {
   sm: 'h-8 w-8 text-base',
@@ -45,7 +46,7 @@ export const AvatarFace: React.FC<{ emoji: string; photo?: string; className: st
     </span>
   ) : (
     <span className={className} aria-hidden="true">
-      {emoji}
+      <Emoji e={emoji} />
     </span>
   );
 };
@@ -65,7 +66,7 @@ export const Avatar: React.FC<{ player: PlayerView; size?: keyof typeof SIZES }>
       />
     ) : (
       <span className={`${SIZES[size]} grid shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft`} aria-hidden="true">
-        {player.emoji}
+        <Emoji e={player.emoji} />
       </span>
     )}
   </Framed>

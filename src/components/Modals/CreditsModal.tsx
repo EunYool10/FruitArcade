@@ -5,6 +5,7 @@ import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
 import { SHOP_ITEMS } from '../../utils/shop';
 import { STAGE_COUNT } from '../PuzzleGame/stages';
 import { TRACK_COUNT } from '../../utils/music';
+import { Emoji } from '../ui/Emoji';
 
 interface Props {
   isOpen: boolean;
@@ -63,7 +64,7 @@ export const CreditsModal: React.FC<Props> = ({ isOpen, onClose }) => (
       {IDEAS.map((m) => (
         <li key={m.name} className="well flex flex-col items-center gap-0.5 p-3 text-center">
           <span className="text-2xl" aria-hidden="true">
-            {m.emoji}
+            <Emoji e={m.emoji} />
           </span>
           <span className="font-display leading-tight">{m.name}</span>
           <span className="text-[11px] text-ink-3">아이디어</span>

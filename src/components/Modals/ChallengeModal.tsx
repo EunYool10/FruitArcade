@@ -5,6 +5,7 @@ import { Challenge } from '../../utils/challenge';
 import { formatNumber } from '../../utils/format';
 import { DASH_LABEL, MEMORY_LABEL } from '../challengeLabels';
 import { Modal } from '../ui/Modal';
+import { Emoji } from '../ui/Emoji';
 
 interface Props {
   challenge: Challenge | null;
@@ -24,7 +25,7 @@ export const ChallengeModal: React.FC<Props> = ({ challenge, onAccept, onDismiss
     <Modal isOpen onClose={onDismiss} title="도전장이 도착했어요!" subtitle="같은 판으로 점수를 겨뤄요" icon="🥊" tone="berry" size="sm">
       <div className={`rounded-2xl border-2 border-line p-4 text-center ${TONE[meta.tone].soft}`}>
         <span className={`sticker h-16 w-16 -rotate-6 text-4xl ${TONE[meta.tone].bg}`} aria-hidden="true">
-          {meta.emoji}
+          <Emoji e={meta.emoji} />
         </span>
         <p className="mt-3 text-sm">
           <b>{challenge.n}</b>님이 <b>{meta.name}</b>에서

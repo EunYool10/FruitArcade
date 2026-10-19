@@ -21,7 +21,7 @@ export type Game = 'memory' | 'suika' | 'dash' | 'puzzle' | 'slice';
 export const GAMES: Game[] = ['memory', 'suika', 'dash', 'puzzle', 'slice'];
 
 /** Same caps as maxScore() in firestore.rules */
-const CAP: Record<Game, number> = { memory: 2000, suika: 100000, dash: 100000, puzzle: 100000, slice: 100000 };
+const CAP: Record<Game, number> = { memory: 2000, suika: 500000, dash: 100000, puzzle: 100000, slice: 100000 };
 
 /**
  * Points per second (plus a head start) that no real round goes past. These sit near each
@@ -29,7 +29,8 @@ const CAP: Record<Game, number> = { memory: 2000, suika: 100000, dash: 100000, p
  */
 const RATE: Record<Exclude<Game, 'puzzle'>, { perSecond: number; burst: number }> = {
   memory: { perSecond: 60, burst: 150 },
-  suika: { perSecond: 500, burst: 2000 },
+  // Points grow ×0.1 every 30 s up to ×2, so the late-game rate doubles
+  suika: { perSecond: 1000, burst: 2000 },
   dash: { perSecond: 140, burst: 300 },
   slice: { perSecond: 160, burst: 300 },
 };

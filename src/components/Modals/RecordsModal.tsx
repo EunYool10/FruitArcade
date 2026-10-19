@@ -7,6 +7,7 @@ import { DayStats, lastDays } from '../../utils/dailyStats';
 import { Modal } from '../ui/Modal';
 import { BarChart } from '../ui/BarChart';
 import { HistoryRow } from '../HistoryRow';
+import { Emoji } from '../ui/Emoji';
 
 interface Props {
   isOpen: boolean;
@@ -50,7 +51,7 @@ export const RecordsModal: React.FC<Props> = ({ isOpen, onClose, stats, history,
               className={`flex items-center gap-3 rounded-2xl border-2 border-line p-3 sm:flex-col sm:gap-1.5 sm:px-1.5 sm:py-2.5 sm:text-center ${TONE[meta.tone].soft}`}
             >
               <span className={`sticker h-11 w-11 shrink-0 text-2xl sm:h-10 sm:w-10 sm:text-xl ${TONE[meta.tone].bg}`} aria-hidden="true">
-                {meta.emoji}
+                <Emoji e={meta.emoji} />
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-bold sm:text-xs">{meta.name}</p>

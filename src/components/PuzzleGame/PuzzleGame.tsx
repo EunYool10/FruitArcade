@@ -32,6 +32,7 @@ import {
   stepPoints,
   swapped,
 } from './engine';
+import { Emoji } from '../ui/Emoji';
 
 const SWAP_MS = 170;
 const POP_MS = 220;
@@ -419,7 +420,9 @@ export const PuzzleGame: React.FC<Props> = ({
                           } as React.CSSProperties
                         }
                       >
-                        <span className="text-[clamp(20px,6.6vw,30px)] lg:text-[44px]">{FRUIT[t.kind]}</span>
+                        <span className="text-[clamp(20px,6.6vw,30px)] lg:text-[44px]">
+                          <Emoji e={FRUIT[t.kind]} />
+                        </span>
                         {t.special && (
                           <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full border-2 border-line bg-mango text-[10px] font-black text-on-bright sm:h-6 sm:w-6 sm:text-xs">
                             {SPECIAL_BADGE[t.special]}

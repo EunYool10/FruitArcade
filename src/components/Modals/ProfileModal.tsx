@@ -14,6 +14,7 @@ import { googlePhotoOf } from '../../utils/ranking';
 import { Meter } from '../ui/Meter';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import type { TitleDef } from '../../utils/titles';
+import { Emoji } from '../ui/Emoji';
 
 interface Props {
   isOpen: boolean;
@@ -202,7 +203,7 @@ export const ProfileModal: React.FC<Props> = ({
                 onClick={() => onUpdateProfile({ ...profile, avatar: a })}
                 className={`grid aspect-square place-items-center rounded-xl border-2 border-line text-xl ${profile.avatar === a ? 'bg-mango shadow-hard-sm' : 'bg-surface'}`}
               >
-                {a}
+                <Emoji e={a} />
               </button>
             ))}
           </div>
@@ -251,7 +252,7 @@ export const ProfileModal: React.FC<Props> = ({
           <div className="well p-3.5">
             <div className="mb-2 flex items-center justify-between">
               <span className="chip bg-mango-soft">
-                {level.emoji} Lv.{level.level} {level.title}
+                <Emoji e={level.emoji} /> Lv.{level.level} {level.title}
               </span>
               <span className="text-xs font-bold tabular-nums text-ink-2">
                 {level.xp - level.floor} / {level.next - level.floor} XP
@@ -279,7 +280,7 @@ export const ProfileModal: React.FC<Props> = ({
             {GAME_ORDER.map((g) => (
               <div key={g} className={`min-w-0 rounded-xl border-2 border-line px-1 py-2 text-center ${TONE[GAMES[g].tone].soft}`}>
                 <p className="text-lg" aria-hidden="true">
-                  {GAMES[g].emoji}
+                  <Emoji e={GAMES[g].emoji} />
                 </p>
                 <p className="truncate text-[11px] font-bold text-ink-2">{GAMES[g].short}</p>
                 <p className="truncate font-display text-sm tabular-nums">{stats[bestKey(g)] > 0 ? formatNumber(stats[bestKey(g)]) : '–'}</p>

@@ -3,6 +3,7 @@ import { ArrowLeft, Play } from 'lucide-react';
 import { GameSettings, LifeLimit, MemoryConfig, MemoryMode } from '../../types';
 import { playSound } from '../../utils/audio';
 import { Segmented } from '../ui/Segmented';
+import { Emoji } from '../ui/Emoji';
 
 interface Props {
   initial: MemoryConfig;
@@ -75,7 +76,7 @@ export const MemorySetup: React.FC<Props> = ({ initial, settings, onStart, onBac
                     className={`sticker h-11 w-11 shrink-0 text-2xl ${active ? '-rotate-6 bg-berry' : 'bg-surface shadow-none'}`}
                     aria-hidden="true"
                   >
-                    {m.emoji}
+                    <Emoji e={m.emoji} />
                   </span>
                   <span className="min-w-0">
                     <span className="block font-display text-lg leading-tight max-[400px]:text-base">{m.label}</span>

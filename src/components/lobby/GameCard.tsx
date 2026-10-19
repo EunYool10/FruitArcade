@@ -2,6 +2,7 @@ import React from 'react';
 import { Play } from 'lucide-react';
 import { GameMeta, TONE } from '../../constants';
 import { formatNumber } from '../../utils/format';
+import { Emoji } from '../ui/Emoji';
 
 interface GameCardProps {
   meta: GameMeta;
@@ -27,7 +28,7 @@ export const GameCard: React.FC<GameCardProps> = ({ meta, best, plays, onPlay, c
           className="text-5xl drop-shadow-[3px_4px_0_rgb(0_0_0/0.18)] transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 sm:text-7xl"
           aria-hidden="true"
         >
-          {meta.emoji}
+          <Emoji e={meta.emoji} />
         </span>
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2 p-3.5 sm:gap-3 sm:p-4">

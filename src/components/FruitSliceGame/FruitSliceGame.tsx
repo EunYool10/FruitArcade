@@ -11,6 +11,7 @@ import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/Ga
 import { StartCard } from '../game/StartCard';
 import { ResultCard } from '../game/ResultCard';
 import { bladeStyle } from '../../utils/shop';
+import { drawEmoji, preloadEmoji } from '../../utils/emoji';
 
 const CW = 440;
 const CH = 600;
@@ -52,6 +53,8 @@ const SPECIAL: Record<Exclude<Kind, 'fruit'>, { emoji: string; juice: string; r:
   star: { emoji: '⭐', juice: '#ffd23f', r: 24 },
   ice: { emoji: '❄️', juice: '#8fd8ff', r: 25 },
 };
+
+preloadEmoji([...FRUITS.map((f) => f.emoji), ...Object.values(SPECIAL).map((s) => s.emoji)]);
 
 interface Flyer {
   kind: Kind;
@@ -132,7 +135,6 @@ const BOARD = {
   },
 };
 
-const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 
 /** A cutting board of five planks, painted once per theme */
 function paintBoard(c: CanvasRenderingContext2D, P: (typeof BOARD)['light']) {
@@ -724,9 +726,7 @@ export const FruitSliceGame: React.FC<Props> = ({
         ctx.rect(-R, h.side > 0 ? 0 : -R, R * 2, R);
         ctx.clip();
         ctx.rotate(-h.cut);
-        ctx.fillStyle = '#000'; // color emoji inherit the fill alpha
-        ctx.font = `${Math.round(h.r * 1.8)}px ${EMOJI_FONT}`;
-        ctx.fillText(h.emoji, 0, h.r * 0.1);
+        drawEmoji(ctx, h.emoji, 0, h.r * 0.05, h.r * 1.9);
         // The juicy inside along the cut
         ctx.rotate(h.cut);
         ctx.fillStyle = h.juice;
@@ -748,9 +748,7 @@ export const FruitSliceGame: React.FC<Props> = ({
           ctx.fill();
         }
         ctx.rotate(f.rot);
-        ctx.fillStyle = '#000';
-        ctx.font = `${Math.round(f.r * 1.8)}px ${EMOJI_FONT}`;
-        ctx.fillText(f.emoji, 0, f.r * 0.1);
+        drawEmoji(ctx, f.emoji, 0, f.r * 0.05, f.r * 1.9);
         if (f.kind === 'bomb') {
           // Fizzing fuse
           ctx.fillStyle = Math.sin(time * 0.05) > 0 ? '#ffd23f' : '#ff7a1a';
@@ -840,9 +838,7 @@ export const FruitSliceGame: React.FC<Props> = ({
         else ctx.rect(x, 12, 36, 36);
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = '#000';
-        ctx.font = `20px ${EMOJI_FONT}`;
-        ctx.fillText('❄️', x + 18, 29);
+        drawEmoji(ctx, '❄️', x + 18, 28, 22);
         ctx.fillStyle = '#2ea9ff';
         ctx.fillRect(x + 4, 41, 28 * Math.min(1, iceRef.current / ICE_FRAMES), 4);
         ctx.restore();

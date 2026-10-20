@@ -63,6 +63,8 @@ interface Props {
   onClose: () => void;
   settings: GameSettings;
   loggedIn: boolean;
+  /** On the admin list: shows the QA mode switch */
+  isAdmin?: boolean;
   onUpdateSettings: (next: GameSettings) => void;
   onResetAchievements: () => void;
   onResetRecords: () => void;
@@ -90,6 +92,7 @@ const SHORTCUTS: [string, string][] = [
   ['메모리 카드 힌트', 'C'],
   ['수박 · 대시 이동', '← → / A D'],
   ['수박 낙하', 'Space · ↓'],
+  ['수박 망치 · 흔들기', '1 · 2'],
   ['게임 시작', 'Space · Enter'],
 ];
 
@@ -98,6 +101,7 @@ export const SettingsModal: React.FC<Props> = ({
   onClose,
   settings,
   loggedIn,
+  isAdmin = false,
   onUpdateSettings,
   onResetAchievements,
   onResetRecords,
@@ -143,6 +147,19 @@ export const SettingsModal: React.FC<Props> = ({
       }
     >
       <div className="space-y-3">
+        {isAdmin && (
+          <Section icon="🛡️" title="운영진">
+            {toggle(
+              'qaMode',
+              '🧪 QA 모드',
+              settings.qaMode
+                ? '지금 일반 사용자처럼 보여요. 끄면 운영진으로 돌아가요'
+                : '일반 사용자처럼 테스트해요. 코인 · 수박 아이템 무한, 운영진 물건, 관리자 버튼이 꺼져요'
+            )}
+            <p className="text-xs text-ink-3">닉네임과 서버의 관리자 권한은 그대로예요. 켜 둔 동안 산 물건은 진짜 코인으로 사요.</p>
+          </Section>
+        )}
+
         <Section icon="🎨" title="화면">
           <Segmented<ThemeMode>
             ariaLabel="테마"

@@ -20,6 +20,8 @@ interface Props {
   challenge: Challenge | null;
   /** Shows the admin screen button */
   isAdmin: boolean;
+  /** An admin testing as an ordinary player: a QA badge that opens the settings */
+  qaMode?: boolean;
   /** Friend requests and gifts waiting */
   friendBadge: number;
   onHome: () => void;
@@ -38,6 +40,7 @@ export const Navbar: React.FC<Props> = ({
   level,
   challenge,
   isAdmin,
+  qaMode = false,
   friendBadge,
   onHome,
   onPause,
@@ -87,6 +90,17 @@ export const Navbar: React.FC<Props> = ({
         )}
 
         <nav className="ml-auto flex shrink-0 items-center gap-2" aria-label="빠른 메뉴">
+          {inLobby && qaMode && (
+            <button
+              type="button"
+              className="chip h-9 shrink-0 bg-grape-deep px-3 text-white shadow-hard-sm"
+              onClick={() => onOpen('settings')}
+              aria-label="QA 모드 켜짐: 일반 사용자처럼 테스트 중 (설정에서 끄기)"
+              title="일반 사용자처럼 테스트 중이에요. 설정에서 끌 수 있어요"
+            >
+              🧪 QA
+            </button>
+          )}
           {inLobby && isAdmin && (
             <button type="button" className="btn btn-icon btn-grape" onClick={() => onOpen('admin')} aria-label="관리자 화면">
               <Shield className={ICON} strokeWidth={2.5} />

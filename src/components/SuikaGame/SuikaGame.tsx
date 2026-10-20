@@ -44,7 +44,7 @@ const JAR_TOP = DEADLINE - 30;
 const HOLD_GAP = 6;
 const holdY = (r: number) => DEADLINE - HOLD_GAP - r;
 /** Seconds a fruit may stay over the line */
-const DANGER_SECONDS = 3;
+const DANGER_SECONDS = 5;
 /** Below this speed (px per frame) a fruit over the line counts as overflowing */
 const SETTLED_SPEED = 1;
 const COOLDOWN_MS = 550;
@@ -60,12 +60,12 @@ const TICK_FRAMES = TICK_MS / (1000 / 60);
 const SHAKE_DECAY = Math.pow(0.88, TICK_FRAMES);
 // Chance of each droppable fruit (cherry, strawberry, grape, hallabong, persimmon, apple).
 // The longer a round goes, the fewer cherries and the more big fruit: the mix slides from
-// EARLY to LATE between the 15th and the 135th fruit (counted, not timed, so a challenge
+// EARLY to LATE between the 30th and the 230th fruit (counted, not timed, so a challenge
 // seed still gives everyone the same fruit).
 const EARLY_WEIGHTS = [0.3, 0.25, 0.2, 0.15, 0.1, 0];
-const LATE_WEIGHTS = [0.05, 0.12, 0.22, 0.28, 0.25, 0.08];
+const LATE_WEIGHTS = [0.1, 0.17, 0.25, 0.25, 0.18, 0.05];
 const dropWeights = (n: number) => {
-  const t = Math.max(0, Math.min(1, (n - 15) / 120));
+  const t = Math.max(0, Math.min(1, (n - 30) / 200));
   return EARLY_WEIGHTS.map((w, i) => w + (LATE_WEIGHTS[i] - w) * t);
 };
 /** Points multiplier for the time played: +0.1 every 30 seconds, ×2 from 5 minutes */
@@ -80,11 +80,11 @@ const ITEMS: Record<ItemKind, { emoji: string; name: string; desc: string; key: 
   shake: { emoji: '🫨', name: '흔들기', desc: '병을 흔들어 쌓인 과일을 섞어요', key: '2' },
 };
 const ITEM_KINDS = Object.keys(ITEMS) as ItemKind[];
-/** Every round starts with one of each */
-const ITEM_START = 1;
-const ITEM_MAX = 3;
+/** Every round starts with two of each */
+const ITEM_START = 2;
+const ITEM_MAX = 5;
 /** One more item for every this many merges */
-const MERGES_PER_ITEM = 15;
+const MERGES_PER_ITEM = 10;
 const startItems = (): Record<ItemKind, number> => ({ hammer: ITEM_START, shake: ITEM_START });
 /** A tap this close to a fruit's edge (px) still picks it for the hammer */
 const PICK_SLACK = 8;
@@ -164,6 +164,8 @@ interface Props {
   settings: GameSettings;
   dark: boolean;
   best: number;
+  /** 운영진: the hammer and the shake never run out */
+  unlimitedItems?: boolean;
   /** Start the round right away instead of showing the start card */
   autoStart?: boolean;
   isPaused: boolean;
@@ -181,6 +183,7 @@ export const SuikaGame: React.FC<Props> = ({
   settings,
   dark,
   best,
+  unlimitedItems = false,
   autoStart = false,
   isPaused,
   onUnlockAchieve,
@@ -198,6 +201,8 @@ export const SuikaGame: React.FC<Props> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
+  const unlimitedRef = useRef(unlimitedItems);
+  unlimitedRef.current = unlimitedItems;
 
   const [gameState, setGameState] = useState<'IDLE' | 'PLAYING' | 'OVER'>('IDLE');
   const [score, setScore] = useState(0);
@@ -265,6 +270,7 @@ export const SuikaGame: React.FC<Props> = ({
   };
 
   const setItemCount = (kind: ItemKind, n: number) => {
+    if (unlimitedRef.current) return;
     itemsRef.current = { ...itemsRef.current, [kind]: n };
     setItems(itemsRef.current);
   };
@@ -466,12 +472,12 @@ export const SuikaGame: React.FC<Props> = ({
     if (!isPlayingRef.current || isPaused) return;
     if (kind === 'hammer') {
       // Pressing it again puts it away; it is only used up once it hits a fruit
-      if (!hammerRef.current && itemsRef.current.hammer <= 0) return;
+      if (!hammerRef.current && itemsRef.current.hammer <= 0 && !unlimitedRef.current) return;
       setHammerOut(!hammerRef.current);
       playSound('click', settings);
       return;
     }
-    if (itemsRef.current.shake <= 0) return;
+    if (itemsRef.current.shake <= 0 && !unlimitedRef.current) return;
     // Every fruit hops, small ones higher. Moving fruit never count as overflowing.
     for (const b of worldRef.current.bodies) {
       const lift = 2.2 + 1.8 * (1 - Math.min(1, b.r / 110));
@@ -932,13 +938,13 @@ export const SuikaGame: React.FC<Props> = ({
                   {ITEM_KINDS.map((k) => {
                     const it = ITEMS[k];
                     const on = k === 'hammer' && hammer;
-                    const count = items[k];
+                    const count = unlimitedItems ? Infinity : items[k];
                     return (
                       <button
                         key={k}
                         type="button"
                         title={`${it.name}: ${it.desc} (${it.key})`}
-                        aria-label={`${it.name} ${count}개 · ${on ? '부술 과일을 고르세요, 다시 누르면 넣어요' : it.desc}`}
+                        aria-label={`${it.name} ${unlimitedItems ? '무한' : `${count}개`} · ${on ? '부술 과일을 고르세요, 다시 누르면 넣어요' : it.desc}`}
                         aria-pressed={k === 'hammer' ? on : undefined}
                         className={`btn btn-sm h-10 gap-1.5 px-2 ${on ? 'btn-mango animate-pulse' : ''}`}
                         disabled={gameState !== 'PLAYING' || isPaused || (count <= 0 && !on)}
@@ -949,19 +955,23 @@ export const SuikaGame: React.FC<Props> = ({
                       >
                         <Emoji e={it.emoji} className="text-xl leading-none" />
                         {on ? '넣기' : it.name}
-                        <span className="rounded-md bg-on-bright/10 px-1.5 text-sm tabular-nums">{count}</span>
+                        <span className="rounded-md bg-on-bright/10 px-1.5 text-sm tabular-nums">{unlimitedItems ? '∞' : count}</span>
                         <span className="kbd hidden xl:inline-block">{it.key}</span>
                       </button>
                     );
                   })}
                 </div>
-                <div className="mt-1.5 flex items-center gap-2" title={`과일을 ${MERGES_PER_ITEM}번 합칠 때마다 아이템 1개`}>
-                  <span className="shrink-0 text-[10px] font-bold text-ink-3 sm:text-[11px]">🎁 다음 아이템</span>
-                  <Meter value={itemGauge} max={MERGES_PER_ITEM} label="다음 아이템까지 합체 횟수" tone="grape" className="h-2.5 flex-1" />
-                  <span className="shrink-0 text-[10px] font-bold tabular-nums text-ink-3 sm:text-[11px]">
-                    {itemGauge}/{MERGES_PER_ITEM}
-                  </span>
-                </div>
+                {unlimitedItems ? (
+                  <p className="mt-1.5 text-center text-[10px] font-bold text-ink-3 sm:text-[11px]">🛡️ 운영진은 망치 · 흔들기가 무한이에요</p>
+                ) : (
+                  <div className="mt-1.5 flex items-center gap-2" title={`과일을 ${MERGES_PER_ITEM}번 합칠 때마다 아이템 1개`}>
+                    <span className="shrink-0 text-[10px] font-bold text-ink-3 sm:text-[11px]">🎁 다음 아이템</span>
+                    <Meter value={itemGauge} max={MERGES_PER_ITEM} label="다음 아이템까지 합체 횟수" tone="grape" className="h-2.5 flex-1" />
+                    <span className="shrink-0 text-[10px] font-bold tabular-nums text-ink-3 sm:text-[11px]">
+                      {itemGauge}/{MERGES_PER_ITEM}
+                    </span>
+                  </div>
+                )}
               </div>
             }
           >

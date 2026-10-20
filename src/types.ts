@@ -35,6 +35,8 @@ export interface GameSettings {
   blade: string;
   /** FRUIT DASH runner from the shop ('' = the orange) */
   runner: string;
+  /** Admins only: play as an ordinary player (no unlimited coins or items, no 운영진 things) to test what players see */
+  qaMode: boolean;
 }
 
 export interface Achievement {

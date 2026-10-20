@@ -1,6 +1,6 @@
 import { GameSettings, GameType, ScreenType } from './types';
 
-export const APP_VERSION = '3.17.0';
+export const APP_VERSION = '3.18.0';
 
 export const DEFAULT_SETTINGS: GameSettings = {
   theme: 'light',
@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   cardBack: '',
   blade: '',
   runner: '',
+  qaMode: false,
 };
 
 export type Tone = 'berry' | 'melon' | 'mango' | 'grape' | 'soda';
@@ -75,14 +76,14 @@ export const GAMES: Record<GameType, GameMeta> = {
     screen: 'suika',
     tag: 'POPULAR',
     desc: '같은 과일끼리 합쳐 더 큰 과일로! 수박까지 키워 보세요.',
-    how: ['과일을 떨어뜨려 같은 과일끼리 붙여요', '🔨 망치로 부수고 🫨 흔들기로 섞어요', '넘침 선 위에 3초 넘게 쌓이면 끝!'],
+    how: ['과일을 떨어뜨려 같은 과일끼리 붙여요', '🔨 망치로 부수고 🫨 흔들기로 섞어요', '넘침 선 위에 5초 넘게 쌓이면 끝!'],
     startHint: '← → 이동 · Space 낙하 · 1 망치 · 2 흔들기',
     tutorial: [
       { emoji: '👆', title: '조준하고 떨어뜨리기', text: '마우스나 손가락으로 위치를 정하고 놓으면 과일이 떨어져요. 키보드는 ← → 와 Space.' },
       { emoji: '🍒➕🍒', title: '같은 과일끼리 합체', text: '같은 과일이 닿으면 한 단계 큰 과일이 돼요. 체리에서 시작해 수박까지!' },
-      { emoji: '🔨', title: '아이템', text: '🔨 망치를 누르고 과일을 톡 치면 그 과일이 부서져요. 🫨 흔들기는 병을 흔들어 쌓인 과일을 섞어요. 한 판에 하나씩 받고, 과일을 15번 합칠 때마다 하나 더! (키보드 1 · 2)' },
+      { emoji: '🔨', title: '아이템', text: '🔨 망치를 누르고 과일을 톡 치면 그 과일이 부서져요. 🫨 흔들기는 병을 흔들어 쌓인 과일을 섞어요. 한 판에 두 개씩 받고, 과일을 10번 합칠 때마다 하나 더! (키보드 1 · 2)' },
       { emoji: '🔥', title: '오래 버틸수록 점수 UP', text: '30초마다 점수 배율이 0.1씩 올라 5분이면 2배! 대신 시간이 갈수록 체리는 줄고 큰 과일이 자주 나와요.' },
-      { emoji: '⚠️', title: '넘침 선을 넘기지 마세요', text: '쌓인 과일이 넘침 선 위에 3초 넘게 머물면 게임이 끝나요.' },
+      { emoji: '⚠️', title: '넘침 선을 넘기지 마세요', text: '쌓인 과일이 넘침 선 위에 5초 넘게 머물면 게임이 끝나요.' },
     ],
   },
   dash: {

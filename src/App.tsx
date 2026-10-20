@@ -228,9 +228,14 @@ export default function App() {
   // Titles: one per unlocked achievement, plus 주간 챔피언 for anyone who topped a weekly board
   const unlocked = getUnlockedAchievements();
   const wasChampion = stats.lastChampionWeek > 0;
+  // QA mode (설정, admins only): the app treats the admin like any player, so they can test what
+  // players get. Only the perks and admin tools switch off; the public name and the server's
+  // admin rights stay as they are.
+  const qaMode = isAdmin && settings.qaMode;
+  const asAdmin = isAdmin && !settings.qaMode;
   // Items in use: bought ones, plus the whole 운영진 series for admins (who also have unlimited coins)
-  const owned = usableItems(inventory, isAdmin);
-  const coins = isAdmin ? Infinity : coinBalance(stats);
+  const owned = usableItems(inventory, asAdmin);
+  const coins = asAdmin ? Infinity : coinBalance(stats);
   const titles = earnedTitles(unlocked, wasChampion, owned);
   const title = wornTitle(profile.title, unlocked, wasChampion, owned);
   // A bought avatar shows while it's owned; the free fruit always do
@@ -437,10 +442,10 @@ export default function App() {
     if (!u) return 'error';
     try {
       await cloudWrite(async (api) => {
-        if (!isAdmin) await api.pushMergedStats(u.uid, statsRef.current);
+        if (!asAdmin) await api.pushMergedStats(u.uid, statsRef.current);
         const f = await friendsApi();
-        await f.sendCoins(u.uid, to, amount, isAdmin);
-        if (!isAdmin) commitStats(await api.pushMergedStats(u.uid, statsRef.current));
+        await f.sendCoins(u.uid, to, amount, asAdmin);
+        if (!asAdmin) commitStats(await api.pushMergedStats(u.uid, statsRef.current));
       });
       playSound('star', settings);
       return 'ok';
@@ -501,20 +506,20 @@ export default function App() {
   // 운영진 have every achievement; new ones get added the next time an admin signs in
   useEffect(() => {
     const u = userRef.current;
-    if (!isAdmin || !u) return;
+    if (!asAdmin || !u) return;
     const added = unlockMany(ACHIEVEMENT_DEFINITIONS.map((a) => a.id));
     if (!added.length) return;
     bumpAchievements();
     cloudWrite((api) => api.saveAchievements(u.uid, getUnlockedAchievements())).catch(() => {});
     pushToast({ icon: '🏆', title: `운영진이라 업적 ${added.length}개를 모두 달성했어요`, sub: '업적 칭호도 전부 달 수 있어요', tone: 'mango' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin]);
+  }, [asAdmin]);
 
   // The admin check comes back after sign-in: then a worn 운영진 title or frame can go on the boards
   useEffect(() => {
-    if (isAdmin && (isStaffId(profile.title) || isStaffId(profile.frame))) scheduleLookSync();
+    if (asAdmin && (isStaffId(profile.title) || isStaffId(profile.frame))) scheduleLookSync();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin]);
+  }, [asAdmin]);
 
   // ───────── puzzle stages ─────────
 
@@ -541,16 +546,16 @@ export default function App() {
   /** Admins don't pay: their coins are unlimited */
   const buyItem = (item: ShopItem) => {
     const stats0 = statsRef.current;
-    if (item.staff || inventoryRef.current[item.id] || (!isAdmin && coinBalance(stats0) < item.price)) return;
+    if (item.staff || inventoryRef.current[item.id] || (!asAdmin && coinBalance(stats0) < item.price)) return;
     saveBought({ ...inventoryRef.current, [item.id]: new Date().toISOString() });
     playSound('levelup', settings);
     pushToast({
-      icon: isAdmin ? '🎁' : '🛍️',
-      title: `${item.name}${josa(item.name, '을', '를')} ${isAdmin ? '받았어요' : '샀어요'}`,
+      icon: asAdmin ? '🎁' : '🛍️',
+      title: `${item.name}${josa(item.name, '을', '를')} ${asAdmin ? '받았어요' : '샀어요'}`,
       sub: '바로 사용해 보세요!',
       tone: 'mango',
     });
-    if (isAdmin) return;
+    if (asAdmin) return;
     commitStats({ ...stats0, coinsSpent: stats0.coinsSpent + item.price });
     const u = userRef.current;
     if (u) cloudWrite((api) => api.pushMergedStats(u.uid, statsRef.current)).catch(() => {});
@@ -558,7 +563,7 @@ export default function App() {
 
   /** Admins: everything in the shop at once */
   const takeAllItems = () => {
-    if (!isAdmin) return;
+    if (!asAdmin) return;
     const now = new Date().toISOString();
     const inv = { ...inventoryRef.current };
     const missing = SHOP_ITEMS.filter((i) => !i.staff && !inv[i.id]);
@@ -1092,7 +1097,8 @@ export default function App() {
         player={player}
         level={level}
         challenge={activeChallenge && SCREEN_GAME[screen] === activeChallenge.g ? activeChallenge : null}
-        isAdmin={isAdmin}
+        isAdmin={asAdmin}
+        qaMode={qaMode}
         friendBadge={friendBadge}
         onHome={() => goTo(screen === 'memory-play' ? 'memory-setup' : 'lobby')}
         onPause={() => setIsPaused(true)}
@@ -1157,6 +1163,7 @@ export default function App() {
                     autoStart={autoStart}
                     dark={resolvedTheme === 'dark'}
                     best={stats.suikaHighScore}
+                    unlimitedItems={asAdmin}
                     onHelp={() => setTutorialGame('suika')}
                     seed={activeChallenge?.g === 'suika' ? activeChallenge.s : undefined}
                     onRoundSeed={(seed: string) => (roundSeeds.current.suika = seed)}
@@ -1214,7 +1221,7 @@ export default function App() {
         isOpen={modal === 'profile'}
         onClose={() => setModal(null)}
         user={user}
-        isAdmin={isAdmin}
+        isAdmin={asAdmin}
         player={player}
         profile={profile}
         onUpdateProfile={updateProfile}
@@ -1236,6 +1243,7 @@ export default function App() {
         onClose={() => setModal(null)}
         settings={settings}
         loggedIn={!!user}
+        isAdmin={isAdmin}
         onUpdateSettings={updateSettings}
         onResetAchievements={resetAllAchievements}
         onResetRecords={resetAllRecords}
@@ -1250,7 +1258,7 @@ export default function App() {
         onClose={() => setModal(null)}
         game={rankGame}
         uid={user?.uid ?? null}
-        isAdmin={isAdmin}
+        isAdmin={asAdmin}
         onLogin={() => setModal('profile')}
         onViewPlayer={(id) => {
           setViewUid(id);
@@ -1264,7 +1272,7 @@ export default function App() {
           refreshFriendBadge();
         }}
         uid={user?.uid ?? null}
-        isAdmin={isAdmin}
+        isAdmin={asAdmin}
         myCode={myCode}
         balance={coins}
         onLogin={() => setModal('profile')}
@@ -1290,7 +1298,7 @@ export default function App() {
         isOpen={modal === 'shop'}
         onClose={() => setModal(null)}
         balance={coins}
-        isAdmin={isAdmin}
+        isAdmin={asAdmin}
         owned={owned}
         player={player}
         equipped={{
@@ -1305,7 +1313,7 @@ export default function App() {
         onTakeAll={takeAllItems}
         onEquip={equipItem}
       />
-      <AdminModal isOpen={modal === 'admin' && isAdmin} onClose={() => setModal(null)} adminUid={user?.uid ?? null} />
+      <AdminModal isOpen={modal === 'admin' && asAdmin} onClose={() => setModal(null)} adminUid={user?.uid ?? null} />
       <FeedbackModal
         isOpen={modal === 'feedback'}
         onClose={() => setModal(null)}

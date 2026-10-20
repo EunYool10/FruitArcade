@@ -9,6 +9,14 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.20.2',
+    title: '공개 프로필 기록 확인',
+    items: [
+      ['🛡️ 진짜 기록만', '친구 · 랭킹에서 보이는 프로필의 게임별 최고 기록은 이제 점수 확인을 거친 랭킹 기록까지만 보여요. 랭킹에 오르지 않은 기록은 프로필에 0으로 보여요.'],
+      ['🔢 레벨 · 업적', '프로필의 레벨과 업적 수도 실제로 가능한 범위만 올라가요.'],
+    ],
+  },
+  {
     version: '3.20.1',
     title: '관리자 통계 새 단장',
     items: [

@@ -108,17 +108,36 @@ const sameCard = (a: PlayerCard, b: PlayerCard) =>
 
 /** Same caps as the rules (and the leaderboards): a card over them would be refused */
 const BEST_CAP: Record<GameType, number> = { memory: 2000, suika: 500000, dash: 100000, puzzle: 100000, slice: 100000 };
+/** Same as isValidPlayerCard in firestore.rules */
+const LEVEL_CAP = 200;
+const ACHIEVEMENT_CAP = 60;
 
 const cardFields = (card: PlayerCard) => ({
   name: card.name,
   avatar: card.avatar,
-  level: Math.max(1, Math.min(999, Math.round(card.level))),
-  achievements: Math.max(0, Math.min(500, Math.round(card.achievements))),
+  level: Math.max(1, Math.min(LEVEL_CAP, Math.round(card.level))),
+  achievements: Math.max(0, Math.min(ACHIEVEMENT_CAP, Math.round(card.achievements))),
   best: Object.fromEntries(GAME_ORDER.map((g) => [g, Math.max(0, Math.min(BEST_CAP[g], Math.round(card.best[g] ?? 0)))])),
 });
 
+/**
+ * My all-time leaderboard scores. Those went through the score server, so the bests on my public
+ * card may not go above them (firestore.rules checks the same); games without one show 0.
+ */
+async function boardBests(uid: string): Promise<Partial<Record<GameType, number>>> {
+  const snaps = await Promise.all(GAME_ORDER.map((g) => getDoc(doc(db, 'leaderboards', `${g}_all`, 'scores', uid)).catch(() => null)));
+  const out: Partial<Record<GameType, number>> = {};
+  GAME_ORDER.forEach((g, i) => {
+    const score = snaps[i]?.exists() ? snaps[i]!.data().score : 0;
+    out[g] = typeof score === 'number' && score > 0 ? score : 0;
+  });
+  return out;
+}
+
 /** Make sure the player has a public card (claiming a friend code the first time); returns the code */
 export async function ensurePlayer(uid: string, card: PlayerCard): Promise<string> {
+  const onBoards = await boardBests(uid);
+  card = { ...card, best: Object.fromEntries(GAME_ORDER.map((g) => [g, Math.min(card.best[g] ?? 0, onBoards[g] ?? 0)])) };
   const snap = await getDoc(playerRef(uid));
   if (snap.exists()) {
     const current = toPlayer(uid, snap.data());

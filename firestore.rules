@@ -76,7 +76,8 @@ rules_version = '2';
 // Document ID: uid
 // Fields: uid, code (friend code, 8 of [A-HJ-NP-Z2-9], fixed once claimed), name (1-40, not
 //         staff-looking unless admin), avatar (1-16), title?, frame? (ids; staff_ only admins), photo? (as above),
-//         level (1-999), achievements (0-500), best (map game -> best score), at (== request.time)
+//         level (1-200), achievements (0-60), best (map game -> best score, never above the player's
+//         all-time board entry for that game), at (== request.time)
 //
 // Collection: friendCodes  (code -> { uid }, claimed once together with the player's card)
 //
@@ -386,6 +387,13 @@ service cloud.firestore {
       return !(game in best) || (best[game] is int && best[game] >= 0 && best[game] <= cap);
     }
 
+    // A best on the card may not beat the player's all-time board entry for that game, which only
+    // gets there with a score-server proof (0 = no score, needs no entry)
+    function isBestBacked(uid, best, game) {
+      return !(game in best) || best[game] == 0
+        || best[game] <= get(/databases/$(database)/documents/leaderboards/$(game + '_all')/scores/$(uid)).data.score;
+    }
+
     function isValidPlayerCard(uid, data) {
       return data.keys().hasAll(['uid', 'code', 'name', 'avatar', 'level', 'achievements', 'best', 'at'])
         && data.keys().hasOnly(['uid', 'code', 'name', 'avatar', 'level', 'achievements', 'best', 'title', 'frame', 'photo', 'at'])
@@ -399,8 +407,8 @@ service cloud.firestore {
         && isOptionalPhoto(data)
         && (!('title' in data) || !data.title.matches('^staff_.*') || isAdmin())
         && (!('frame' in data) || !data.frame.matches('^staff_.*') || isAdmin())
-        && data.level is int && data.level >= 1 && data.level <= 999
-        && data.achievements is int && data.achievements >= 0 && data.achievements <= 500
+        && data.level is int && data.level >= 1 && data.level <= 200
+        && data.achievements is int && data.achievements >= 0 && data.achievements <= 60
         && data.best is map
         && data.best.keys().hasOnly(['memory', 'suika', 'dash', 'puzzle', 'slice'])
         && isBest(data.best, 'memory', 2000)
@@ -408,6 +416,11 @@ service cloud.firestore {
         && isBest(data.best, 'dash', 100000)
         && isBest(data.best, 'puzzle', 100000)
         && isBest(data.best, 'slice', 100000)
+        && isBestBacked(uid, data.best, 'memory')
+        && isBestBacked(uid, data.best, 'suika')
+        && isBestBacked(uid, data.best, 'dash')
+        && isBestBacked(uid, data.best, 'puzzle')
+        && isBestBacked(uid, data.best, 'slice')
         && data.at == request.time;
     }
 

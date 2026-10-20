@@ -93,7 +93,7 @@ import { AVATARS, PlayerProfile, loadProfile, saveProfile } from './utils/profil
 import { DailyState, applyDaily, loadDaily, saveDaily, todayKey } from './utils/missions';
 import { playSound } from './utils/audio';
 import { TrackName, music } from './utils/music';
-import { proveRound, startScoredRound, wakeScoreServer } from './utils/scoreServer';
+import { askProof, dropClaim, endScoredRound, pendingClaims, proveRound, queueClaim, startScoredRound, wakeScoreServer } from './utils/scoreServer';
 import { loadReminderState } from './utils/reminderState';
 
 // Games are code-split so the lobby loads fast
@@ -850,9 +850,50 @@ export default function App() {
       const u = userRef.current;
       const game = SCREEN_GAME[screenRef.current];
       if (u && game) startScoredRound(game, () => u.getIdToken());
-    }
+    } else endScoredRound();
     setRoundActive(active);
   }, []);
+
+  // Rounds the score server couldn't check yet (it was asleep or the device offline) wait on the
+  // device; they're sent again every couple of minutes until they reach the boards
+  const flushingRef = useRef(false);
+  const flushPendingRef = useRef(async () => {});
+  flushPendingRef.current = async () => {
+    const u = userRef.current;
+    if (!u || flushingRef.current) return;
+    const mine = pendingClaims().filter((c) => c.uid === u.uid);
+    if (!mine.length) return;
+    flushingRef.current = true;
+    try {
+      const api = await rankApi();
+      for (const claim of mine) {
+        const verdict = await askProof(claim, () => u.getIdToken());
+        if (verdict && 'later' in verdict) break; // still asleep: next time
+        dropClaim(claim);
+        if (verdict && 'proof' in verdict) {
+          await api.submitScore(u.uid, claim.game, rankWhoRef.current, claim.score, verdict.proof);
+          pushToast({ icon: '🏆', title: `${GAMES[claim.game].name} ${claim.score.toLocaleString('ko-KR')}점이 랭킹에 올라갔어요`, tone: 'mango' });
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to send a saved round:', err);
+    } finally {
+      flushingRef.current = false;
+    }
+  };
+  useEffect(() => {
+    if (!user) return;
+    const run = () => {
+      if (document.visibilityState === 'visible') flushPendingRef.current();
+    };
+    run();
+    const timer = setInterval(run, 2 * 60_000);
+    document.addEventListener('visibilitychange', run);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', run);
+    };
+  }, [user]);
 
   /** Called once per finished round. Returns the rewards for the result screen. */
   const handleGameComplete = useCallback(
@@ -906,10 +947,18 @@ export default function App() {
         rankApi()
           .then(async (api) => {
             // The score server checks the round first; its proof goes on the board entries
-            const verdict = await proveRound(result, () => u.getIdToken());
+            const verdict = await proveRound(result, u.uid, () => u.getIdToken());
             if (verdict && 'rejected' in verdict) {
               console.warn('The score server did not accept this round:', verdict.rejected);
               if (request === rankRequest.current) setRank({ game, status: 'rejected' });
+              return;
+            }
+            if (verdict && 'later' in verdict) {
+              // The server didn't answer (asleep, offline): the round waits here and goes up shortly
+              queueClaim(verdict.later);
+              wakeScoreServer();
+              setTimeout(() => flushPendingRef.current(), 60_000);
+              if (request === rankRequest.current) setRank({ game, status: 'queued' });
               return;
             }
             const proof = verdict && 'proof' in verdict ? verdict.proof : undefined;

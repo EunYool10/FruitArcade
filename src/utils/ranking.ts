@@ -103,7 +103,7 @@ export function googlePhotoOf(user: PhotoSource | null): string | null {
 export interface RankResult {
   game: GameType;
   /** rejected: the score server didn't accept the round, so it stayed off the boards */
-  status: 'pending' | 'done' | 'error' | 'rejected';
+  status: 'pending' | 'done' | 'error' | 'rejected' | 'queued';
   day?: number;
   all?: number;
 }

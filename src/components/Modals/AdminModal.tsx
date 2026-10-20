@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Ban, Check, Loader2, RefreshCw, RotateCcw, Trash2, UserSearch } from 'lucide-react';
-import type { AdminStats, FeedbackItem, ReportItem, UserRow } from '../../utils/adminService';
+import type { AdminStats as Stats, FeedbackItem, ReportItem, UserRow } from '../../utils/adminService';
 import type { BanEntry } from '../../utils/leaderboardService';
 import { boardLabel } from '../../utils/ranking';
-import { formatNumber, formatTime } from '../../utils/format';
+import { formatNumber } from '../../utils/format';
 import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
-import { BarChart } from '../ui/BarChart';
 import { AdminUsers } from './AdminUsers';
+import { AdminStats } from './AdminStats';
 import { isOnline } from '../../utils/presence';
 
 const adminApi = () => import('../../utils/adminService');
@@ -58,7 +58,7 @@ const Spinner = () => (
 
 export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
   const [tab, setTab] = useState<Tab>('stats');
-  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [reports, setReports] = useState<ReportItem[] | null>(null);
   const [showDone, setShowDone] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackItem[] | null>(null);
@@ -69,6 +69,8 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
   const [busy, setBusy] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  /** When the counts last came in, shown next to the refresh button */
+  const [loadedAt, setLoadedAt] = useState<number | null>(null);
   /** The counts and the user list didn't load: offer a retry instead of a spinner that never ends */
   const [loadFailed, setLoadFailed] = useState(false);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -106,6 +108,7 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
           api.listUsers().then((u) => alive && setUsers(u)),
         ])
       )
+      .then(() => alive && setLoadedAt(Date.now()))
       .catch((err) => {
         console.warn('Failed to load admin stats:', err);
         if (alive) {
@@ -168,7 +171,6 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
     }
   };
 
-  const today = stats?.days[stats.days.length - 1];
   const now = Date.now();
   const onlineNow = users?.filter((u) => isOnline(u.lastSeen, now)).length ?? 0;
   const TABS: { id: Tab; icon: string; label: string; badge?: number }[] = [
@@ -178,38 +180,10 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
     { id: 'feedback', icon: '💬', label: '의견', badge: stats?.newFeedback },
     { id: 'bans', icon: '🚫', label: '차단' },
   ];
-  const SUMMARY: [string, string, string][] = [
-    ['👥', '전체 유저', users ? `${formatNumber(users.length)}명` : '…'],
-    ['🟢', '지금 접속', users ? `${formatNumber(onlineNow)}명` : '…'],
-    ['🎮', '오늘', today ? `${formatNumber(today.players)}명 · ${formatNumber(today.plays)}판` : '…'],
-  ];
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="관리자" subtitle="유저 · 신고 · 의견 · 차단을 한곳에서" icon="🛡️" tone="grape" size="xl">
-      <div className="flex items-stretch gap-1.5 pt-1">
-        <dl className="grid min-w-0 flex-1 grid-cols-3 gap-1.5">
-          {SUMMARY.map(([icon, label, value]) => (
-            <div key={label} className="min-w-0 rounded-2xl border-2 border-line bg-surface-2 px-2.5 py-1.5">
-              <dt className="truncate text-[10px] font-bold text-ink-3 sm:text-[11px]">
-                <span aria-hidden="true">{icon}</span> {label}
-              </dt>
-              <dd className="truncate font-display text-sm tabular-nums sm:text-base">{value}</dd>
-            </div>
-          ))}
-        </dl>
-        <button
-          type="button"
-          className="btn btn-icon shrink-0 self-center"
-          onClick={() => setReload((r) => r + 1)}
-          disabled={refreshing}
-          aria-label="새로고침"
-          title="새로고침"
-        >
-          <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} strokeWidth={2.5} />
-        </button>
-      </div>
-
-      <div role="tablist" aria-label="관리 메뉴" className="mb-3 mt-3 grid grid-cols-5 gap-1.5 pt-1.5">
+      <div role="tablist" aria-label="관리 메뉴" className="grid grid-cols-5 gap-1.5 pt-2.5">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -232,6 +206,20 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
             )}
           </button>
         ))}
+      </div>
+
+      <div className="my-2 flex items-center justify-end gap-2 text-[11px] font-bold text-ink-3">
+        <span>{refreshing ? '불러오는 중…' : loadedAt ? `${new Date(loadedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 기준` : ''}</span>
+        <button
+          type="button"
+          className="btn btn-sm btn-icon"
+          onClick={() => setReload((r) => r + 1)}
+          disabled={refreshing}
+          aria-label="새로고침"
+          title="새로고침"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} strokeWidth={2.5} />
+        </button>
       </div>
 
       {notice && (
@@ -275,36 +263,12 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
         (!stats ? (
           loadFailed ? <Retry onRetry={() => setReload((r) => r + 1)} /> : <Spinner />
         ) : (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {[
-                ['🧑‍🤝‍🧑', '전체 유저', `${formatNumber(users?.length ?? 0)}명`],
-                ['🟢', '지금 접속 중', `${formatNumber(onlineNow)}명`],
-                ['👥', '오늘 플레이어', `${formatNumber(today?.players ?? 0)}명`],
-                ['🎮', '오늘 판 수', `${formatNumber(today?.plays ?? 0)}판`],
-                ['⏱️', '오늘 플레이 시간', formatTime(today?.seconds ?? 0)],
-                ['🏆', '오늘 랭킹 기록', `${formatNumber(stats.todayEntries)}개`],
-                ['🚩', '처리 안 된 신고', `${formatNumber(stats.openReports)}건`],
-                ['💬', '새 의견', `${formatNumber(stats.newFeedback)}건`],
-              ].map(([icon, label, value]) => (
-                <div key={label} className="well px-3 py-2.5">
-                  <p className="text-[11px] font-bold text-ink-3">
-                    <span aria-hidden="true">{icon}</span> {label}
-                  </p>
-                  <p className="font-display text-xl tabular-nums">{value}</p>
-                </div>
-              ))}
-            </div>
-            <div className="well p-3.5">
-              <p className="mb-2 text-sm font-bold">최근 7일 판 수</p>
-              <BarChart data={stats.days.map((d) => ({ label: d.label.split(' ')[0], value: d.plays }))} ariaLabel="최근 7일 판 수" tone="grape" />
-            </div>
-            <div className="well p-3.5">
-              <p className="mb-2 text-sm font-bold">최근 7일 플레이어 수</p>
-              <BarChart data={stats.days.map((d) => ({ label: d.label.split(' ')[0], value: d.players }))} ariaLabel="최근 7일 플레이어 수" tone="melon" />
-            </div>
-            <p className="text-center text-[11px] text-ink-3">Google 로그인한 플레이어만 집계돼요 · 날짜는 한국 시간 기준</p>
-          </div>
+          <AdminStats
+            stats={stats}
+            people={users ? { total: users.length, online: onlineNow } : null}
+            refreshing={refreshing}
+            onOpen={setTab}
+          />
         ))}
 
       {tab === 'reports' && (

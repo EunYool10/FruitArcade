@@ -42,6 +42,8 @@ export interface AdminStats {
   bans: number;
   /** Entries on today's boards, all games together */
   todayEntries: number;
+  /** Players on each game's board today */
+  todayByGame: Record<GameType, number>;
 }
 
 export async function loadStats(): Promise<AdminStats> {
@@ -70,6 +72,7 @@ export async function loadStats(): Promise<AdminStats> {
     newFeedback: newFeedback.data().count,
     bans: bans.data().count,
     todayEntries: boards.reduce((n, b) => n + b.data().count, 0),
+    todayByGame: Object.fromEntries(GAME_ORDER.map((g, i) => [g, boards[i].data().count])) as Record<GameType, number>,
   };
 }
 

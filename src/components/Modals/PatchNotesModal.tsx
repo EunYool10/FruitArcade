@@ -9,6 +9,13 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.18.1',
+    title: 'Google 사진 동기화 수정',
+    items: [
+      ['🖼️ Google 사진', '일부 Google 계정은 사진 주소가 아주 길어서, 기본 아바타를 써도 랭킹 · 친구 프로필에 사진 대신 과일이 보였어요. 이제 사진이 보여요. 앱을 한 번 열면 기록에도 바뀌어요.'],
+    ],
+  },
+  {
     version: '3.18.0',
     title: '수박 게임 더 쉽게 · QA 모드',
     items: [

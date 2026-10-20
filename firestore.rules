@@ -35,7 +35,8 @@ rules_version = '2';
 //   - at: timestamp (== request.time)
 //   - title, frame: optional ids ([a-z0-9_], 1-32) of the worn title and avatar frame;
 //           ids starting with "staff_" (the 운영진 series) only on admins' entries
-//   - photo: optional Google profile photo URL (https://lh3-6.googleusercontent.com/...),
+//   - photo: optional Google profile photo URL (https://lh3-6.googleusercontent.com/..., up to
+//           2048 chars: some older accounts have photo URLs over 1000 chars long),
 //           shown instead of the emoji for players who kept the default avatar
 //   - proof: optional 64-char hex from the score server (server.mjs) that checked the round:
 //           SHA-256 of "<secret>|<uid>|<game>|<score>|<KST day>|<secret>". Required once
@@ -165,8 +166,8 @@ service cloud.firestore {
     function isOptionalPhoto(m) {
       return !('photo' in m)
         || (m.photo is string
-          && m.photo.size() <= 450
-          && m.photo.matches('^https://lh[3-6][.]googleusercontent[.]com/[A-Za-z0-9_./=-]{1,400}$'));
+          && m.photo.size() <= 2048
+          && m.photo.matches('^https://lh[3-6][.]googleusercontent[.]com/[A-Za-z0-9_./=-]+$'));
     }
 
     // Missing, null, or a string up to maxLen

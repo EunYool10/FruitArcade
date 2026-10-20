@@ -71,11 +71,14 @@ export interface RankEntry {
   photo?: string;
 }
 
-// Google account photos only (same pattern as isOptionalPhoto in firestore.rules)
-const PHOTO_URL = /^https:\/\/lh[3-6]\.googleusercontent\.com\/[A-Za-z0-9_\-.\/=]{1,400}$/;
+// Google account photos only (same check as isOptionalPhoto in firestore.rules). Some older
+// accounts have photo URLs over 1000 characters long, so the limit is generous.
+const PHOTO_URL = /^https:\/\/lh[3-6]\.googleusercontent\.com\/[A-Za-z0-9_\-.\/=]+$/;
+const PHOTO_MAX = 2048;
 
 /** The URL when it is a Google profile photo, otherwise undefined */
-export const cleanPhoto = (url: unknown): string | undefined => (typeof url === 'string' && PHOTO_URL.test(url) ? url : undefined);
+export const cleanPhoto = (url: unknown): string | undefined =>
+  typeof url === 'string' && url.length <= PHOTO_MAX && PHOTO_URL.test(url) ? url : undefined;
 
 interface PhotoSource {
   photoURL: string | null;

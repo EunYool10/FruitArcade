@@ -8,6 +8,7 @@ import { titleDef } from '../../utils/titles';
 import { formatNumber } from '../../utils/format';
 import type { PublicPlayer } from '../../utils/friendsService';
 import { Emoji } from '../ui/Emoji';
+import { PresenceTag } from '../ui/Presence';
 
 const friendsApi = () => import('../../utils/friendsService');
 
@@ -31,18 +32,26 @@ export const PlayerModal: React.FC<Props> = ({ isOpen, onClose, viewerUid, targe
   const [player, setPlayer] = useState<PublicPlayer | null | 'missing'>(null);
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Friends (and me): when they were last here; undefined while unknown or not friends */
+  const [seen, setSeen] = useState<number | null | undefined>(undefined);
 
   useEffect(() => {
     if (!isOpen || !targetUid || !viewerUid) return;
     let alive = true;
     setPlayer(null);
     setStatus(null);
+    setSeen(undefined);
     friendsApi()
       .then(async (api) => {
         const [p, s] = await Promise.all([api.getPlayer(targetUid), targetUid === viewerUid ? Promise.resolve(null) : api.friendStatus(viewerUid, targetUid)]);
         if (!alive) return;
         setPlayer(p ?? 'missing');
         setStatus(s);
+        // Only friends (and I) may see when someone was last here
+        if (s === 'friends' || targetUid === viewerUid) {
+          const at = await api.lastSeen(targetUid).catch(() => null);
+          if (alive) setSeen(at);
+        }
       })
       .catch(() => alive && setPlayer('missing'));
     return () => {
@@ -98,6 +107,7 @@ export const PlayerModal: React.FC<Props> = ({ isOpen, onClose, viewerUid, targe
                 <span className="chip bg-surface">🏆 업적 {p.achievements}개</span>
                 {t && <TitleTag title={t} />}
               </div>
+              {seen !== undefined && <PresenceTag at={seen} className="mt-1.5 text-xs" />}
             </div>
           </div>
 

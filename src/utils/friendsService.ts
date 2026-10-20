@@ -54,6 +54,8 @@ export interface FriendLink {
   status: 'pending' | 'accepted';
   /** I sent the request */
   fromMe: boolean;
+  /** Friends only: when they last had the app open (ms), null when hidden or never */
+  lastSeen?: number | null;
 }
 
 export interface Gift {
@@ -177,8 +179,28 @@ export async function loadFriends(uid: string): Promise<FriendLink[]> {
       fromMe: data.from === uid,
     };
   });
-  const others = await Promise.all(links.map((l) => getPlayer(l.otherUid).catch(() => null)));
-  return links.map((l, i) => ({ ...l, other: others[i] }));
+  const [others, seen] = await Promise.all([
+    Promise.all(links.map((l) => getPlayer(l.otherUid).catch(() => null))),
+    Promise.all(links.map((l) => (l.status === 'accepted' ? lastSeen(l.otherUid).catch(() => null) : Promise.resolve(null)))),
+  ]);
+  return links.map((l, i) => ({ ...l, other: others[i], ...(l.status === 'accepted' ? { lastSeen: seen[i] } : {}) }));
+}
+
+// ───────── presence ─────────
+// presence/{uid} = { at }: when the player last had the app open. The player, their friends and
+// admins can read it. The app writes it about once a minute while it is in front (utils/presence.ts
+// turns it into online / last seen).
+
+export const touchPresence = (uid: string) => setDoc(doc(db, 'presence', uid), { at: serverTimestamp() });
+
+/** Stop showing when I was last here (the setting is off) */
+export const clearPresence = (uid: string) => deleteDoc(doc(db, 'presence', uid));
+
+/** When a friend (or I) last had the app open, null when they hide it or never came */
+export async function lastSeen(uid: string): Promise<number | null> {
+  const snap = await getDoc(doc(db, 'presence', uid));
+  const at = snap.exists() ? snap.data().at : null;
+  return at && typeof at.toMillis === 'function' ? at.toMillis() : null;
 }
 
 /** sent: a new request; accepted: they had asked me already; exists: already friends or asked */

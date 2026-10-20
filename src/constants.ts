@@ -1,6 +1,6 @@
 import { GameSettings, GameType, ScreenType } from './types';
 
-export const APP_VERSION = '3.18.1';
+export const APP_VERSION = '3.19.0';
 
 export const DEFAULT_SETTINGS: GameSettings = {
   theme: 'light',
@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   cardBack: '',
   blade: '',
   runner: '',
+  showPresence: true,
   qaMode: false,
 };
 

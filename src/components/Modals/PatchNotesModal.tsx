@@ -9,6 +9,15 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.19.0',
+    title: '친구 접속 상태',
+    items: [
+      ['🟢 온라인 · 마지막 접속', '친구 목록과 친구 프로필에 지금 온라인인지, 마지막으로 언제 접속했는지 보여요. 온라인인 친구가 맨 위에 와요.'],
+      ['🙈 숨기기', '설정 → 친구 → "접속 상태 보이기"를 끄면 친구에게 "접속 기록 없음"으로 보여요.'],
+      ['📜 약관 업데이트', '접속 시간을 저장하고 친구에게 보여 주는 내용을 개인정보 처리방침에 더했어요.'],
+    ],
+  },
+  {
     version: '3.18.1',
     title: 'Google 사진 동기화 수정',
     items: [

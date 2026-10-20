@@ -251,6 +251,19 @@ export const SettingsModal: React.FC<Props> = ({
           <Reminders loggedIn={loggedIn} on={reminders.on} busy={reminders.busy} onToggle={onToggleReminders} />
         </Section>
 
+        <Section icon="👥" title="친구">
+          <SettingRow
+            title="접속 상태 보이기"
+            desc={
+              settings.showPresence !== false
+                ? '친구에게 온라인인지, 마지막으로 언제 접속했는지 보여요'
+                : '친구에게 "접속 기록 없음"으로 보여요'
+            }
+          >
+            <Toggle checked={settings.showPresence !== false} onChange={(v) => set('showPresence', v)} label="접속 상태 보이기" />
+          </SettingRow>
+        </Section>
+
         <Section icon="📲" title="앱">
           <AppInstall />
         </Section>

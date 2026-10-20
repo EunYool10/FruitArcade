@@ -56,6 +56,7 @@ import { RankResult, cleanPhoto, googlePhotoOf, kstWeek, publicName } from './ut
 import { maskBadWords } from './utils/badWords';
 import { earnedTitles, wornTitle } from './utils/titles';
 import { josa } from './utils/format';
+import { PRESENCE_EVERY_MS } from './utils/presence';
 import { StageProgress, clearStageProgress, loadStageProgress, mergeStageProgress, saveStageProgress } from './components/PuzzleGame/stages';
 import { DayStats, clearDays, loadDays, recordDay } from './utils/dailyStats';
 import { Challenge, challengeLink, takeChallengeFromUrl } from './utils/challenge';
@@ -433,6 +434,37 @@ export default function App() {
     if (user && boardPhoto) scheduleLookSync();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid, boardPhoto]);
+
+  // ───────── friends: online / last seen ─────────
+
+  // While the app is in front, say "still here" about once a minute; friends see online / last
+  // seen from it. Turned off in the settings, the record is removed instead.
+  const showPresence = settings.showPresence !== false;
+  useEffect(() => {
+    const uid = user?.uid;
+    if (!uid) return;
+    if (!showPresence) {
+      friendsApi()
+        .then((api) => api.clearPresence(uid))
+        .catch(() => {});
+      return;
+    }
+    let last = 0;
+    const beat = () => {
+      if (document.hidden || Date.now() - last < PRESENCE_EVERY_MS - 5000) return;
+      last = Date.now();
+      friendsApi()
+        .then((api) => api.touchPresence(uid))
+        .catch(() => {});
+    };
+    beat();
+    const timer = setInterval(beat, PRESENCE_EVERY_MS);
+    document.addEventListener('visibilitychange', beat);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', beat);
+    };
+  }, [user?.uid, showPresence]);
 
   // ───────── friends: coin gifts ─────────
 

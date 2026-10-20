@@ -90,6 +90,10 @@ rules_version = '2';
 //         99999999999 = COIN_MAX in src/utils/coins.ts), day (KST day), at (== request.time), claimed (false -> true by the receiver)
 // The sender's statistics.coinsSpent must grow by the amount in the same write (admins excepted).
 //
+// Collection: presence  (when a player last had the app open: they, their friends and admins read it)
+// Document ID: uid
+// Fields: at (== request.time; at most every 20 s). Players who hide it delete the doc.
+//
 // Collection: activity/{dayId}/players  (daily play counts for the admin stats)
 // Day ID: d<dayIndex> (KST), only today or yesterday can be written
 // Document ID: Firebase Auth uid
@@ -622,6 +626,22 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimed'])
         && request.resource.data.claimed == true;
       allow delete: if isAdmin();
+    }
+
+    // When each player last had the app open (online / last seen): the player, their friends and admins
+    match /presence/{uid} {
+      allow get: if isGoogleUser() && (isOwner(uid) || isAdmin() || areFriends(request.auth.uid, uid));
+      allow list: if isAdmin();
+      allow create: if isGoogleUser()
+        && isOwner(uid)
+        && request.resource.data.keys().hasOnly(['at'])
+        && request.resource.data.at == request.time;
+      allow update: if isGoogleUser()
+        && isOwner(uid)
+        && request.resource.data.keys().hasOnly(['at'])
+        && request.resource.data.at == request.time
+        && request.time > resource.data.at + duration.value(20, 's');
+      allow delete: if isOwner(uid) || isAdmin();
     }
 
     // One doc per player per day: rounds played and time, counted for the admin stats

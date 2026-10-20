@@ -4,6 +4,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import { AvatarFace, Framed } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
+import { PresenceTag } from '../ui/Presence';
 import { titleDef } from '../../utils/titles';
 import { formatCompact, formatNumber, josa, relativeTime } from '../../utils/format';
 import { COIN_MAX, GIFT_LIMITS } from '../../utils/coins';
@@ -38,7 +39,8 @@ type Tab = 'friends' | 'requests' | 'gifts';
 const PLAYER_AMOUNTS = [10, 50, 100, 300];
 const ADMIN_AMOUNTS = [1_000, 1_000_000, 100_000_000, COIN_MAX];
 
-const PlayerBadge: React.FC<{ p: PublicPlayer | null; fallback?: string }> = ({ p, fallback = '알 수 없는 플레이어' }) => {
+/** `seen`: friends only, when they were last here (left out for requests) */
+const PlayerBadge: React.FC<{ p: PublicPlayer | null; fallback?: string; seen?: number | null }> = ({ p, fallback = '알 수 없는 플레이어', seen }) => {
   const t = titleDef(p?.title);
   return (
     <span className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -51,6 +53,7 @@ const PlayerBadge: React.FC<{ p: PublicPlayer | null; fallback?: string }> = ({ 
           {p && <span className="chip h-5 shrink-0 bg-surface px-1.5 text-[10px]">Lv.{p.level}</span>}
         </span>
         {t && <TitleTag title={t} variant="line" />}
+        {seen !== undefined && <PresenceTag at={seen} className="mt-0.5" />}
       </span>
     </span>
   );
@@ -143,7 +146,8 @@ export const FriendsModal: React.FC<Props> = ({
     );
   }
 
-  const friends = (links ?? []).filter((l) => l.status === 'accepted');
+  // Friends online now first, then whoever was here most recently
+  const friends = (links ?? []).filter((l) => l.status === 'accepted').sort((a, b) => (b.lastSeen ?? 0) - (a.lastSeen ?? 0));
   const incoming = (links ?? []).filter((l) => l.status === 'pending' && !l.fromMe);
   const outgoing = (links ?? []).filter((l) => l.status === 'pending' && l.fromMe);
   const inbox = gifts?.inbox ?? [];
@@ -320,7 +324,7 @@ export const FriendsModal: React.FC<Props> = ({
                   <li key={l.pair} className="rounded-2xl border-2 border-line bg-surface-2 p-2.5">
                     <div className="flex flex-wrap items-center gap-2">
                       <button type="button" className="flex min-w-0 flex-1 text-left" onClick={() => onViewPlayer(l.otherUid)} aria-label={`${l.other?.name ?? '친구'} 프로필`}>
-                        <PlayerBadge p={l.other} />
+                        <PlayerBadge p={l.other} seen={l.lastSeen ?? null} />
                       </button>
                       <button
                         type="button"

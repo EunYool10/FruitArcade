@@ -7,7 +7,7 @@ interface Props {
 }
 
 /** Shown in the window and in the patch notes; bump it when the text below changes */
-export const TERMS_DATE = '2026년 10월 18일';
+export const TERMS_DATE = '2026년 10월 20일';
 
 // Plain-language terms and privacy notice. Keep it in step with what the app really does
 // (firestore.rules, server/, scripts/reminders) whenever data handling changes.
@@ -39,6 +39,7 @@ const SECTIONS: { title: string; items: string[] }[] = [
       '신고 · 의견: 보낸 내용과 기기 정보(브라우저 · 운영체제 종류, 화면 크기).',
       '연속 출석 알림을 켜면: 이 브라우저의 푸시 알림 주소, 마지막으로 한 날, 연속 일수를 알림 발송기만 열 수 있게 암호화해서 저장해요.',
       '친구: 공개 프로필(이름, 아바타 또는 Google 프로필 사진, 칭호, 테두리, 레벨, 업적 수, 게임별 최고 점수)과 친구 코드를 만들어요. 친구 관계와 요청은 두 사람만, 코인 선물 기록은 보낸 사람과 받은 사람만 볼 수 있어요.',
+      '접속 상태: 로그인해서 앱을 켜 두는 동안 1분쯤마다 마지막 접속 시간을 저장해요. 설정 → 친구 → "접속 상태 보이기"를 끄면 저장하지 않고 남아 있던 기록도 지워요.',
       '로그인하지 않으면 모든 기록은 이 기기의 브라우저 저장소에만 있어요. 광고 추적 쿠키는 쓰지 않아요.',
     ],
   },
@@ -50,6 +51,7 @@ const SECTIONS: { title: string; items: string[] }[] = [
       '이메일과 Google 이름은 공개되지 않아요. 닉네임을 정하지 않으면 "과일러 1234" 같은 이름으로 보여요.',
       '로그인한 플레이어는 친구 코드나 랭킹으로 내 공개 프로필을 볼 수 있어요. 이메일과 Google 이름은 여기에도 없어요.',
       '친구 대결 링크를 공유하면 그 링크에 닉네임과 점수가 들어가요.',
+      '친구에게는 내가 지금 온라인인지, 마지막으로 언제 접속했는지 보여요(친구가 아닌 사람에게는 안 보여요). 운영진은 운영을 위해 볼 수 있어요.',
     ],
   },
   {

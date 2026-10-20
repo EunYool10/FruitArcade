@@ -66,34 +66,51 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   const span = level.next - level.floor;
   return (
     <section className="panel flex flex-col gap-4 p-5 sm:p-6" aria-label="내 정보">
-      <div className="flex items-center gap-3">
-        <Avatar player={player} size="lg" />
-        <div className="min-w-0 flex-1">
-          <p className="flex min-w-0 items-center gap-1.5 font-display text-xl">
+      {/* Who: avatar, name with the blue check, level and title; editing sits in the corner */}
+      <div className="flex items-start gap-3">
+        <button type="button" className="shrink-0 rounded-full" onClick={onOpenProfile} aria-label={player.isGuest ? '로그인' : '프로필 편집'}>
+          <Avatar player={player} size="lg" />
+        </button>
+        <div className="min-w-0 flex-1 pt-1">
+          <p className="flex min-w-0 items-center gap-1.5 font-display text-xl leading-tight">
             <span className="truncate">{player.name}</span>
             {player.verified && <VerifiedBadge className="h-5 w-5" />}
           </p>
-          <div className="mt-1 flex flex-wrap gap-1">
-            <span className="chip bg-mango-soft">
-              <Emoji e={level.emoji} /> Lv.{level.level} {level.title}
+          <p className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm font-bold text-ink-2">
+            <span className="shrink-0">
+              <Emoji e={level.emoji} /> Lv.{level.level} <span className="text-ink-3">{level.title}</span>
             </span>
             {player.title && <TitleTag title={player.title} />}
-            <button type="button" className="chip bg-mango text-on-bright transition-transform hover:-translate-y-0.5" onClick={onOpenShop} aria-label={`${Number.isFinite(coins) ? `코인 ${formatNumber(coins)}개` : '코인 무한'} · 상점 열기`}>
-              🪙 {formatCompact(coins)}
-            </button>
-            <button
-              type="button"
-              className="chip relative bg-soda-soft transition-transform hover:-translate-y-0.5"
-              onClick={onOpenFriends}
-              aria-label={friendBadge ? `친구 (새 소식 ${friendBadge}개)` : '친구'}
-            >
-              👥 친구
-              {friendBadge > 0 && <span className="rounded-full bg-berry px-1.5 text-[10px] font-bold text-white">{friendBadge > 9 ? '9+' : friendBadge}</span>}
-            </button>
-          </div>
+          </p>
         </div>
-        <button type="button" className="btn btn-sm" onClick={onOpenProfile}>
-          {player.isGuest ? '로그인' : '프로필'}
+        <button type="button" className={`btn btn-sm shrink-0 ${player.isGuest ? 'btn-primary' : ''}`} onClick={onOpenProfile}>
+          {player.isGuest ? '로그인' : '✏️ 편집'}
+        </button>
+      </div>
+
+      {/* What to do: coins open the shop, friends open the friends window */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          className="btn btn-sm btn-mango w-full justify-between px-3"
+          onClick={onOpenShop}
+          aria-label={`${Number.isFinite(coins) ? `코인 ${formatNumber(coins)}개` : '코인 무한'} · 상점 열기`}
+        >
+          <span>🪙 {formatCompact(coins)}</span>
+          <span className="text-xs opacity-80">상점 ›</span>
+        </button>
+        <button
+          type="button"
+          className="btn btn-sm btn-soda relative w-full justify-between px-3"
+          onClick={onOpenFriends}
+          aria-label={friendBadge ? `친구 (새 소식 ${friendBadge}개)` : '친구'}
+        >
+          <span>👥 친구</span>
+          {friendBadge > 0 ? (
+            <span className="rounded-full bg-berry px-1.5 text-[11px] font-bold text-white">{friendBadge > 9 ? '9+' : friendBadge}</span>
+          ) : (
+            <span className="text-xs opacity-80">›</span>
+          )}
         </button>
       </div>
 

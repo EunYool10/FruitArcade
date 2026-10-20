@@ -6,7 +6,7 @@ import { GameResult } from '../types';
 // coins), nobody else can get them, and firestore.rules keep staff titles and frames off
 // everyone else's leaderboard entries.
 
-export type ItemKind = 'frame' | 'avatar' | 'title' | 'cardBack' | 'blade' | 'runner';
+export type ItemKind = 'frame' | 'avatar' | 'title' | 'cardBack' | 'blade' | 'runner' | 'suikaSkin';
 
 export interface ShopItem {
   id: string;
@@ -157,6 +157,27 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'runner_cherry', kind: 'runner', name: '체리 러너', price: 300 },
   { id: 'runner_gold', kind: 'runner', name: '황금 러너', price: 800 },
 
+  // 수박 게임 skins: the fruit become something else (utils/skins.ts)
+  { id: 'skin_veggie', kind: 'suikaSkin', name: '채소밭 스킨', price: 400 },
+  { id: 'skin_animal', kind: 'suikaSkin', name: '동물 친구들 스킨', price: 500 },
+  { id: 'skin_dessert', kind: 'suikaSkin', name: '달콤 디저트 스킨', price: 600 },
+  { id: 'skin_space', kind: 'suikaSkin', name: '우주 여행 스킨', price: 800 },
+
+  // v3.21.0
+  { id: 'av_turtle', kind: 'avatar', name: '거북이', icon: '🐢', price: 120 },
+  { id: 'av_pig', kind: 'avatar', name: '돼지', icon: '🐷', price: 150 },
+  { id: 'av_monkey', kind: 'avatar', name: '원숭이', icon: '🐵', price: 150 },
+  { id: 'av_lion', kind: 'avatar', name: '사자', icon: '🦁', price: 250 },
+  { id: 'av_shark', kind: 'avatar', name: '상어', icon: '🦈', price: 300 },
+  { id: 'title_sparkle', kind: 'title', name: '반짝반짝', icon: '✨', price: 200 },
+  { id: 'title_watermelon', kind: 'title', name: '수박 제조기', icon: '🍉', price: 300 },
+  { id: 'title_space', kind: 'title', name: '우주 여행자', icon: '🚀', price: 350 },
+  { id: 'title_unicorn', kind: 'title', name: '유니콘 탐험가', icon: '🦄', price: 400 },
+  { id: 'title_dragon', kind: 'title', name: '전설의 용사', icon: '🐉', price: 500 },
+  { id: 'frame_ice', kind: 'frame', name: '얼음 테두리', price: 350 },
+  { id: 'frame_lava', kind: 'frame', name: '용암 테두리', price: 450 },
+  { id: 'frame_aurora', kind: 'frame', name: '오로라 테두리', price: 800 },
+
   // 운영진 series
   staff({ id: 'staff_admin', kind: 'title', name: '운영자', icon: '🛡️' }),
   staff({ id: 'staff_gm', kind: 'title', name: '게임 마스터', icon: '🎮' }),
@@ -186,6 +207,15 @@ export const SHOP_ITEMS: ShopItem[] = [
   staff({ id: 'staff_blade_ice', kind: 'blade', name: '운영진 얼음 칼날' }),
   staff({ id: 'staff_runner_gold', kind: 'runner', name: '운영진 황금 러너' }),
   staff({ id: 'staff_runner_night', kind: 'runner', name: '운영진 밤 러너' }),
+  staff({ id: 'staff_skin_fantasy', kind: 'suikaSkin', name: '운영진 판타지 스킨' }),
+  staff({ id: 'staff_founder', kind: 'title', name: '창립 멤버', icon: '🌟' }),
+  staff({ id: 'staff_mentor', kind: 'title', name: '새싹 멘토', icon: '🌱' }),
+  staff({ id: 'staff_designer', kind: 'title', name: '디자인 담당', icon: '🎨' }),
+  staff({ id: 'staff_tester', kind: 'title', name: '품질 지킴이', icon: '🧪' }),
+  staff({ id: 'staff_av_galaxy', kind: 'avatar', name: '운영진 은하수', icon: '🌌' }),
+  staff({ id: 'staff_av_sun', kind: 'avatar', name: '운영진 태양', icon: '☀️' }),
+  staff({ id: 'staff_frame_royal', kind: 'frame', name: '운영진 로열 테두리' }),
+  staff({ id: 'staff_frame_flame', kind: 'frame', name: '운영진 불꽃 테두리' }),
 ];
 
 export const shopItem = (id: string | null | undefined) => (id ? (SHOP_ITEMS.find((i) => i.id === id) ?? null) : null);
@@ -220,6 +250,11 @@ export const FRAME_CLASS: Record<string, string> = {
   frame_holo: 'bg-[conic-gradient(#ffd1f7,#c2f0ff,#d6ffd1,#fff6c2,#e6d1ff,#ffd1f7)]',
   staff_frame_crown: 'bg-[repeating-linear-gradient(45deg,#ffd23f_0_6px,#1e3a8a_6px_12px)]',
   staff_frame_galaxy: 'bg-[conic-gradient(#0b0b2b,#3b82f6,#ffd23f,#0b0b2b,#7a5cff,#0b0b2b)]',
+  frame_ice: 'bg-[linear-gradient(135deg,#ffffff,#bdeeff_45%,#5bc0eb)]',
+  frame_lava: 'bg-[linear-gradient(135deg,#ffd000,#ff5400_45%,#3d0c02)]',
+  frame_aurora: 'bg-[conic-gradient(#3ddbb2,#2ea9ff,#7a5cff,#ff4fd8,#3ddbb2)]',
+  staff_frame_royal: 'bg-[conic-gradient(#ffd23f,#1e3a8a,#ffffff,#1e3a8a,#ffd23f)]',
+  staff_frame_flame: 'bg-[conic-gradient(#1e3a8a,#3b82f6,#ff9100,#ffea00,#3b82f6,#1e3a8a)]',
 };
 
 /** Memory card backs: background pattern + the mark in the middle */

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Check, Gift } from 'lucide-react';
 import { ItemKind, Inventory, SHOP_ITEMS, ShopItem, bladeStyle, cardBackStyle, runnerStyle } from '../../utils/shop';
+import { SUIKA_DEFAULT, SUIKA_SKINS } from '../../utils/skins';
 import { titleDef } from '../../utils/titles';
 import { formatCompact, formatNumber, josa } from '../../utils/format';
 import { Modal } from '../ui/Modal';
@@ -37,6 +38,7 @@ const TABS: [Tab, string][] = [
   ['cardBack', '🃏 카드 뒷면'],
   ['blade', '🔪 칼날'],
   ['runner', '🏃 러너'],
+  ['suikaSkin', '🍉 수박 스킨'],
 ];
 
 /** The free choice at the start of each tab */
@@ -47,6 +49,7 @@ const DEFAULT_LABEL: Record<ItemKind, string> = {
   cardBack: '기본 딸기',
   blade: '기본 칼날',
   runner: '기본 오렌지',
+  suikaSkin: '기본 과일',
 };
 
 const TAB_HINT: Record<Tab, string> = {
@@ -56,6 +59,7 @@ const TAB_HINT: Record<Tab, string> = {
   cardBack: '과일 메모리 카드의 뒷면이에요',
   blade: '과일 자르기에서 긋는 칼날 자국 색이에요',
   runner: 'FRUIT DASH에서 달리는 캐릭터예요',
+  suikaSkin: '수박 게임의 과일이 다른 모양으로 바뀌어요 (크기와 점수는 그대로)',
   staff: '운영진만 쓸 수 있는 전용 시리즈예요. 칭호와 테두리는 다른 사람은 랭킹에 달 수 없어요',
 };
 
@@ -126,6 +130,19 @@ const Preview: React.FC<{ kind: ItemKind; id: string; player: PlayerView }> = ({
       return <BladePreview id={id} />;
     case 'runner':
       return <RunnerPreview id={id} />;
+    case 'suikaSkin': {
+      // Smallest, middle and biggest of the 11 sizes
+      const set = (SUIKA_SKINS[id] ?? SUIKA_DEFAULT).emojis;
+      return (
+        <span className="flex h-14 items-end justify-center gap-0.5" aria-hidden="true">
+          {[0, 3, 6, 8, 10].map((lv, i) => (
+            <span key={lv} style={{ fontSize: 13 + i * 5 }} className="leading-none">
+              <Emoji e={set[lv]} />
+            </span>
+          ))}
+        </span>
+      );
+    }
   }
 };
 

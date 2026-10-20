@@ -35,6 +35,8 @@ export interface GameSettings {
   blade: string;
   /** FRUIT DASH runner from the shop ('' = the orange) */
   runner: string;
+  /** 수박 게임 skin from the shop ('' = the fruit) */
+  suikaSkin: string;
   /** Friends can see whether I'm online and when I was last here */
   showPresence: boolean;
   /** Admins only: play as an ordinary player (no unlimited coins or items, no 운영진 things) to test what players see */

@@ -14,6 +14,7 @@ import { Body, Merge, TICK_MS, World, addBody, bodyAt, createWorld, drawPos, rem
 import { drawEmoji, preloadEmoji } from '../../utils/emoji';
 import { Emoji } from '../ui/Emoji';
 import { Meter } from '../ui/Meter';
+import { SUIKA_SKINS } from '../../utils/skins';
 
 const FRUITS: SuikaFruitDef[] = [
   { name: '체리', emoji: '🍒', r: 17, score: 1, color: '#ff334b' },
@@ -160,6 +161,20 @@ function firstBelow(bodies: Body[], x: number): Body | null {
   return hit;
 }
 
+const skinned = new Map<string, SuikaFruitDef[]>();
+/** The fruit with a shop skin's pictures and names (sizes, colours and points stay the same) */
+function skinFruits(id: string): SuikaFruitDef[] {
+  const skin = SUIKA_SKINS[id];
+  if (!skin) return FRUITS;
+  let list = skinned.get(id);
+  if (!list) {
+    list = FRUITS.map((f, i) => ({ ...f, emoji: skin.emojis[i] ?? f.emoji, name: skin.names[i] ?? f.name }));
+    skinned.set(id, list);
+    preloadEmoji(list.map((f) => f.emoji));
+  }
+  return list;
+}
+
 interface Props {
   settings: GameSettings;
   dark: boolean;
@@ -201,6 +216,10 @@ export const SuikaGame: React.FC<Props> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
+  // The shop's skin: the same 11 sizes with other pictures and names
+  const fruitsRef = useRef(FRUITS);
+  fruitsRef.current = skinFruits(settings.suikaSkin);
+  const top = fruitsRef.current[fruitsRef.current.length - 1];
   const unlimitedRef = useRef(unlimitedItems);
   unlimitedRef.current = unlimitedItems;
 
@@ -421,7 +440,7 @@ export const SuikaGame: React.FC<Props> = ({
     removeBody(worldRef.current, target);
     setHammerOut(false);
     setItemCount('hammer', itemsRef.current.hammer - 1);
-    const color = FRUITS[target.lv].color;
+    const color = fruitsRef.current[target.lv].color;
     for (let p = 0; p < (settings.comboEffect ? 14 : 0); p++) {
       const a = Math.random() * Math.PI * 2;
       const sp = 1.5 + Math.random() * 4;
@@ -453,7 +472,7 @@ export const SuikaGame: React.FC<Props> = ({
     }
     if (isCooldownRef.current) return;
 
-    const f = FRUITS[curLevelRef.current];
+    const f = fruitsRef.current[curLevelRef.current];
     const x = clampX(dropXRef.current, f.r);
     addBody(worldRef.current, curLevelRef.current, x, holdY(f.r), { vy: 1.2 });
 
@@ -516,7 +535,7 @@ export const SuikaGame: React.FC<Props> = ({
     const onMerge = (m: Merge) => {
       if (m.made) {
         const nl = m.made.lv;
-        const nf = FRUITS[nl];
+        const nf = fruitsRef.current[nl];
         const pts = Math.round((m.a.r + m.b.r + nf.score) * scoreMult(elapsedRef.current));
         setScore((s) => s + pts);
 
@@ -555,7 +574,7 @@ export const SuikaGame: React.FC<Props> = ({
           highestFruitRef.current = nl;
           setHighestFruit(nl);
         }
-        if (nl === FRUITS.length - 1) {
+        if (nl === fruitsRef.current.length - 1) {
           // A watermelon! Watermelons don't merge (two used to vanish together), so they're counted
           watermelonsRef.current += 1;
           setWatermelons(watermelonsRef.current);
@@ -591,7 +610,7 @@ export const SuikaGame: React.FC<Props> = ({
       const dir = (keysRef.current.right ? 1 : 0) - (keysRef.current.left ? 1 : 0);
       if (dir !== 0) {
         // The hammer reaches right up to the walls; a fruit to drop has to fit between them
-        dropXRef.current = clampX(dropXRef.current + dir * KEY_SPEED * TICK_FRAMES, hammerRef.current ? -2 : FRUITS[curLevelRef.current].r);
+        dropXRef.current = clampX(dropXRef.current + dir * KEY_SPEED * TICK_FRAMES, hammerRef.current ? -2 : fruitsRef.current[curLevelRef.current].r);
         pointerYRef.current = null;
       }
 
@@ -748,7 +767,7 @@ export const SuikaGame: React.FC<Props> = ({
 
       const hammerOut = isPlayingRef.current && hammerRef.current;
       const aiming = isPlayingRef.current && !isCooldownRef.current && !hammerOut;
-      const aimFruit = FRUITS[curLevelRef.current];
+      const aimFruit = fruitsRef.current[curLevelRef.current];
       const aimX = clampX(dropXRef.current, aimFruit.r);
       const target = hammerOut ? hammerTarget() : null;
 
@@ -773,7 +792,7 @@ export const SuikaGame: React.FC<Props> = ({
         ctx.save();
         ctx.translate(at.x, at.y);
         ctx.scale(b.scale, b.scale);
-        drawFruit(ctx, FRUITS[b.lv], b.r, at.angle, P, dangerRef.current && b.y - b.r < DEADLINE);
+        drawFruit(ctx, fruitsRef.current[b.lv], b.r, at.angle, P, dangerRef.current && b.y - b.r < DEADLINE);
         if (b === target) {
           // The fruit the hammer will hit
           ctx.lineWidth = 5;
@@ -929,11 +948,11 @@ export const SuikaGame: React.FC<Props> = ({
     const rect = canvas.getBoundingClientRect();
     const canvasX = (clientX - rect.left) * (CW / rect.width);
     // The hammer goes anywhere in the jar; a fruit to drop has to fit between the walls
-    dropXRef.current = hammerRef.current ? Math.max(LEFT, Math.min(RIGHT, canvasX)) : clampX(canvasX, FRUITS[curLevelRef.current].r);
+    dropXRef.current = hammerRef.current ? Math.max(LEFT, Math.min(RIGHT, canvasX)) : clampX(canvasX, fruitsRef.current[curLevelRef.current].r);
     pointerYRef.current = (clientY - rect.top) * (CH / rect.height);
   };
 
-  const topFruit = FRUITS[highestFruit];
+  const topFruit = fruitsRef.current[highestFruit];
   const mult = gameState === 'IDLE' ? 1 : scoreMult(elapsedTime);
 
   return (
@@ -988,7 +1007,7 @@ export const SuikaGame: React.FC<Props> = ({
             <HudStat label="최고" value={formatNumber(Math.max(best, score))} tone={best > 0 && score > best ? 'hot' : 'default'} />
             {/* The points multiplier rides on the time: it grows the longer the round lasts */}
             <HudStat label={mult > 1 ? `시간 ×${mult.toFixed(1)}` : '시간'} value={formatTime(elapsedTime)} tone={mult > 1 ? 'hot' : 'default'} />
-            <HudStat label="다음" value={<Emoji e={FRUITS[nextLevel]?.emoji ?? ''} className="text-2xl leading-none" />} />
+            <HudStat label="다음" value={<Emoji e={fruitsRef.current[nextLevel]?.emoji ?? ''} className="text-2xl leading-none" />} />
           </Hud>
         }
         board={
@@ -1053,8 +1072,8 @@ export const SuikaGame: React.FC<Props> = ({
               </h3>
               <span className="text-xs font-bold text-ink-3">
                 {watermelons > 0 ? (
-                  <span key={watermelons} className="chip h-6 bg-melon-soft px-2 text-[11px] text-ink animate-pop-in" title="이번 판에 만든 수박">
-                    <Emoji e="🍉" /> ×{watermelons}
+                  <span key={watermelons} className="chip h-6 bg-melon-soft px-2 text-[11px] text-ink animate-pop-in" title={`이번 판에 만든 ${top.name}`}>
+                    <Emoji e={top.emoji} /> ×{watermelons}
                   </span>
                 ) : (
                   <>
@@ -1064,7 +1083,7 @@ export const SuikaGame: React.FC<Props> = ({
               </span>
             </div>
             <ol className="grid grid-cols-6 gap-1.5">
-              {FRUITS.map((f, i) => {
+              {fruitsRef.current.map((f, i) => {
                 const reached = i <= highestFruit;
                 const isTop = i === highestFruit && gameState !== 'IDLE';
                 return (
@@ -1102,13 +1121,13 @@ export const SuikaGame: React.FC<Props> = ({
         <ScreenOverlay>
           <ResultCard
             game="suika"
-            emoji={highestFruit === FRUITS.length - 1 ? '🍉' : '💥'}
+            emoji={highestFruit === fruitsRef.current.length - 1 ? top.emoji : '💥'}
             title="GAME OVER"
             subtitle="과일이 점선 위로 넘쳤어요"
             tone="berry"
             score={score}
             stats={[
-              { label: '만든 수박', value: `🍉 ${formatNumber(watermelons)}개` },
+              { label: `만든 ${top.name}`, value: `${top.emoji} ${formatNumber(watermelons)}개` },
               { label: '가장 큰 과일', value: `${topFruit.emoji} ${topFruit.name}` },
               { label: '합친 횟수', value: `${formatNumber(mergeTotal)}번` },
               { label: '플레이 시간', value: formatTime(elapsedTime) },

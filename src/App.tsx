@@ -1111,6 +1111,7 @@ export default function App() {
       cardBack: owned[settings.cardBack] ? settings.cardBack : '',
       blade: owned[settings.blade] ? settings.blade : '',
       runner: owned[settings.runner] ? settings.runner : '',
+      suikaSkin: owned[settings.suikaSkin] ? settings.suikaSkin : '',
     },
     isPaused: gamePaused,
     onUnlockAchieve: handleUnlockAchieve,
@@ -1344,6 +1345,7 @@ export default function App() {
           cardBack: owned[settings.cardBack] ? settings.cardBack : '',
           blade: owned[settings.blade] ? settings.blade : '',
           runner: owned[settings.runner] ? settings.runner : '',
+          suikaSkin: owned[settings.suikaSkin] ? settings.suikaSkin : '',
         }}
         onBuy={buyItem}
         onTakeAll={takeAllItems}

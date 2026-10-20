@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, Loader2, LogOut } from 'lucide-react';
+import { AlertCircle, Loader2, LogOut, Pencil } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { UserStatistics } from '../../types';
 import { GAMES, GAME_ORDER, TONE } from '../../constants';
 import { LevelInfo, bestKey } from '../../utils/progress';
 import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
-import { formatNumber, formatTime } from '../../utils/format';
+import { formatNumber } from '../../utils/format';
 import { Modal } from '../ui/Modal';
 import { Avatar, PlayerView } from '../ui/Avatar';
 import { AVATARS, NICKNAME_MAX, PlayerProfile, cleanNickname, isReservedNickname } from '../../utils/profile';
@@ -15,6 +15,15 @@ import { Meter } from '../ui/Meter';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import type { TitleDef } from '../../utils/titles';
 import { Emoji } from '../ui/Emoji';
+import { VerifiedBadge } from '../ui/VerifiedBadge';
+
+type Tab = 'avatar' | 'title' | 'stats';
+
+/** Total play time: "1시간 48분", "35분" */
+const playTime = (sec: number) => {
+  const m = Math.floor(Math.max(0, sec) / 60);
+  return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`;
+};
 
 interface Props {
   isOpen: boolean;
@@ -77,6 +86,7 @@ export const ProfileModal: React.FC<Props> = ({
   const [error, setError] = useState<string | null>(null);
   const [nickDraft, setNickDraft] = useState(profile.nickname);
   const [nickError, setNickError] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('avatar');
 
   useEffect(() => {
     if (isOpen) {
@@ -118,6 +128,58 @@ export const ProfileModal: React.FC<Props> = ({
     onClose();
   };
 
+  // Email is only shown to its owner, and even then half hidden (screens get shared)
+  const email = user?.email ? user.email.replace(/^(.{3}).*(@.*)$/, '$1***$2') : '';
+  const bought = boughtAvatars.filter((a) => !AVATARS.includes(a));
+  const staffTitles = titles.filter((t) => t.staff);
+  const myTitles = titles.filter((t) => !t.staff);
+  const tabs: [Tab, string][] = user
+    ? [
+        ['avatar', '😀 아바타'],
+        ['title', '🏷️ 칭호'],
+        ['stats', '📊 기록'],
+      ]
+    : [
+        ['avatar', '😀 아바타'],
+        ['title', '🏷️ 칭호'],
+      ];
+  const shown = !user && tab === 'stats' ? 'avatar' : tab;
+
+  const avatarButton = (a: string) => (
+    <button
+      key={a}
+      type="button"
+      aria-pressed={profile.avatar === a}
+      aria-label={`아바타 ${a}`}
+      onClick={() => onUpdateProfile({ ...profile, avatar: a })}
+      className={`grid aspect-square place-items-center rounded-xl border-2 border-line text-xl transition-transform hover:-translate-y-0.5 ${
+        profile.avatar === a ? 'bg-mango shadow-hard-sm' : 'bg-surface'
+      }`}
+    >
+      <Emoji e={a} />
+    </button>
+  );
+
+  const titleButton = (t: TitleDef) => (
+    <button
+      key={t.id}
+      type="button"
+      aria-pressed={profile.title === t.id}
+      onClick={() => onUpdateProfile({ ...profile, title: t.id })}
+      className={`chip h-8 px-3 text-xs ${
+        profile.title === t.id
+          ? t.staff
+            ? 'bg-[#1e3a8a] text-white shadow-hard-sm'
+            : 'bg-grape text-white shadow-hard-sm'
+          : t.staff
+            ? 'border-[#3b82f6] bg-[#dbeafe] text-[#1e3a8a] hover:bg-[#bfdbfe]'
+            : 'bg-surface hover:bg-surface-3'
+      }`}
+    >
+      {t.icon} {t.label}
+    </button>
+  );
+
   return (
     <Modal
       isOpen={isOpen}
@@ -137,168 +199,192 @@ export const ProfileModal: React.FC<Props> = ({
         </div>
       )}
 
-      <section className="well mb-3 space-y-3 p-3.5" aria-label="꾸미기">
+      {/* Who I am: avatar, name (edit in place), badges, level */}
+      <section className="well mb-3 p-3.5" aria-label="내 정보">
         <div className="flex items-center gap-3">
           <Avatar player={player} size="lg" />
           <div className="min-w-0 flex-1">
-            <label htmlFor="nickname" className="text-[11px] font-bold text-ink-3">
-              닉네임 (최대 {NICKNAME_MAX}자)
+            <label htmlFor="nickname" className="flex items-center gap-1 text-[11px] font-bold text-ink-3">
+              <Pencil className="h-3 w-3" strokeWidth={2.5} /> 닉네임 (최대 {NICKNAME_MAX}자)
             </label>
-            <input
-              id="nickname"
-              value={nickDraft}
-              maxLength={NICKNAME_MAX}
-              placeholder={user?.displayName || '게스트'}
-              onChange={(e) => setNickDraft(e.target.value)}
-              onBlur={commitNickname}
-              onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-              className="mt-0.5 h-10 w-full select-text rounded-xl border-2 border-line bg-surface px-3 font-display text-lg outline-none focus:border-soda"
-            />
+            <div className="mt-0.5 flex items-center gap-1.5">
+              <input
+                id="nickname"
+                value={nickDraft}
+                maxLength={NICKNAME_MAX}
+                placeholder={user?.displayName || '게스트'}
+                onChange={(e) => setNickDraft(e.target.value)}
+                onBlur={commitNickname}
+                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                className="h-10 min-w-0 flex-1 select-text rounded-xl border-2 border-line bg-surface px-3 font-display text-lg outline-none focus:border-soda"
+              />
+              {player.verified && <VerifiedBadge className="h-6 w-6" />}
+            </div>
             {nickError && (
               <p role="alert" className="mt-1 text-xs font-bold text-berry-ink">
                 {nickError}
               </p>
             )}
-            {user?.email && (
-              <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-ink-3">
-                {isAdmin && (
-                  <button
-                    type="button"
-                    className="chip h-5 shrink-0 bg-grape-deep px-2 text-[10px] text-white hover:bg-grape"
-                    onClick={onOpenAdmin}
-                    aria-label="관리자 화면 열기"
-                  >
-                    🛡️ 관리자
-                  </button>
-                )}
-                <span className="truncate">{user.email}</span>
-              </p>
-            )}
-            {user && <p className="mt-0.5 text-[11px] text-ink-3">🏆 랭킹에는 닉네임 · 아바타 · 칭호 · 테두리가 보여요. 기본 아바타는 Google 사진이에요</p>}
-          </div>
-        </div>
-        <div>
-          <div className="mb-1.5 flex items-center justify-between gap-2">
-            <p className="text-[11px] font-bold text-ink-3">아바타</p>
-            <button type="button" className="text-[11px] font-bold text-grape-ink underline-offset-2 hover:underline" onClick={onOpenShop}>
-              🛍️ 상점에서 더 보기
-            </button>
-          </div>
-          <div className="grid max-h-44 grid-cols-7 gap-1.5 overflow-y-auto p-0.5" role="group" aria-label="아바타">
-            <button
-              type="button"
-              aria-pressed={!profile.avatar}
-              aria-label="기본 아바타"
-              onClick={() => onUpdateProfile({ ...profile, avatar: '' })}
-              className={`grid aspect-square place-items-center rounded-xl border-2 border-line ${!profile.avatar ? 'bg-mango shadow-hard-sm' : 'bg-surface'}`}
-            >
-              <Avatar player={defaultLook} size="sm" />
-            </button>
-            {[...AVATARS, ...boughtAvatars].map((a) => (
-              <button
-                key={a}
-                type="button"
-                aria-pressed={profile.avatar === a}
-                aria-label={`아바타 ${a}`}
-                onClick={() => onUpdateProfile({ ...profile, avatar: a })}
-                className={`grid aspect-square place-items-center rounded-xl border-2 border-line text-xl ${profile.avatar === a ? 'bg-mango shadow-hard-sm' : 'bg-surface'}`}
-              >
-                <Emoji e={a} />
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="mb-1.5 text-[11px] font-bold text-ink-3">칭호 · 이름 옆에 붙고 랭킹에도 보여요</p>
-          {titles.length === 0 ? (
-            <p className="rounded-xl bg-surface px-3 py-2 text-xs text-ink-3">업적을 달성하거나 상점에서 칭호를 사면 달 수 있어요.</p>
-          ) : (
-            <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto p-0.5" role="group" aria-label="칭호">
-              <button
-                type="button"
-                aria-pressed={!profile.title}
-                onClick={() => onUpdateProfile({ ...profile, title: '' })}
-                className={`chip h-8 px-3 text-xs ${!profile.title ? 'bg-grape text-white shadow-hard-sm' : 'bg-surface hover:bg-surface-3'}`}
-              >
-                없음
-              </button>
-              {titles.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  aria-pressed={profile.title === t.id}
-                  onClick={() => onUpdateProfile({ ...profile, title: t.id })}
-                  className={`chip h-8 px-3 text-xs ${
-                    profile.title === t.id
-                      ? t.staff
-                        ? 'bg-[#1e3a8a] text-white shadow-hard-sm'
-                        : 'bg-grape text-white shadow-hard-sm'
-                      : t.staff
-                        ? 'border-[#3b82f6] bg-[#dbeafe] text-[#1e3a8a] hover:bg-[#bfdbfe]'
-                        : 'bg-surface hover:bg-surface-3'
-                  }`}
-                >
-                  {t.icon} {t.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {user ? (
-        <div className="space-y-3">
-
-          <div className="well p-3.5">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="chip bg-mango-soft">
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="chip h-6 bg-mango-soft px-2 text-[11px]">
                 <Emoji e={level.emoji} /> Lv.{level.level} {level.title}
               </span>
-              <span className="text-xs font-bold tabular-nums text-ink-2">
-                {level.xp - level.floor} / {level.next - level.floor} XP
-              </span>
+              {isAdmin && (
+                <button type="button" className="chip h-6 bg-grape-deep px-2 text-[11px] text-white hover:bg-grape" onClick={onOpenAdmin} aria-label="관리자 화면 열기">
+                  🛡️ 관리자
+                </button>
+              )}
+              {email && (
+                <span className="truncate text-[11px] text-ink-3" title="나에게만 보여요">
+                  🔒 {email}
+                </span>
+              )}
             </div>
-            <Meter value={level.xp - level.floor} max={level.next - level.floor} label="경험치" />
           </div>
+        </div>
+        <div className="mt-3">
+          <div className="mb-1 flex justify-between text-[11px] font-bold text-ink-3">
+            <span>경험치</span>
+            <span className="tabular-nums">
+              {level.xp - level.floor} / {level.next - level.floor} XP
+            </span>
+          </div>
+          <Meter value={level.xp - level.floor} max={level.next - level.floor} label="경험치" className="h-3" />
+        </div>
+        {user && <p className="mt-2 text-[11px] text-ink-3">🏆 랭킹 · 친구에게는 닉네임 · 아바타 · 칭호 · 테두리가 보여요. 기본 아바타는 Google 사진이에요.</p>}
+      </section>
 
+      <div role="tablist" aria-label="프로필 메뉴" className={`mb-3 grid gap-1.5 ${tabs.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        {tabs.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={shown === id}
+            onClick={() => setTab(id)}
+            className={`rounded-2xl border-2 border-line px-2 py-2 text-sm font-bold transition-all ${
+              shown === id ? '-translate-y-0.5 bg-melon text-on-bright shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {shown === 'avatar' && (
+        <div className="space-y-3">
+          <section>
+            <p className="mb-1.5 text-[11px] font-bold text-ink-3">기본 · 무료 과일</p>
+            <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8" role="group" aria-label="무료 아바타">
+              <button
+                type="button"
+                aria-pressed={!profile.avatar}
+                aria-label="기본 아바타"
+                onClick={() => onUpdateProfile({ ...profile, avatar: '' })}
+                className={`grid aspect-square place-items-center rounded-xl border-2 border-line ${!profile.avatar ? 'bg-mango shadow-hard-sm' : 'bg-surface'}`}
+              >
+                <Avatar player={defaultLook} size="sm" />
+              </button>
+              {AVATARS.map(avatarButton)}
+            </div>
+          </section>
+          <section>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <p className="text-[11px] font-bold text-ink-3">상점에서 산 아바타 {bought.length > 0 && `(${bought.length})`}</p>
+              <button type="button" className="text-[11px] font-bold text-grape-ink underline-offset-2 hover:underline" onClick={onOpenShop}>
+                🛍️ 상점에서 더 보기
+              </button>
+            </div>
+            {bought.length ? (
+              <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8" role="group" aria-label="산 아바타">
+                {bought.map(avatarButton)}
+              </div>
+            ) : (
+              <p className="rounded-xl bg-surface-2 px-3 py-2.5 text-xs text-ink-3">아직 산 아바타가 없어요. 상점에서 동물 · 음식 아바타를 살 수 있어요.</p>
+            )}
+          </section>
+        </div>
+      )}
+
+      {shown === 'title' && (
+        <div className="space-y-3">
+          <p className="text-[11px] font-bold text-ink-3">이름 옆에 붙고 랭킹에도 보여요</p>
+          {titles.length === 0 ? (
+            <p className="rounded-xl bg-surface-2 px-3 py-2.5 text-xs text-ink-3">업적을 달성하거나 상점에서 칭호를 사면 달 수 있어요.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  aria-pressed={!profile.title}
+                  onClick={() => onUpdateProfile({ ...profile, title: '' })}
+                  className={`chip h-8 px-3 text-xs ${!profile.title ? 'bg-grape text-white shadow-hard-sm' : 'bg-surface hover:bg-surface-3'}`}
+                >
+                  칭호 없음
+                </button>
+              </div>
+              {staffTitles.length > 0 && (
+                <section>
+                  <p className="mb-1.5 text-[11px] font-bold text-[#1e3a8a] dark:text-[#93c5fd]">🛡️ 운영진 칭호 ({staffTitles.length})</p>
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="운영진 칭호">
+                    {staffTitles.map(titleButton)}
+                  </div>
+                </section>
+              )}
+              <section>
+                <p className="mb-1.5 text-[11px] font-bold text-ink-3">🏷️ 내 칭호 ({myTitles.length})</p>
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="칭호">
+                  {myTitles.map(titleButton)}
+                </div>
+              </section>
+            </>
+          )}
+        </div>
+      )}
+
+      {shown === 'stats' && user && (
+        <div className="space-y-3">
           <dl className="grid grid-cols-2 gap-2">
             {[
-              ['총 플레이', `${stats.totalPlayCount}판`],
-              ['플레이 시간', formatTime(stats.totalPlayTime)],
-              ['업적', `${achievementCount}/${ACHIEVEMENT_COUNT}`],
-              ['미션 도장', `${stats.missionStamps}개`],
+              ['🎮 총 플레이', `${formatNumber(stats.totalPlayCount)}판`],
+              ['⏱️ 플레이 시간', playTime(stats.totalPlayTime)],
+              ['🏆 업적', `${achievementCount}/${ACHIEVEMENT_COUNT}`],
+              ['🏅 미션 도장', `${stats.missionStamps}개`],
             ].map(([k, v]) => (
               <div key={k} className="rounded-xl border-2 border-line bg-surface-2 px-3 py-2">
                 <dt className="text-[11px] font-bold text-ink-3">{k}</dt>
-                <dd className="font-display text-lg tabular-nums">{v}</dd>
+                <dd className="font-display text-lg">{v}</dd>
               </div>
             ))}
           </dl>
-
-          <p className="-mb-1 text-xs font-bold text-ink-3">게임별 최고 기록</p>
-          <div className="grid grid-cols-5 gap-1.5">
-            {GAME_ORDER.map((g) => (
-              <div key={g} className={`min-w-0 rounded-xl border-2 border-line px-1 py-2 text-center ${TONE[GAMES[g].tone].soft}`}>
-                <p className="text-lg" aria-hidden="true">
-                  <Emoji e={GAMES[g].emoji} />
-                </p>
-                <p className="truncate text-[11px] font-bold text-ink-2">{GAMES[g].short}</p>
-                <p className="truncate font-display text-sm tabular-nums">{stats[bestKey(g)] > 0 ? formatNumber(stats[bestKey(g)]) : '–'}</p>
-              </div>
-            ))}
-          </div>
-
-          <ConfirmButton
-            className="btn w-full"
-            question="로그아웃하면 이 기기의 기록이 비워져요. 다시 로그인하면 복원돼요."
-            confirmLabel="로그아웃"
-            onConfirm={onLogout}
-          >
-            <LogOut className="h-4 w-4" strokeWidth={2.5} /> 로그아웃
-          </ConfirmButton>
+          <section>
+            <p className="mb-1.5 text-[11px] font-bold text-ink-3">게임별 최고 기록</p>
+            <div className="grid grid-cols-5 gap-1.5">
+              {GAME_ORDER.map((g) => (
+                <div key={g} className={`min-w-0 rounded-xl border-2 border-line px-1 py-2 text-center ${TONE[GAMES[g].tone].soft}`}>
+                  <p className="text-lg" aria-hidden="true">
+                    <Emoji e={GAMES[g].emoji} />
+                  </p>
+                  <p className="truncate text-[11px] font-bold text-ink-2">{GAMES[g].short}</p>
+                  <p className="truncate font-display text-sm tabular-nums">{stats[bestKey(g)] > 0 ? formatNumber(stats[bestKey(g)]) : '–'}</p>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
+      )}
+
+      {user ? (
+        <ConfirmButton
+          className="btn mt-4 w-full"
+          question="로그아웃하면 이 기기의 기록이 비워져요. 다시 로그인하면 복원돼요."
+          confirmLabel="로그아웃"
+          onConfirm={onLogout}
+        >
+          <LogOut className="h-4 w-4" strokeWidth={2.5} /> 로그아웃
+        </ConfirmButton>
       ) : (
-        <div className="space-y-3">
+        <div className="mt-4 space-y-3">
           <button
             type="button"
             onClick={signIn}
@@ -322,7 +408,6 @@ export const ProfileModal: React.FC<Props> = ({
             </button>
             에 동의하는 것으로 봐요.
           </p>
-
           <ul className="space-y-2">
             {PERKS.map((p) => (
               <li key={p.title} className="well flex items-start gap-3 p-3">

@@ -221,6 +221,10 @@ export const SuikaGame: React.FC<Props> = ({
   const [itemGauge, setItemGauge] = useState(0);
   /** "🔨 망치 획득!" on the board for a moment */
   const [itemToast, setItemToast] = useState<{ id: number; text: string } | null>(null);
+  /** Watermelons made this round, and merges in all (for the result card) */
+  const [watermelons, setWatermelons] = useState(0);
+  const watermelonsRef = useRef(0);
+  const [mergeTotal, setMergeTotal] = useState(0);
 
   // Mutable game state refs for physics loop
   const worldRef = useRef<World>(newWorld());
@@ -374,6 +378,9 @@ export const SuikaGame: React.FC<Props> = ({
     setHammerOut(false);
     pointerYRef.current = null;
     mergesRef.current = 0;
+    setMergeTotal(0);
+    watermelonsRef.current = 0;
+    setWatermelons(0);
     setItemGauge(0);
     setItemToast(null);
     graceRef.current = 0;
@@ -548,15 +555,16 @@ export const SuikaGame: React.FC<Props> = ({
           highestFruitRef.current = nl;
           setHighestFruit(nl);
         }
-        if (nl === FRUITS.length - 1) onUnlockRef.current('suika_watermelon');
-        countMerge();
-      } else {
-        // Watermelon + Watermelon Merge -> Huge bonus
-        setScore((s) => s + Math.round(5000 * scoreMult(elapsedRef.current)));
-        playSound('victory', settingsRef.current);
-        vibrate(HAPTIC.over, settingsRef.current);
-        shakeRef.current = 12;
-        if (settingsRef.current.celebrateEffect) celebrate(true);
+        if (nl === FRUITS.length - 1) {
+          // A watermelon! Watermelons don't merge (two used to vanish together), so they're counted
+          watermelonsRef.current += 1;
+          setWatermelons(watermelonsRef.current);
+          onUnlockRef.current('suika_watermelon');
+          playSound('victory', settingsRef.current);
+          vibrate(HAPTIC.over, settingsRef.current);
+          shakeRef.current = Math.max(shakeRef.current, 10);
+          if (settingsRef.current.celebrateEffect) celebrate(true);
+        }
         countMerge();
       }
     };
@@ -564,6 +572,7 @@ export const SuikaGame: React.FC<Props> = ({
     /** Every MERGES_PER_ITEM merges earn one item (one the player doesn't already hold the most of) */
     const countMerge = () => {
       mergesRef.current += 1;
+      setMergeTotal(mergesRef.current);
       const toward = mergesRef.current % MERGES_PER_ITEM;
       setItemGauge(toward);
       if (toward !== 0) return;
@@ -1043,7 +1052,15 @@ export const SuikaGame: React.FC<Props> = ({
                 )}
               </h3>
               <span className="text-xs font-bold text-ink-3">
-                최고: <Emoji e={topFruit.emoji} /> {topFruit.name}
+                {watermelons > 0 ? (
+                  <span key={watermelons} className="chip h-6 bg-melon-soft px-2 text-[11px] text-ink animate-pop-in" title="이번 판에 만든 수박">
+                    <Emoji e="🍉" /> ×{watermelons}
+                  </span>
+                ) : (
+                  <>
+                    최고: <Emoji e={topFruit.emoji} /> {topFruit.name}
+                  </>
+                )}
               </span>
             </div>
             <ol className="grid grid-cols-6 gap-1.5">
@@ -1091,11 +1108,17 @@ export const SuikaGame: React.FC<Props> = ({
             tone="berry"
             score={score}
             stats={[
+              { label: '만든 수박', value: `🍉 ${formatNumber(watermelons)}개` },
               { label: '가장 큰 과일', value: `${topFruit.emoji} ${topFruit.name}` },
+              { label: '합친 횟수', value: `${formatNumber(mergeTotal)}번` },
               { label: '플레이 시간', value: formatTime(elapsedTime) },
             ]}
             reward={reward}
-            shareText={`🍉 수박 게임 ${formatNumber(score)}점! 가장 큰 과일은 ${topFruit.emoji} ${topFruit.name}`}
+            shareText={
+              watermelons > 0
+                ? `🍉 수박 게임 ${formatNumber(score)}점! 수박을 ${formatNumber(watermelons)}개 만들었어요`
+                : `🍉 수박 게임 ${formatNumber(score)}점! 가장 큰 과일은 ${topFruit.emoji} ${topFruit.name}`
+            }
             onRetry={handleStartGame}
             onExit={onExit}
           />

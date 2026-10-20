@@ -78,7 +78,7 @@ export interface World {
   merging: boolean;
 }
 
-/** Two fruit of level `lv` met. `made` is the new fruit, or null when two watermelons vanish. */
+/** Two fruit of level `lv` met and became `made`, one level bigger. */
 export interface Merge {
   lv: number;
   a: Body;
@@ -87,6 +87,12 @@ export interface Merge {
   x: number;
   y: number;
 }
+
+/**
+ * Same fruit merge, except the biggest one: two watermelons just sit side by side (they used to
+ * vanish together, which players took for watermelons disappearing).
+ */
+const canMerge = (world: World, a: Body, b: Body) => world.merging && a.lv === b.lv && a.lv < world.radii.length - 1;
 
 export function createWorld(bounds: Bounds, radii: number[]): World {
   return { bodies: [], bounds, radii, nextId: 1, met: new Set(), merging: true };
@@ -185,7 +191,7 @@ function solveContacts(world: World) {
         // Touching the pile means the fruit has landed (two fruit still in the air do not count)
         if (a.landed || b.landed) a.landed = b.landed = true;
         // Twins are not pushed apart: they merge when the tick ends, even if they met fast
-        if (a.lv === b.lv && world.merging) {
+        if (canMerge(world, a, b)) {
           world.met.add(a.id < b.id ? `${a.id}:${b.id}` : `${b.id}:${a.id}`);
           continue;
         }
@@ -242,7 +248,7 @@ function findMerges(world: World): Merge[] {
       const b = bodies[j];
       const rb = b.r * b.scale;
       if (b.x - rb >= reach) break;
-      if (b.lv !== a.lv || used.has(b.id)) continue;
+      if (!canMerge(world, a, b) || used.has(b.id)) continue;
       const dx = b.x - a.x;
       const dy = b.y - a.y;
       const near = ra + rb + MERGE_GAP;

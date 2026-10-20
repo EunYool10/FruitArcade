@@ -18,7 +18,9 @@ import {
 import { db } from '../firestore';
 import { GAME_ORDER } from '../constants';
 import type { FeedbackKind, ReportReason } from './communityService';
-import { boardId, dayLabel, kstDay } from './ranking';
+import { RANK_PERIODS, boardId, cleanPhoto, dayLabel, kstDay } from './ranking';
+import { maskBadWords } from './badWords';
+import type { GameType } from '../types';
 
 // Admin screen data. firestore.rules only lets accounts on config/admins read or change any of it.
 
@@ -164,4 +166,78 @@ export function setFeedbackStatus(id: string, status: 'new' | 'done'): Promise<v
 
 export function deleteFeedback(id: string): Promise<void> {
   return deleteDoc(doc(db, 'feedback', id));
+}
+
+// ───────── users ─────────
+
+/** One player for the admin user list: the public card, plus last seen, ban and today's play */
+export interface UserRow {
+  uid: string;
+  code: string;
+  /** As others see it (bad words masked) */
+  name: string;
+  /** As the player typed it, for judging the name */
+  rawName: string;
+  avatar: string;
+  photo?: string;
+  title?: string;
+  frame?: string;
+  level: number;
+  achievements: number;
+  best: Partial<Record<GameType, number>>;
+  /** When the card last changed (sign-in or a new best) */
+  cardAt: number;
+  /** presence/{uid}: null when hidden or never written */
+  lastSeen: number | null;
+  bannedAt: number | null;
+  todayPlays: number;
+  todaySeconds: number;
+}
+
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+
+/** Everyone with a public card (made the first time a player signs in), newest card first */
+export async function listUsers(): Promise<UserRow[]> {
+  const [players, presence, bans, activity] = await Promise.all([
+    getDocs(query(collection(db, 'players'), orderBy('at', 'desc'), limit(1000))),
+    getDocs(query(collection(db, 'presence'), limit(2000))),
+    getDocs(query(collection(db, 'bans'), limit(1000))),
+    getDocs(collection(db, 'activity', `d${kstDay()}`, 'players')),
+  ]);
+  const seen = new Map(presence.docs.map((d) => [d.id, millis(d.data().at) || null]));
+  const banned = new Map(bans.docs.map((d) => [d.id, millis(d.data().at) || Date.now()]));
+  const today = new Map(activity.docs.map((d) => [d.id, d.data()]));
+  return players.docs.map((d) => {
+    const x = d.data();
+    const best: Partial<Record<GameType, number>> = {};
+    for (const g of GAME_ORDER) if (typeof x.best?.[g] === 'number') best[g] = x.best[g];
+    const raw = str(x.name, '???');
+    const play = today.get(d.id);
+    return {
+      uid: d.id,
+      code: str(x.code),
+      name: maskBadWords(raw),
+      rawName: raw,
+      avatar: str(x.avatar, '🍓'),
+      ...(cleanPhoto(x.photo) ? { photo: x.photo as string } : {}),
+      ...(typeof x.title === 'string' ? { title: x.title } : {}),
+      ...(typeof x.frame === 'string' ? { frame: x.frame } : {}),
+      level: num(x.level) || 1,
+      achievements: num(x.achievements),
+      best,
+      cardAt: millis(x.at),
+      lastSeen: seen.get(d.id) ?? null,
+      bannedAt: banned.get(d.id) ?? null,
+      todayPlays: num(play?.plays),
+      todaySeconds: num(play?.seconds),
+    };
+  });
+}
+
+/** Take a player off today's, this week's and the all-time boards of every game */
+export async function clearBoardsOf(uid: string): Promise<void> {
+  const batch = writeBatch(db);
+  const now = Date.now();
+  for (const g of GAME_ORDER) for (const p of RANK_PERIODS) batch.delete(doc(db, 'leaderboards', boardId(g, p, now), 'scores', uid));
+  await batch.commit();
 }

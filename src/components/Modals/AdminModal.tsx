@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { Ban, Check, Loader2, RotateCcw, Trash2 } from 'lucide-react';
-import type { AdminStats, FeedbackItem, ReportItem } from '../../utils/adminService';
+import React, { useEffect, useRef, useState } from 'react';
+import { Ban, Check, Loader2, RefreshCw, RotateCcw, Trash2, UserSearch } from 'lucide-react';
+import type { AdminStats, FeedbackItem, ReportItem, UserRow } from '../../utils/adminService';
 import type { BanEntry } from '../../utils/leaderboardService';
 import { boardLabel } from '../../utils/ranking';
 import { formatNumber, formatTime } from '../../utils/format';
 import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import { BarChart } from '../ui/BarChart';
+import { AdminUsers } from './AdminUsers';
+import { isOnline } from '../../utils/presence';
 
 const adminApi = () => import('../../utils/adminService');
 const rankApi = () => import('../../utils/leaderboardService');
@@ -18,7 +20,7 @@ interface Props {
   adminUid: string | null;
 }
 
-type Tab = 'stats' | 'reports' | 'feedback' | 'bans';
+type Tab = 'stats' | 'users' | 'reports' | 'feedback' | 'bans';
 
 const REASON: Record<ReportItem['reason'], string> = { name: '부적절한 닉네임', score: '의심스러운 점수', other: '기타' };
 const KIND: Record<FeedbackItem['kind'], string> = { bug: '🐞 버그', idea: '💡 아이디어', other: '💬 기타' };
@@ -37,6 +39,17 @@ const Empty: React.FC<{ icon: string; text: string }> = ({ icon, text }) => (
   </div>
 );
 
+const Retry: React.FC<{ onRetry: () => void }> = ({ onRetry }) => (
+  <div className="well grid min-h-[160px] place-items-center p-6 text-center">
+    <div className="space-y-2">
+      <p className="text-sm font-bold text-ink-2">불러오지 못했어요. 권한과 인터넷 연결을 확인해 주세요.</p>
+      <button type="button" className="btn btn-sm" onClick={onRetry}>
+        <RefreshCw className="h-4 w-4" strokeWidth={2.5} /> 다시 시도
+      </button>
+    </div>
+  </div>
+);
+
 const Spinner = () => (
   <div className="grid h-[160px] place-items-center text-ink-3">
     <Loader2 className="h-7 w-7 animate-spin" aria-label="불러오는 중" />
@@ -50,28 +63,61 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
   const [showDone, setShowDone] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackItem[] | null>(null);
   const [bans, setBans] = useState<BanEntry[] | null>(null);
-  const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
+  const [users, setUsers] = useState<UserRow[] | null>(null);
+  const [userSearch, setUserSearch] = useState('');
+  const [notice, setNotice] = useState<{ text: string; ok: boolean; id: number } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  /** The counts and the user list didn't load: offer a retry instead of a spinner that never ends */
+  const [loadFailed, setLoadFailed] = useState(false);
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** A line under the tabs; good news goes away by itself */
+  const say = (text: string, ok: boolean) => {
+    setNotice({ text, ok, id: Date.now() });
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    if (ok) noticeTimer.current = setTimeout(() => setNotice(null), 3500);
+  };
 
   useEffect(() => {
     if (isOpen) setNotice(null);
+    return () => {
+      if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    };
   }, [isOpen]);
 
-  // Counts for the tab badges and the stats page
+  /** Show one player in the user list */
+  const openUser = (uid: string) => {
+    setUserSearch(uid);
+    setTab('users');
+  };
+
+  // Counts for the tab badges, the summary and the stats page, and the user list
   useEffect(() => {
     if (!isOpen) return;
     let alive = true;
+    setRefreshing(true);
+    setLoadFailed(false);
     adminApi()
-      .then((api) => api.loadStats())
-      .then((s) => alive && setStats(s))
+      .then((api) =>
+        Promise.all([
+          api.loadStats().then((s) => alive && setStats(s)),
+          api.listUsers().then((u) => alive && setUsers(u)),
+        ])
+      )
       .catch((err) => {
         console.warn('Failed to load admin stats:', err);
-        if (alive) setNotice({ text: '통계를 불러오지 못했어요.', ok: false });
-      });
+        if (alive) {
+          setLoadFailed(true);
+          say('통계나 유저 목록을 불러오지 못했어요.', false);
+        }
+      })
+      .finally(() => alive && setRefreshing(false));
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, reload]);
 
   useEffect(() => {
@@ -79,7 +125,7 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
     let alive = true;
     const fail = (what: string) => (err: unknown) => {
       console.warn(`Failed to load ${what}:`, err);
-      if (alive) setNotice({ text: '목록을 불러오지 못했어요.', ok: false });
+      if (alive) say('목록을 불러오지 못했어요.', false);
     };
     if (tab === 'reports') {
       setReports(null);
@@ -103,6 +149,7 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, tab, showDone, reload]);
 
   /** Runs an admin action, then refreshes the lists and counts */
@@ -111,27 +158,58 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
     setNotice(null);
     try {
       await fn();
-      setNotice({ text: done, ok: true });
+      say(done, true);
       setReload((r) => r + 1);
     } catch (err) {
       console.warn('Admin action failed:', err);
-      setNotice({ text: '처리하지 못했어요. 권한과 인터넷 연결을 확인해 주세요.', ok: false });
+      say('처리하지 못했어요. 권한과 인터넷 연결을 확인해 주세요.', false);
     } finally {
       setBusy(null);
     }
   };
 
   const today = stats?.days[stats.days.length - 1];
-  const TABS: { id: Tab; label: string; badge?: number }[] = [
-    { id: 'stats', label: '📊 통계' },
-    { id: 'reports', label: '🚩 신고', badge: stats?.openReports },
-    { id: 'feedback', label: '💬 의견', badge: stats?.newFeedback },
-    { id: 'bans', label: '🚫 차단', badge: stats?.bans },
+  const now = Date.now();
+  const onlineNow = users?.filter((u) => isOnline(u.lastSeen, now)).length ?? 0;
+  const TABS: { id: Tab; icon: string; label: string; badge?: number }[] = [
+    { id: 'stats', icon: '📊', label: '통계' },
+    { id: 'users', icon: '👥', label: '유저' },
+    { id: 'reports', icon: '🚩', label: '신고', badge: stats?.openReports },
+    { id: 'feedback', icon: '💬', label: '의견', badge: stats?.newFeedback },
+    { id: 'bans', icon: '🚫', label: '차단' },
+  ];
+  const SUMMARY: [string, string, string][] = [
+    ['👥', '전체 유저', users ? `${formatNumber(users.length)}명` : '…'],
+    ['🟢', '지금 접속', users ? `${formatNumber(onlineNow)}명` : '…'],
+    ['🎮', '오늘', today ? `${formatNumber(today.players)}명 · ${formatNumber(today.plays)}판` : '…'],
   ];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="관리자" subtitle="신고 · 의견 · 차단을 한곳에서" icon="🛡️" tone="grape" size="lg">
-      <div role="tablist" aria-label="관리 메뉴" className="mb-4 grid grid-cols-4 gap-1.5 pt-2.5">
+    <Modal isOpen={isOpen} onClose={onClose} title="관리자" subtitle="유저 · 신고 · 의견 · 차단을 한곳에서" icon="🛡️" tone="grape" size="xl">
+      <div className="flex items-stretch gap-1.5 pt-1">
+        <dl className="grid min-w-0 flex-1 grid-cols-3 gap-1.5">
+          {SUMMARY.map(([icon, label, value]) => (
+            <div key={label} className="min-w-0 rounded-2xl border-2 border-line bg-surface-2 px-2.5 py-1.5">
+              <dt className="truncate text-[10px] font-bold text-ink-3 sm:text-[11px]">
+                <span aria-hidden="true">{icon}</span> {label}
+              </dt>
+              <dd className="truncate font-display text-sm tabular-nums sm:text-base">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <button
+          type="button"
+          className="btn btn-icon shrink-0 self-center"
+          onClick={() => setReload((r) => r + 1)}
+          disabled={refreshing}
+          aria-label="새로고침"
+          title="새로고침"
+        >
+          <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} strokeWidth={2.5} />
+        </button>
+      </div>
+
+      <div role="tablist" aria-label="관리 메뉴" className="mb-3 mt-3 grid grid-cols-5 gap-1.5 pt-1.5">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -139,12 +217,15 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
             role="tab"
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
-            className={`relative rounded-2xl border-2 border-line px-1 py-2 text-sm font-bold transition-all ${
+            className={`relative flex flex-col items-center rounded-2xl border-2 border-line px-0.5 py-1.5 font-bold transition-all sm:flex-row sm:justify-center sm:gap-1.5 sm:py-2 ${
               tab === t.id ? '-translate-y-0.5 bg-grape text-white shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
             }`}
           >
-            {t.label}
-            {!!t.badge && t.id !== 'bans' && (
+            <span aria-hidden="true" className="text-base leading-tight">
+              {t.icon}
+            </span>
+            <span className="text-[11px] sm:text-sm">{t.label}</span>
+            {!!t.badge && (
               <span className="absolute -right-1.5 -top-2 grid h-5 min-w-5 place-items-center rounded-full border-2 border-line bg-berry px-1 text-[10px] text-white">
                 {t.badge > 99 ? '99+' : t.badge}
               </span>
@@ -154,18 +235,51 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
       </div>
 
       {notice && (
-        <p role="status" className={`mb-3 rounded-2xl border-2 border-line px-3 py-2 text-sm font-bold ${notice.ok ? 'bg-melon-soft' : 'bg-berry-soft'}`}>
-          {notice.text}
+        <p
+          key={notice.id}
+          role="status"
+          className={`mb-3 rounded-2xl border-2 border-line px-3 py-2 text-sm font-bold animate-pop-in ${notice.ok ? 'bg-melon-soft' : 'bg-berry-soft'}`}
+        >
+          {notice.ok ? '✅' : '⚠️'} {notice.text}
         </p>
       )}
 
+      {tab === 'users' &&
+        (!users ? (
+          loadFailed ? <Retry onRetry={() => setReload((r) => r + 1)} /> : <Spinner />
+        ) : (
+          <AdminUsers
+            users={users}
+            search={userSearch}
+            onSearch={setUserSearch}
+            busy={busy}
+            onCopy={(text, what) =>
+              navigator.clipboard
+                ?.writeText(text)
+                .then(() => say(`${what}를 복사했어요.`, true))
+                .catch(() => say('복사하지 못했어요.', false))
+            }
+            onClearBoards={(u) => act(u.uid, `${u.name}님의 랭킹 기록을 지웠어요.`, async () => (await adminApi()).clearBoardsOf(u.uid))}
+            onBan={(u) =>
+              act(u.uid, `${u.name}님을 차단했어요.`, async () => {
+                if (!adminUid) throw new Error('not signed in');
+                await (await rankApi()).banPlayer(adminUid, u.uid, u.rawName);
+                await (await adminApi()).closeReportsAbout(u.uid);
+              })
+            }
+            onUnban={(u) => act(u.uid, `${u.name}님의 차단을 풀었어요.`, async () => (await rankApi()).unban(u.uid))}
+          />
+        ))}
+
       {tab === 'stats' &&
         (!stats ? (
-          <Spinner />
+          loadFailed ? <Retry onRetry={() => setReload((r) => r + 1)} /> : <Spinner />
         ) : (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {[
+                ['🧑‍🤝‍🧑', '전체 유저', `${formatNumber(users?.length ?? 0)}명`],
+                ['🟢', '지금 접속 중', `${formatNumber(onlineNow)}명`],
                 ['👥', '오늘 플레이어', `${formatNumber(today?.players ?? 0)}명`],
                 ['🎮', '오늘 판 수', `${formatNumber(today?.plays ?? 0)}판`],
                 ['⏱️', '오늘 플레이 시간', formatTime(today?.seconds ?? 0)],
@@ -215,6 +329,9 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
                   </div>
                   <p className="mt-1 text-xs text-ink-2">
                     {boardLabel(r.board)} · {formatNumber(r.score)}점 · 신고한 사람 {r.reporter.slice(0, 6)}
+                    <button type="button" className="ml-2 font-bold text-grape-ink underline underline-offset-2" onClick={() => openUser(r.target)}>
+                      유저 보기
+                    </button>
                   </p>
                   {r.note && <p className="mt-1.5 rounded-xl bg-surface px-2.5 py-1.5 text-sm">“{r.note}”</p>}
                   {r.status === 'open' ? (
@@ -336,7 +453,10 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
           <ul className="space-y-1.5">
             {bans.map((b) => (
               <li key={b.uid} className="flex items-center gap-2 rounded-2xl border-2 border-line bg-surface-2 px-3 py-2 text-sm">
-                <span className="min-w-0 flex-1 truncate font-bold">{b.name}</span>
+                <button type="button" className="flex min-w-0 flex-1 items-center gap-1.5 text-left" onClick={() => openUser(b.uid)} aria-label={`${b.name} 유저 보기`}>
+                  <UserSearch className="h-4 w-4 shrink-0 text-ink-3" strokeWidth={2.5} />
+                  <span className="truncate font-bold">{b.name}</span>
+                </button>
                 {b.at > 0 && <span className="shrink-0 text-xs text-ink-3">{new Date(b.at).toLocaleDateString('ko-KR')}</span>}
                 <button
                   type="button"

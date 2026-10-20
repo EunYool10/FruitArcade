@@ -13,12 +13,12 @@ interface ModalProps {
   /** Emoji or icon shown in the header sticker */
   icon?: React.ReactNode;
   tone?: Tone;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   footer?: React.ReactNode;
   children?: React.ReactNode;
 }
 
-const SIZES = { sm: 'sm:max-w-sm', md: 'sm:max-w-md', lg: 'sm:max-w-xl' };
+const SIZES = { sm: 'sm:max-w-sm', md: 'sm:max-w-md', lg: 'sm:max-w-xl', xl: 'sm:max-w-3xl' };
 
 /** Bottom sheet on phones, centered card from `sm` up. */
 export const Modal: React.FC<ModalProps> = ({

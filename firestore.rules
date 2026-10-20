@@ -72,7 +72,7 @@ rules_version = '2';
 // Readable by anyone because the sender (GitHub Actions) has no sign-in; it learns nothing else.
 // Docs not refreshed for 40 days may be deleted by anyone (the sender cleans them up).
 //
-// Collection: players  (public card for friends; signed-in players can look one up, never list)
+// Collection: players  (public card for friends; signed-in players can look one up, only admins list them)
 // Document ID: uid
 // Fields: uid, code (friend code, 8 of [A-HJ-NP-Z2-9], fixed once claimed), name (1-40, not
 //         staff-looking unless admin), avatar (1-16), title?, frame? (ids; staff_ only admins), photo? (as above),
@@ -562,9 +562,11 @@ service cloud.firestore {
         || request.time > resource.data.at + duration.value(40, 'd');
     }
 
-    // Public cards: looked up one at a time (by uid or friend code), never listed
+    // Public cards: players look them up one at a time (by uid or friend code); only admins list
+    // them all (the user list in the admin screen)
     match /players/{uid} {
       allow get: if isGoogleUser();
+      allow list: if isAdmin();
       allow create: if isGoogleUser()
         && isOwner(uid)
         && isValidPlayerCard(uid, request.resource.data)

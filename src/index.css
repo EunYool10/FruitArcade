@@ -454,6 +454,20 @@
       --board-offset: 88px;
     }
   }
+  /* A row under the HUD (Suika's items) makes it taller above the board, on phones only */
+  .board-fit-hud-row {
+    --board-offset: 304px;
+  }
+  @media (min-width: 1024px) {
+    .board-fit-hud-row {
+      --board-offset: 112px;
+    }
+  }
+  @media (max-height: 560px) and (orientation: landscape) {
+    .board-fit-hud-row {
+      --board-offset: 88px;
+    }
+  }
 }
 
 /* Respect the OS "reduce motion" preference */

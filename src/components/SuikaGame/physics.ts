@@ -74,6 +74,8 @@ export interface World {
   nextId: number;
   /** Same fruit that touched during this tick ("a:b" ids): they merge at its end */
   met: Set<string>;
+  /** Off once the round is over: fruit still fall and settle, but twins just bump like any two fruit */
+  merging: boolean;
 }
 
 /** Two fruit of level `lv` met. `made` is the new fruit, or null when two watermelons vanish. */
@@ -87,7 +89,7 @@ export interface Merge {
 }
 
 export function createWorld(bounds: Bounds, radii: number[]): World {
-  return { bodies: [], bounds, radii, nextId: 1, met: new Set() };
+  return { bodies: [], bounds, radii, nextId: 1, met: new Set(), merging: true };
 }
 
 export function addBody(world: World, lv: number, x: number, y: number, opts: Partial<Pick<Body, 'vx' | 'vy' | 'scale' | 'landed' | 'angle'>> = {}): Body {
@@ -183,7 +185,7 @@ function solveContacts(world: World) {
         // Touching the pile means the fruit has landed (two fruit still in the air do not count)
         if (a.landed || b.landed) a.landed = b.landed = true;
         // Twins are not pushed apart: they merge when the tick ends, even if they met fast
-        if (a.lv === b.lv) {
+        if (a.lv === b.lv && world.merging) {
           world.met.add(a.id < b.id ? `${a.id}:${b.id}` : `${b.id}:${a.id}`);
           continue;
         }
@@ -211,6 +213,7 @@ function solveContacts(world: World) {
 }
 
 function findMerges(world: World): Merge[] {
+  if (!world.merging) return [];
   const bodies = world.bodies;
   sortByLeft(bodies);
   const used = new Set<number>();
@@ -318,6 +321,21 @@ export function stepWorld(world: World): Merge[] {
     }
   }
   return findMerges(world);
+}
+
+/** Take a body out of the jar (the hammer) */
+export function removeBody(world: World, body: Body): void {
+  world.bodies = world.bodies.filter((b) => b !== body);
+}
+
+/** The body under the point (x, y), the smallest one if several overlap there */
+export function bodyAt(world: World, x: number, y: number, slack = 0): Body | null {
+  let hit: Body | null = null;
+  for (const b of world.bodies) {
+    const r = b.r * b.scale + slack;
+    if ((b.x - x) ** 2 + (b.y - y) ** 2 <= r * r && (!hit || b.r < hit.r)) hit = b;
+  }
+  return hit;
 }
 
 /** Position to draw a body at, `t` (0..1) of the way through the next tick */

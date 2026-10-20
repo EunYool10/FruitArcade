@@ -9,6 +9,11 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.20.4',
+    title: '운영진 인증 마크',
+    items: [['✅ 파란 체크', '운영진 닉네임 옆에 파란 인증 체크가 붙어요. 랭킹 · 친구 · 프로필에서 보이고, 운영진만 달 수 있어요.']],
+  },
+  {
     version: '3.20.3',
     title: '수박 여러 개 만들기',
     items: [

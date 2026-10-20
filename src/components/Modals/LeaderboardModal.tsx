@@ -10,6 +10,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import { AvatarFace, Framed } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
+import { VerifiedBadge } from '../ui/VerifiedBadge';
 import { Emoji } from '../ui/Emoji';
 
 const rankApi = () => import('../../utils/leaderboardService');
@@ -85,6 +86,7 @@ const NameBlock: React.FC<{ entry: RankEntry; mine?: boolean; champion?: boolean
           </span>
         )}
         <span className="truncate">{entry.name}</span>
+        {entry.verified && <VerifiedBadge />}
         {mine && <span className="shrink-0 text-xs text-ink-3">(나)</span>}
       </span>
       {t && <TitleTag title={t} variant="line" />}

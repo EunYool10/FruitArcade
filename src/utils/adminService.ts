@@ -181,6 +181,8 @@ export interface UserRow {
   name: string;
   /** As the player typed it, for judging the name */
   rawName: string;
+  /** 운영진 (blue check) */
+  verified: boolean;
   avatar: string;
   photo?: string;
   title?: string;
@@ -221,6 +223,7 @@ export async function listUsers(): Promise<UserRow[]> {
       code: str(x.code),
       name: maskBadWords(raw),
       rawName: raw,
+      verified: x.verified === true,
       avatar: str(x.avatar, '🍓'),
       ...(cleanPhoto(x.photo) ? { photo: x.photo as string } : {}),
       ...(typeof x.title === 'string' ? { title: x.title } : {}),

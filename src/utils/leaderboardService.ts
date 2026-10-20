@@ -37,6 +37,7 @@ const toEntry = (uid: string, d: DocumentData): RankEntry => ({
   ...(typeof d.title === 'string' && TITLE_ID.test(d.title) ? { title: d.title } : {}),
   ...(typeof d.frame === 'string' && TITLE_ID.test(d.frame) ? { frame: d.frame } : {}),
   ...(cleanPhoto(d.photo) ? { photo: d.photo } : {}),
+  ...(d.verified === true ? { verified: true } : {}),
 });
 
 /**
@@ -62,7 +63,9 @@ export function submitScore(
       const frame = who.frame && TITLE_ID.test(who.frame) ? { frame: who.frame } : {};
       const signed = proof ? { proof } : {};
       const photo = cleanPhoto(who.photo) ? { photo: who.photo } : {};
-      if (score > prev) tx.set(refs[i], { uid, name: who.name, avatar: who.avatar, score, at: serverTimestamp(), ...title, ...frame, ...photo, ...signed });
+      const verified = who.verified ? { verified: true } : {};
+      if (score > prev)
+        tx.set(refs[i], { uid, name: who.name, avatar: who.avatar, score, at: serverTimestamp(), ...title, ...frame, ...photo, ...verified, ...signed });
       best[RANK_PERIODS[i]] = Math.max(prev, score);
     });
     return best;
@@ -75,6 +78,8 @@ export interface Look {
   title?: string;
   frame?: string;
   photo?: string;
+  /** 운영진 (the rules refuse it from anyone else) */
+  verified?: boolean;
 }
 
 /**
@@ -91,7 +96,14 @@ export async function syncLook(uid: string, look: Look): Promise<number> {
   const writes = snaps.flatMap((snap, i) => {
     if (!snap.exists()) return [];
     const d = snap.data();
-    if (d.name === look.name && d.avatar === look.avatar && (d.title ?? '') === title && (d.frame ?? '') === frame && (d.photo ?? '') === photo) return [];
+    const same =
+      d.name === look.name &&
+      d.avatar === look.avatar &&
+      (d.title ?? '') === title &&
+      (d.frame ?? '') === frame &&
+      (d.photo ?? '') === photo &&
+      (d.verified === true) === !!look.verified;
+    if (same) return [];
     return [
       updateDoc(refs[i], {
         name: look.name,
@@ -99,6 +111,7 @@ export async function syncLook(uid: string, look: Look): Promise<number> {
         title: title || deleteField(),
         frame: frame || deleteField(),
         photo: photo || deleteField(),
+        verified: look.verified ? true : deleteField(),
         at: serverTimestamp(),
       }),
     ];

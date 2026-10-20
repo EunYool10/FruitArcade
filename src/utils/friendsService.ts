@@ -39,6 +39,8 @@ export interface PublicPlayer {
   frame?: string;
   /** Google profile photo (players who kept the default avatar) */
   photo?: string;
+  /** 운영진: blue check after the name (only admins can write it) */
+  verified?: boolean;
   level: number;
   achievements: number;
   best: Partial<Record<GameType, number>>;
@@ -90,6 +92,7 @@ function toPlayer(uid: string, d: DocumentData): PublicPlayer {
     ...(typeof d.title === 'string' ? { title: d.title } : {}),
     ...(typeof d.frame === 'string' ? { frame: d.frame } : {}),
     ...(cleanPhoto(d.photo) ? { photo: d.photo } : {}),
+    ...(d.verified === true ? { verified: true } : {}),
     level: typeof d.level === 'number' ? d.level : 1,
     achievements: typeof d.achievements === 'number' ? d.achievements : 0,
     best,
@@ -102,6 +105,7 @@ const sameCard = (a: PlayerCard, b: PlayerCard) =>
   (a.title ?? '') === (b.title ?? '') &&
   (a.frame ?? '') === (b.frame ?? '') &&
   (cleanPhoto(a.photo) ?? '') === (cleanPhoto(b.photo) ?? '') &&
+  !!a.verified === !!b.verified &&
   a.level === b.level &&
   a.achievements === b.achievements &&
   GAME_ORDER.every((g) => (a.best[g] ?? 0) === (b.best[g] ?? 0));
@@ -147,6 +151,7 @@ export async function ensurePlayer(uid: string, card: PlayerCard): Promise<strin
         title: card.title ? card.title : deleteField(),
         frame: card.frame ? card.frame : deleteField(),
         photo: cleanPhoto(card.photo) ?? deleteField(),
+        verified: card.verified ? true : deleteField(),
         at: serverTimestamp(),
       });
     }
@@ -164,6 +169,7 @@ export async function ensurePlayer(uid: string, card: PlayerCard): Promise<strin
       ...(card.title ? { title: card.title } : {}),
       ...(card.frame ? { frame: card.frame } : {}),
       ...(cleanPhoto(card.photo) ? { photo: card.photo } : {}),
+      ...(card.verified ? { verified: true } : {}),
       at: serverTimestamp(),
     });
     try {

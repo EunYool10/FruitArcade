@@ -38,6 +38,7 @@ rules_version = '2';
 //   - photo: optional Google profile photo URL (https://lh3-6.googleusercontent.com/..., up to
 //           2048 chars: some older accounts have photo URLs over 1000 chars long),
 //           shown instead of the emoji for players who kept the default avatar
+//   - verified: optional true, only on admins' entries (the blue check after 운영진 names)
 //   - proof: optional 64-char hex from the score server (server.mjs) that checked the round:
 //           SHA-256 of "<secret>|<uid>|<game>|<score>|<KST day>|<secret>". Required once
 //           config/scoreKey.enforce is true; a proof that is there must always match.
@@ -76,6 +77,7 @@ rules_version = '2';
 // Document ID: uid
 // Fields: uid, code (friend code, 8 of [A-HJ-NP-Z2-9], fixed once claimed), name (1-40, not
 //         staff-looking unless admin), avatar (1-16), title?, frame? (ids; staff_ only admins), photo? (as above),
+//         verified? (true, admins only),
 //         level (1-200), achievements (0-60), best (map game -> best score, never above the player's
 //         all-time board entry for that game), at (== request.time)
 //
@@ -173,6 +175,11 @@ service cloud.firestore {
         || (m.photo is string
           && m.photo.size() <= 2048
           && m.photo.matches('^https://lh[3-6][.]googleusercontent[.]com/[A-Za-z0-9_./=-]+$'));
+    }
+
+    // The blue check next to 운영진 names: missing, or true on an admin's own write
+    function isOptionalVerified(m) {
+      return !('verified' in m) || (m.verified == true && isAdmin());
     }
 
     // Missing, null, or a string up to maxLen
@@ -304,7 +311,7 @@ service cloud.firestore {
 
     function isValidScoreEntry(boardId, uid, data) {
       return hasRequiredFields(['uid', 'name', 'avatar', 'score', 'at'])
-        && hasOnlyAllowedFields(['uid', 'name', 'avatar', 'score', 'at', 'title', 'frame', 'photo', 'proof'])
+        && hasOnlyAllowedFields(['uid', 'name', 'avatar', 'score', 'at', 'title', 'frame', 'photo', 'verified', 'proof'])
         && data.uid == uid
         && data.uid == request.auth.uid
         && isPlainText(data.name, 1, 40)
@@ -314,6 +321,7 @@ service cloud.firestore {
         && isOptionalPhoto(data)
         && (!('title' in data) || !data.title.matches('^staff_.*') || isAdmin())
         && (!('frame' in data) || !data.frame.matches('^staff_.*') || isAdmin())
+        && isOptionalVerified(data)
         && (!('proof' in data) || (data.proof is string && data.proof.size() == 64))
         && (!isReservedName(data.name) || isAdmin())
         && data.score is int
@@ -396,7 +404,7 @@ service cloud.firestore {
 
     function isValidPlayerCard(uid, data) {
       return data.keys().hasAll(['uid', 'code', 'name', 'avatar', 'level', 'achievements', 'best', 'at'])
-        && data.keys().hasOnly(['uid', 'code', 'name', 'avatar', 'level', 'achievements', 'best', 'title', 'frame', 'photo', 'at'])
+        && data.keys().hasOnly(['uid', 'code', 'name', 'avatar', 'level', 'achievements', 'best', 'title', 'frame', 'photo', 'verified', 'at'])
         && data.uid == uid
         && data.code is string && data.code.matches('^[A-HJ-NP-Z2-9]{8}$')
         && isPlainText(data.name, 1, 40)
@@ -407,6 +415,7 @@ service cloud.firestore {
         && isOptionalPhoto(data)
         && (!('title' in data) || !data.title.matches('^staff_.*') || isAdmin())
         && (!('frame' in data) || !data.frame.matches('^staff_.*') || isAdmin())
+        && isOptionalVerified(data)
         && data.level is int && data.level >= 1 && data.level <= 200
         && data.achievements is int && data.achievements >= 0 && data.achievements <= 60
         && data.best is map
@@ -516,7 +525,7 @@ service cloud.firestore {
         && !isBanned();
 
       // A higher score (with its proof) replaces the entry; with the same score only the look
-      // (name, avatar, title, frame, photo) may change. Either way at most every 3 seconds, and the uid never changes.
+      // (name, avatar, title, frame, photo, verified) may change. Either way at most every 3 seconds, and the uid never changes.
       allow update: if isGoogleUser()
         && isOwner(uid)
         && resource.data.uid == uid
@@ -524,7 +533,7 @@ service cloud.firestore {
         && isValidScoreEntry(boardId, uid, request.resource.data)
         && ((request.resource.data.score > resource.data.score && hasValidProof(boardId, uid, request.resource.data))
           || (request.resource.data.score == resource.data.score
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'avatar', 'title', 'frame', 'photo', 'at'])))
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'avatar', 'title', 'frame', 'photo', 'verified', 'at'])))
         && request.time > resource.data.at + duration.value(3, 's')
         && !isBanned();
 

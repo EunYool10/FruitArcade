@@ -4,6 +4,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import { AvatarFace, Framed } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
+import { VerifiedBadge } from '../ui/VerifiedBadge';
 import { PresenceTag } from '../ui/Presence';
 import { titleDef } from '../../utils/titles';
 import { formatCompact, formatNumber, josa, relativeTime } from '../../utils/format';
@@ -50,6 +51,7 @@ const PlayerBadge: React.FC<{ p: PublicPlayer | null; fallback?: string; seen?: 
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-center gap-1.5">
           <span className="truncate font-bold">{p?.name ?? fallback}</span>
+          {p?.verified && <VerifiedBadge />}
           {p && <span className="chip h-5 shrink-0 bg-surface px-1.5 text-[10px]">Lv.{p.level}</span>}
         </span>
         {t && <TitleTag title={t} variant="line" />}

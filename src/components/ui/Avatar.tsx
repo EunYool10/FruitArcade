@@ -21,6 +21,8 @@ export interface PlayerView {
   frame?: string;
   /** Name put on things the player shares (challenge links, result images): never the Google name */
   shareName?: string;
+  /** 운영진: blue check after the name */
+  verified?: boolean;
 }
 
 /** Colored ring from the shop around an avatar or sticker (nothing when no frame) */

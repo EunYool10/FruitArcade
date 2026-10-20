@@ -3,6 +3,7 @@ import { Ban, ChevronDown, Copy, Search, ShieldCheck, Trash2, X } from 'lucide-r
 import type { UserRow } from '../../utils/adminService';
 import { AvatarFace, Framed } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
+import { VerifiedBadge } from '../ui/VerifiedBadge';
 import { PresenceTag } from '../ui/Presence';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import { Emoji } from '../ui/Emoji';
@@ -160,6 +161,7 @@ export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onB
                   <span className="min-w-0 flex-1">
                     <span className="flex min-w-0 items-center gap-1.5">
                       <span className="truncate font-bold">{u.name}</span>
+                      {u.verified && <VerifiedBadge />}
                       <span className="chip h-5 shrink-0 bg-surface px-1.5 text-[10px]">Lv.{u.level}</span>
                       {!!u.bannedAt && <span className="chip h-5 shrink-0 bg-berry-deep px-1.5 text-[10px] text-white">차단</span>}
                     </span>

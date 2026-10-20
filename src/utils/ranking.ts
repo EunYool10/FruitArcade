@@ -69,6 +69,8 @@ export interface RankEntry {
   frame?: string;
   /** Google profile photo, shown instead of the emoji (players who kept the default avatar) */
   photo?: string;
+  /** 운영진: a blue check after the name (only admins can write it) */
+  verified?: boolean;
 }
 
 // Google account photos only (same check as isOptionalPhoto in firestore.rules). Some older

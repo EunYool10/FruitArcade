@@ -4,6 +4,7 @@ import { LevelInfo } from '../../utils/progress';
 import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
 import { Avatar, PlayerView } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
+import { VerifiedBadge } from '../ui/VerifiedBadge';
 import { Meter } from '../ui/Meter';
 import { formatCompact, formatNumber } from '../../utils/format';
 import { Emoji } from '../ui/Emoji';
@@ -68,7 +69,10 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       <div className="flex items-center gap-3">
         <Avatar player={player} size="lg" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-xl">{player.name}</p>
+          <p className="flex min-w-0 items-center gap-1.5 font-display text-xl">
+            <span className="truncate">{player.name}</span>
+            {player.verified && <VerifiedBadge className="h-5 w-5" />}
+          </p>
           <div className="mt-1 flex flex-wrap gap-1">
             <span className="chip bg-mango-soft">
               <Emoji e={level.emoji} /> Lv.{level.level} {level.title}

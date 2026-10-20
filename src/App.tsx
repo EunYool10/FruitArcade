@@ -45,7 +45,6 @@ import {
   avatarItem,
   clearInventory,
   coinsFor,
-  isStaffId,
   loadInventory,
   mergeInventory,
   saveInventory,
@@ -250,15 +249,18 @@ export default function App() {
     frame: owned[profile.frame] ? profile.frame : '',
     // Shared links and images carry the same public name as the boards, not the Google name
     shareName: user ? publicName(profile.nickname, user.uid, isAdmin) : maskBadWords(profile.nickname) || '게스트',
+    // The blue check is part of who the player is (like the name), so QA mode keeps it
+    verified: isAdmin,
   };
   /** How the player appears on public boards: nickname (never the Google name), and the Google photo unless a fruit avatar is picked */
-  const rankWhoRef = useRef<{ name: string; avatar: string; title?: string; frame?: string; photo?: string }>({ name: '', avatar: '' });
+  const rankWhoRef = useRef<{ name: string; avatar: string; title?: string; frame?: string; photo?: string; verified?: boolean }>({ name: '', avatar: '' });
   rankWhoRef.current = {
     name: publicName(profile.nickname, user?.uid ?? '', isAdmin),
     avatar: avatar || level.emoji,
     ...(title ? { title: title.id } : {}),
     ...(player.frame ? { frame: player.frame } : {}),
     ...(cleanPhoto(player.photo) ? { photo: player.photo! } : {}),
+    ...(isAdmin ? { verified: true } : {}),
   };
 
   // ───────── helpers ─────────
@@ -351,13 +353,14 @@ export default function App() {
   // shortly after (debounced, so flipping through titles makes one update)
   const lookTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** What friends see on my card (same public name as the boards) */
-  const cardRef = useRef({ name: '', avatar: '', level: 1, achievements: 0, best: {} as Partial<Record<GameType, number>>, title: '', frame: '', photo: '' });
+  const cardRef = useRef({ name: '', avatar: '', level: 1, achievements: 0, best: {} as Partial<Record<GameType, number>>, title: '', frame: '', photo: '', verified: false });
   cardRef.current = {
     name: rankWhoRef.current.name,
     avatar: rankWhoRef.current.avatar,
     title: rankWhoRef.current.title ?? '',
     frame: rankWhoRef.current.frame ?? '',
     photo: rankWhoRef.current.photo ?? '',
+    verified: !!rankWhoRef.current.verified,
     level: level.level,
     achievements: achievementCount,
     best: Object.fromEntries(GAME_ORDER.map((g) => [g, stats[bestKey(g)]])) as Partial<Record<GameType, number>>,
@@ -547,9 +550,10 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [asAdmin]);
 
-  // The admin check comes back after sign-in: then a worn 운영진 title or frame can go on the boards
+  // The admin check comes back after sign-in: then the blue check (and a worn 운영진 title or
+  // frame) can go on the boards and the card
   useEffect(() => {
-    if (asAdmin && (isStaffId(profile.title) || isStaffId(profile.frame))) scheduleLookSync();
+    if (asAdmin) scheduleLookSync();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [asAdmin]);
 

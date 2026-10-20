@@ -3,6 +3,7 @@ import { Loader2, UserPlus } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { AvatarFace, Framed } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
+import { VerifiedBadge } from '../ui/VerifiedBadge';
 import { GAMES, GAME_ORDER, TONE } from '../../constants';
 import { titleDef } from '../../utils/titles';
 import { formatNumber } from '../../utils/format';
@@ -101,7 +102,10 @@ export const PlayerModal: React.FC<Props> = ({ isOpen, onClose, viewerUid, targe
               <AvatarFace emoji={p.avatar} photo={p.photo} className="grid h-16 w-16 shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft text-3xl" />
             </Framed>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-display text-xl">{p.name}</p>
+              <p className="flex min-w-0 items-center gap-1.5 font-display text-xl">
+                <span className="truncate">{p.name}</span>
+                {p.verified && <VerifiedBadge className="h-5 w-5" />}
+              </p>
               <div className="mt-1 flex flex-wrap gap-1">
                 <span className="chip bg-mango-soft">Lv.{p.level}</span>
                 <span className="chip bg-surface">🏆 업적 {p.achievements}개</span>

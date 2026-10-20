@@ -24,7 +24,10 @@ const IDEAS = [
   { emoji: '🍉', name: '진' },
 ];
 // Played the new builds first and reported what broke
-const TESTERS = [{ emoji: '🍑', name: '윤아' }];
+const TESTERS = [
+  { emoji: '🍑', name: '윤아' },
+  { emoji: '🍋', name: '지우' },
+];
 
 const NUMBERS: [string, string][] = [
   ['🎮', `게임 ${GAME_ORDER.length}종`],

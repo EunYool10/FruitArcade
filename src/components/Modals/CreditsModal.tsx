@@ -23,6 +23,8 @@ const IDEAS = [
   { emoji: '🍇', name: '윤성' },
   { emoji: '🍉', name: '진' },
 ];
+// Played the new builds first and reported what broke
+const TESTERS = [{ emoji: '🍑', name: '윤아' }];
 
 const NUMBERS: [string, string][] = [
   ['🎮', `게임 ${GAME_ORDER.length}종`],
@@ -68,6 +70,19 @@ export const CreditsModal: React.FC<Props> = ({ isOpen, onClose }) => (
           </span>
           <span className="font-display leading-tight">{m.name}</span>
           <span className="text-[11px] text-ink-3">아이디어</span>
+        </li>
+      ))}
+    </ul>
+
+    <h3 className="mb-2 mt-4 font-display text-lg">🧪 테스트 · QA</h3>
+    <ul className="grid grid-cols-3 gap-2">
+      {TESTERS.map((m) => (
+        <li key={m.name} className="well flex flex-col items-center gap-0.5 p-3 text-center">
+          <span className="text-2xl" aria-hidden="true">
+            <Emoji e={m.emoji} />
+          </span>
+          <span className="font-display leading-tight">{m.name}</span>
+          <span className="text-[11px] text-ink-3">테스트 · QA</span>
         </li>
       ))}
     </ul>

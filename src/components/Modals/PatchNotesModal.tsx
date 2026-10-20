@@ -9,6 +9,11 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.21.3',
+    title: '크레딧 업데이트',
+    items: [['🧪 테스트 · QA', '크레딧에 테스트 · QA를 맡아 준 윤아님이 들어갔어요. 고마워요!']],
+  },
+  {
     version: '3.21.2',
     title: '프로필 창 새 단장',
     items: [

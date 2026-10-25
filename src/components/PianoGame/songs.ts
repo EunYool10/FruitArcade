@@ -230,6 +230,15 @@ export function songLap(song: Song): Lap {
     const [name, count] = part.split(':');
     for (let i = 0; i < Number(count) && at < row; i++) left[at++] = leftNotes(song.style, name, i);
   }
+  // The left hand stays under the tune (the note sounding now and the next one): a note that
+  // would reach it drops an octave, so the two hands never rub against each other
+  let k = 0;
+  let current = tiles[0].note;
+  for (let r = 0; r < row; r++) {
+    while (k < tiles.length && tiles[k].row <= r) current = tiles[k++].note;
+    const limit = Math.min(current, tiles[k]?.note ?? current) - 3;
+    left[r] = [...new Set(left[r].map((n) => (n > limit ? n - 12 * Math.min(Math.ceil((n - limit) / 12), Math.floor((n - 36) / 12)) : n)))];
+  }
   return { rows: row, tiles, left };
 }
 

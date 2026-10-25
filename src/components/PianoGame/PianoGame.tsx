@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { Check, ChevronRight, RotateCcw, X } from 'lucide-react';
 import { GameResult, GameReward, GameSettings } from '../../types';
 import { GAMES } from '../../constants';
 import { playSound } from '../../utils/audio';
@@ -12,6 +12,7 @@ import { skinPiece } from '../../utils/skins';
 import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
 import { StartCard } from '../game/StartCard';
 import { ResultCard } from '../game/ResultCard';
+import { Emoji } from '../ui/Emoji';
 import { Lap, SONGS, Song, songById, songLap, songLevel } from './songs';
 import { playNote } from './sound';
 
@@ -70,6 +71,100 @@ function loadSongId(): string {
     return SONGS[0].id;
   }
 }
+
+/** Each song's first lap: how hard, how many tiles, about how long, and its first fruit */
+const SONG_INFO = new Map(
+  SONGS.map((s) => {
+    const lap = songLap(s);
+    return [s.id, { level: songLevel(s), tiles: lap.tiles.length, seconds: Math.round(lap.rows / s.speed), fruit: fruitOf(lap.tiles[0].note) }];
+  })
+);
+const LEVELS = ['쉬움', '보통', '어려움'] as const;
+const LEVEL_CHIP: Record<string, string> = { 쉬움: 'bg-melon text-on-bright', 보통: 'bg-mango text-on-bright', 어려움: 'bg-berry-deep text-white' };
+
+/** The chosen song on the start card; tapping it opens the list */
+const SongButton: React.FC<{ song: Song; locked: boolean; onClick: () => void }> = ({ song, locked, onClick }) => {
+  const info = SONG_INFO.get(song.id)!;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={locked}
+      aria-label={`곡: ${song.name}. 다른 곡 고르기`}
+      className="flex w-full items-center gap-2.5 rounded-2xl border-2 border-line bg-surface-2 p-2 text-left transition-colors hover:bg-surface-3 disabled:cursor-default disabled:hover:bg-surface-2"
+    >
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border-2 border-line bg-peach-soft text-2xl" aria-hidden="true">
+        <Emoji e={info.fruit} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-bold">{song.name}</span>
+        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-ink-3">
+          <span className={`chip h-5 shrink-0 px-1.5 text-[10px] ${LEVEL_CHIP[info.level]}`}>{info.level}</span>
+          <span className="truncate">{song.by}</span>
+        </span>
+      </span>
+      {!locked && (
+        <span className="chip h-7 shrink-0 bg-surface pl-2 pr-1 text-xs">
+          바꾸기 <ChevronRight className="h-3.5 w-3.5" strokeWidth={3} />
+        </span>
+      )}
+    </button>
+  );
+};
+
+/** Every song, by difficulty */
+const SongList: React.FC<{ current: string; onPick: (id: string) => void; onClose: () => void }> = ({ current, onPick, onClose }) => (
+  <div className="panel w-full max-w-[360px] p-4 animate-pop-in">
+    <div className="mb-3 flex items-center justify-between gap-2">
+      <h2 className="font-display text-2xl">🎵 곡 고르기</h2>
+      <button type="button" className="btn btn-icon btn-sm" onClick={onClose} aria-label="닫기">
+        <X className="h-4 w-4" strokeWidth={2.5} />
+      </button>
+    </div>
+    <div className="space-y-3">
+      {LEVELS.map((level) => {
+        const songs = SONGS.filter((s) => SONG_INFO.get(s.id)!.level === level);
+        if (!songs.length) return null;
+        return (
+          <section key={level}>
+            <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-ink-2">
+              <span className={`chip h-5 px-1.5 text-[10px] ${LEVEL_CHIP[level]}`}>{level}</span> {songs.length}곡
+            </p>
+            <ul className="space-y-1.5">
+              {songs.map((s) => {
+                const info = SONG_INFO.get(s.id)!;
+                const on = s.id === current;
+                return (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => onPick(s.id)}
+                      className={`flex w-full items-center gap-2.5 rounded-xl border-2 border-line p-2 text-left transition-all ${
+                        on ? '-translate-y-0.5 bg-peach-soft shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
+                      }`}
+                    >
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border-2 border-line bg-surface text-lg" aria-hidden="true">
+                        <Emoji e={info.fruit} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold">{s.name}</span>
+                        <span className="block truncate text-[11px] text-ink-3">
+                          {s.by} · 타일 {info.tiles}개 · 한 바퀴 {info.seconds}초
+                        </span>
+                      </span>
+                      {on && <Check className="h-5 w-5 shrink-0 text-peach-ink" strokeWidth={3} />}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        );
+      })}
+    </div>
+  </div>
+);
 
 type EndCause = 'wrong' | 'miss';
 
@@ -145,6 +240,8 @@ export const PianoGame: React.FC<Props> = ({
   const [elapsed, setElapsed] = useState(0);
   const [ending, setEnding] = useState<EndCause | null>(null);
   const [reward, setReward] = useState<GameReward | null>(null);
+  /** The song list is open (instead of the start card) */
+  const [picking, setPicking] = useState(false);
 
   // Mutable round state for the animation loop and taps
   const rngRef = useRef<Rng>(Math.random);
@@ -196,7 +293,8 @@ export const PianoGame: React.FC<Props> = ({
   useEffect(() => {
     if (!isPaused) return;
     pendingRef.current = [];
-    if (holdRef.current) endHold();
+    holdRef.current?.note.release();
+    holdRef.current = null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPaused]);
 
@@ -337,12 +435,9 @@ export const PianoGame: React.FC<Props> = ({
     }
   };
 
-  /** A long tile let go (or held to its top): its note fades */
+  /** A long tile let go (or held to its top): no more points; its note rings out its length */
   const endHold = () => {
-    const h = holdRef.current;
-    if (!h) return;
     holdRef.current = null;
-    h.note.release();
   };
 
   const hit = (index: number, by: string) => {
@@ -677,24 +772,6 @@ export const PianoGame: React.FC<Props> = ({
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => letGo(`p${e.pointerId}`);
 
-  const songPicker = (
-    <label className="block text-left">
-      <span className="mb-1 block text-xs font-bold text-ink-2">🎵 곡 고르기</span>
-      <select
-        value={(challengeSong ?? song).id}
-        disabled={!!challengeSong || gameState === 'PLAYING'}
-        onChange={(e) => pickSong(e.target.value)}
-        className="h-11 w-full rounded-xl border-2 border-line bg-surface px-2 text-sm font-bold outline-none focus:border-berry"
-      >
-        {SONGS.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.name} · {s.by} ({songLevel(s)})
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-
   const playing = challengeSong ?? song;
 
   return (
@@ -722,9 +799,20 @@ export const PianoGame: React.FC<Props> = ({
               />
               {gameState === 'IDLE' && (
                 <BoardOverlay>
-                  <StartCard meta={GAMES.piano} best={best} onStart={handleStartGame} onHelp={onHelp}>
-                    {songPicker}
-                  </StartCard>
+                  {picking ? (
+                    <SongList
+                      current={playing.id}
+                      onPick={(id) => {
+                        pickSong(id);
+                        setPicking(false);
+                      }}
+                      onClose={() => setPicking(false)}
+                    />
+                  ) : (
+                    <StartCard meta={GAMES.piano} best={best} onStart={handleStartGame} onHelp={onHelp}>
+                      <SongButton song={playing} locked={!!challengeSong} onClick={() => setPicking(true)} />
+                    </StartCard>
+                  )}
                 </BoardOverlay>
               )}
             </div>
@@ -768,7 +856,11 @@ export const PianoGame: React.FC<Props> = ({
                 </span>
               </li>
             </ul>
-            {gameState !== 'IDLE' && songPicker}
+            <p className="flex min-w-0 items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-xs">
+              <span aria-hidden="true">🎵</span>
+              <b className="truncate">{playing.name}</b>
+              <span className="shrink-0 text-ink-3">{playing.by}</span>
+            </p>
             <div className="flex items-center justify-between gap-2">
               <p className="hidden text-xs text-ink-3 sm:block short:hidden">터치 · 키보드 D F J K</p>
               <button
@@ -806,6 +898,18 @@ export const PianoGame: React.FC<Props> = ({
             shareText={`🎹 과일 피아노 ${formatNumber(score)}점! ${playing.name}${laps > 0 ? ` ${laps}바퀴 완주` : ''}`}
             onRetry={handleStartGame}
             onExit={onExit}
+            extraAction={
+              challengeSong
+                ? undefined
+                : {
+                    label: '🎵 다른 곡 고르기',
+                    onClick: () => {
+                      setPicking(true);
+                      setEnding(null);
+                      setGameState('IDLE');
+                    },
+                  }
+            }
           />
         </ScreenOverlay>
       )}

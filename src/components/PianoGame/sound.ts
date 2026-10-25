@@ -4,12 +4,12 @@ import { getAudioContext } from '../../utils/audio';
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
-/** Partials: wave, frequency multiple, loudness, detune (cents) */
+/** Partials: wave, frequency multiple, loudness, detune (cents; kept tiny so chords stay in tune) */
 const PARTIALS: [OscillatorType, number, number, number][] = [
   ['triangle', 1, 1, 0],
-  ['triangle', 1, 0.45, -7],
-  ['sine', 2, 0.35, 4],
-  ['sine', 3, 0.12, -3],
+  ['triangle', 1, 0.4, -2],
+  ['sine', 2, 0.32, 1],
+  ['sine', 3, 0.1, 0],
 ];
 
 let bus: { ctx: AudioContext; node: AudioNode } | null = null;
@@ -37,7 +37,7 @@ function output(ctx: AudioContext): AudioNode {
       const echo = ctx.createConvolver();
       echo.buffer = hallEcho(ctx);
       const wet = ctx.createGain();
-      wet.gain.value = 0.22;
+      wet.gain.value = 0.14;
       input.connect(echo).connect(wet).connect(comp);
     } catch {
       // no echo, still fine
@@ -65,16 +65,17 @@ export function playNote(midi: number, settings: { sfxEnabled: boolean; volume: 
     const f = hz(midi);
     const v = (settings.volume / 100) * 0.24 * (opts.gain ?? 1);
     const ring = Math.max(0.3, opts.sustain ?? 0.3);
-    const end = t + ring + 1.2;
+    // A note fades soon after its length, so quick notes stay apart
+    const end = t + ring + 0.45;
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(Math.min(12000, f * 9), t);
-    filter.frequency.exponentialRampToValueAtTime(Math.max(500, f * 1.6), t + ring + 0.8);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(500, f * 1.6), end);
     const env = ctx.createGain();
     env.gain.setValueAtTime(0.0001, t);
     env.gain.exponentialRampToValueAtTime(v, t + 0.006);
-    env.gain.exponentialRampToValueAtTime(v * 0.45, t + 0.25);
-    env.gain.exponentialRampToValueAtTime(v * 0.3, t + ring);
+    env.gain.exponentialRampToValueAtTime(v * 0.55, t + Math.min(0.12, ring));
+    env.gain.exponentialRampToValueAtTime(v * 0.35, t + ring);
     env.gain.exponentialRampToValueAtTime(0.0001, end);
     filter.connect(env).connect(output(ctx));
     const oscs = PARTIALS.map(([type, mult, gain, detune]) => {

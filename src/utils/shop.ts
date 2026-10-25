@@ -5,6 +5,8 @@ import { GameResult } from '../types';
 // Ids starting with "staff_" are the 운영진 series: every admin has all of them (and unlimited
 // coins), nobody else can get them, and firestore.rules keep staff titles and frames off
 // everyone else's leaderboard entries.
+// Ids starting with "owner_" are gifts only the game owner (first on config/admins) gives, from
+// 관리자 → 유저. They aren't sold; the list of who has one lives in ownerGifts/{uid}.
 
 export type ItemKind = 'frame' | 'avatar' | 'title' | 'cardBack' | 'blade' | 'runner' | 'suikaSkin';
 
@@ -17,12 +19,22 @@ export interface ShopItem {
   icon?: string;
   /** 운영진 전용 */
   staff?: boolean;
+  /** Only the game owner gives it (never sold) */
+  gift?: boolean;
 }
 
 export const STAFF_PREFIX = 'staff_';
 export const isStaffId = (id: string | null | undefined) => !!id && id.startsWith(STAFF_PREFIX);
+export const OWNER_PREFIX = 'owner_';
+export const isOwnerGiftId = (id: string | null | undefined) => !!id && id.startsWith(OWNER_PREFIX);
+/** The owner's gift frame: a ring that runs from red to violet and back */
+export const PRISM_FRAME = 'owner_frame_prism';
 
 const staff = (item: Omit<ShopItem, 'price' | 'staff'>): ShopItem => ({ ...item, price: 0, staff: true });
+const gift = (item: Omit<ShopItem, 'price' | 'gift'>): ShopItem => ({ ...item, price: 0, gift: true });
+
+/** Sold in the shop (not the 운영진 series, not the owner's gifts) */
+export const forSale = (item: ShopItem) => !item.staff && !item.gift;
 
 export const SHOP_ITEMS: ShopItem[] = [
   // Avatar frames
@@ -216,6 +228,9 @@ export const SHOP_ITEMS: ShopItem[] = [
   staff({ id: 'staff_av_sun', kind: 'avatar', name: '운영진 태양', icon: '☀️' }),
   staff({ id: 'staff_frame_royal', kind: 'frame', name: '운영진 로열 테두리' }),
   staff({ id: 'staff_frame_flame', kind: 'frame', name: '운영진 불꽃 테두리' }),
+
+  // The owner's gifts
+  gift({ id: PRISM_FRAME, kind: 'frame', name: '프리즘 테두리' }),
 ];
 
 export const shopItem = (id: string | null | undefined) => (id ? (SHOP_ITEMS.find((i) => i.id === id) ?? null) : null);
@@ -255,6 +270,8 @@ export const FRAME_CLASS: Record<string, string> = {
   frame_aurora: 'bg-[conic-gradient(#3ddbb2,#2ea9ff,#7a5cff,#ff4fd8,#3ddbb2)]',
   staff_frame_royal: 'bg-[conic-gradient(#ffd23f,#1e3a8a,#ffffff,#1e3a8a,#ffd23f)]',
   staff_frame_flame: 'bg-[conic-gradient(#1e3a8a,#3b82f6,#ff9100,#ffea00,#3b82f6,#1e3a8a)]',
+  // Animated in index.css
+  owner_frame_prism: 'frame-prism',
 };
 
 /** Memory card backs: background pattern + the mark in the middle */
@@ -358,20 +375,46 @@ export function saveInventory(inv: Inventory): void {
   }
 }
 
-/** Union of both sides; only known, buyable item ids survive (staff items are never stored) */
+/** Union of both sides; only known, buyable item ids survive (staff items and gifts are never stored) */
 export function mergeInventory(a: Inventory, b: Inventory): Inventory {
   const out: Inventory = {};
   for (const src of [a, b])
-    for (const [id, at] of Object.entries(src)) if (shopItem(id) && !isStaffId(id) && !(id in out)) out[id] = String(at).slice(0, 40);
+    for (const [id, at] of Object.entries(src))
+      if (shopItem(id) && !isStaffId(id) && !isOwnerGiftId(id) && !(id in out)) out[id] = String(at).slice(0, 40);
   return out;
 }
 
-/** What the player can use: what they bought, plus the whole 운영진 series for admins */
-export function usableItems(inv: Inventory, isAdmin: boolean): Inventory {
+/**
+ * What the player can use: what they bought, plus the whole 운영진 series for admins, plus the
+ * owner's gifts they were given (the owner has those too)
+ */
+export function usableItems(inv: Inventory, isAdmin: boolean, gifts: string[] = [], isGameOwner = false): Inventory {
   const out: Inventory = {};
-  for (const [id, at] of Object.entries(inv)) if (!isStaffId(id)) out[id] = at;
+  for (const [id, at] of Object.entries(inv)) if (!isStaffId(id) && !isOwnerGiftId(id)) out[id] = at;
   if (isAdmin) for (const item of SHOP_ITEMS) if (item.staff) out[item.id] = 'staff';
+  for (const item of SHOP_ITEMS) if (item.gift && (isGameOwner || gifts.includes(item.id))) out[item.id] = 'gift';
   return out;
+}
+
+// ───────── the owner's gifts (copied from ownerGifts/{uid} at sign-in) ─────────
+
+const GIFTS_KEY = 'fruit_arcade_owner_gifts';
+
+export function loadOwnerGifts(): string[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(GIFTS_KEY) || '[]');
+    return Array.isArray(raw) ? raw.filter((id): id is string => typeof id === 'string' && isOwnerGiftId(id)) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveOwnerGifts(ids: string[]): void {
+  try {
+    localStorage.setItem(GIFTS_KEY, JSON.stringify(ids));
+  } catch {
+    // ignore
+  }
 }
 
 /** The shop avatar item for an emoji, if it is one */
@@ -380,6 +423,7 @@ export const avatarItem = (emoji: string) => SHOP_ITEMS.find((i) => i.kind === '
 export const clearInventory = () => {
   try {
     localStorage.removeItem(INVENTORY_KEY);
+    localStorage.removeItem(GIFTS_KEY);
   } catch {
     // ignore
   }

@@ -1,5 +1,5 @@
 import { User } from 'firebase/auth';
-import { doc, getDoc, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
+import { DocumentData, doc, getDoc, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firestore';
 import { GameResult, GameSettings, UnlockedAchievements, UserStatistics } from '../types';
 import { EMPTY_STATS, applyResult, mergeStats, sameStats } from './progress';
@@ -13,6 +13,8 @@ export interface CloudData {
   settings: Partial<GameSettings>;
   /** Nickname / fruit avatar chosen in the app (empty strings when never set) */
   custom: PlayerProfile;
+  /** When an admin last changed the look ('' = never) */
+  modAt: string;
   /** Shop items bought (item id → purchase date) */
   inventory: Record<string, string>;
   /** Puzzle stage → best stars */
@@ -20,6 +22,13 @@ export interface CloudData {
 }
 
 const userRef = (uid: string) => doc(db, 'users', uid);
+
+const customOf = (p: DocumentData | undefined): PlayerProfile => ({
+  nickname: p?.nickname || '',
+  avatar: p?.avatar || '',
+  title: p?.title || '',
+  frame: p?.frame || '',
+});
 
 /** Load the user's document, creating it on first login. */
 export async function loadUserData(user: User): Promise<CloudData> {
@@ -40,7 +49,8 @@ export async function loadUserData(user: User): Promise<CloudData> {
       statistics: data.statistics || {},
       achievements: data.achievements || {},
       settings: data.settings || {},
-      custom: { nickname: data.profile?.nickname || '', avatar: data.profile?.avatar || '', title: data.profile?.title || '', frame: data.profile?.frame || '' },
+      custom: customOf(data.profile),
+      modAt: typeof data.profile?.modAt === 'string' ? data.profile.modAt : '',
       inventory: data.inventory && typeof data.inventory === 'object' ? data.inventory : {},
       stages: data.stages && typeof data.stages === 'object' ? data.stages : {},
     };
@@ -52,7 +62,7 @@ export async function loadUserData(user: User): Promise<CloudData> {
     achievements: {},
     settings: {},
   });
-  return { statistics: {}, achievements: {}, settings: {}, custom: { nickname: '', avatar: '', title: '', frame: '' }, inventory: {}, stages: {} };
+  return { statistics: {}, achievements: {}, settings: {}, custom: customOf(undefined), modAt: '', inventory: {}, stages: {} };
 }
 
 /** Atomically add one finished round to the cloud stats (safe with several devices). */
@@ -97,6 +107,19 @@ export async function saveProfileCustom(uid: string, p: PlayerProfile): Promise<
 
 export async function saveStages(uid: string, stages: Record<string, number>): Promise<void> {
   await updateDoc(userRef(uid), { stages });
+}
+
+/** The look as it is in the cloud, to catch an admin's change while the app stays open */
+export async function loadCloudLook(uid: string): Promise<{ custom: PlayerProfile; modAt: string }> {
+  const p = (await getDoc(userRef(uid))).data()?.profile;
+  return { custom: customOf(p), modAt: typeof p?.modAt === 'string' ? p.modAt : '' };
+}
+
+/** Items the game owner gave this player (ownerGifts/{uid}); [] when none */
+export async function loadOwnerGifts(uid: string): Promise<string[]> {
+  const snap = await getDoc(doc(db, 'ownerGifts', uid));
+  const items = snap.exists() ? snap.data().items : [];
+  return Array.isArray(items) ? items.filter((id): id is string => typeof id === 'string') : [];
 }
 
 export async function saveInventory(uid: string, inventory: Record<string, string>): Promise<void> {

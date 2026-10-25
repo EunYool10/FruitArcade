@@ -18,6 +18,8 @@ interface Props {
   onClose: () => void;
   /** Signed-in admin's uid (bans record who made them) */
   adminUid: string | null;
+  /** First on the admin list (gives the 프리즘 테두리) */
+  isGameOwner?: boolean;
 }
 
 type Tab = 'stats' | 'users' | 'reports' | 'feedback' | 'bans';
@@ -56,7 +58,7 @@ const Spinner = () => (
   </div>
 );
 
-export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
+export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid, isGameOwner = false }) => {
   const [tab, setTab] = useState<Tab>('stats');
   const [stats, setStats] = useState<Stats | null>(null);
   const [reports, setReports] = useState<ReportItem[] | null>(null);
@@ -256,6 +258,13 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
               })
             }
             onUnban={(u) => act(u.uid, `${u.name}님의 차단을 풀었어요.`, async () => (await rankApi()).unban(u.uid))}
+            isGameOwner={isGameOwner}
+            onChangeLook={(u, c) => act(u.uid, `${u.name}님의 프로필을 바꿨어요.`, async () => (await adminApi()).changeLook(u, c))}
+            onPrism={(u, give) =>
+              act(u.uid, give ? `${u.name}님에게 프리즘 테두리를 줬어요.` : `${u.name}님의 프리즘 테두리를 회수했어요.`, async () =>
+                (await adminApi()).setPrismGift(u, give)
+              )
+            }
           />
         ))}
 

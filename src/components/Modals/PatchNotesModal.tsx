@@ -9,6 +9,14 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.25.0',
+    title: '프리즘 테두리 · 운영진 프로필 관리',
+    items: [
+      ['🌈 프리즘 테두리', '빨강부터 보라까지 색이 계속 바뀌는 테두리예요. 상점에서 팔지 않고, 게임 소유자만 선물할 수 있어요. 받으면 상점의 테두리 칸에 생겨요.'],
+      ['🛡️ 프로필 관리', '운영진이 부적절한 닉네임 · 아바타 · 칭호 · 테두리를 바꿀 수 있어요. 바뀌면 다음에 앱을 열 때 알려 드려요.'],
+    ],
+  },
+  {
     version: '3.24.0',
     title: '운영진 등록 · 새 테스터',
     items: [

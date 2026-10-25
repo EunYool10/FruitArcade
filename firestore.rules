@@ -97,6 +97,11 @@ rules_version = '2';
 // Document ID: uid
 // Fields: at (== request.time; at most every 20 s). Players who hide it delete the doc.
 //
+// Collection: ownerGifts  (items only the game owner gives, e.g. the 프리즘 테두리)
+// Doc ID: the player's uid
+// Fields: items (list of owner_ ids), at (server time). The owner (first on config/admins) writes;
+//         the player and admins read. Boards and cards only show an owner_ frame listed here.
+//
 // Collection: activity/{dayId}/players  (daily play counts for the admin stats)
 // Day ID: d<dayIndex> (KST), only today or yesterday can be written
 // Document ID: Firebase Auth uid
@@ -134,6 +139,37 @@ service cloud.firestore {
       return isGoogleUser()
         && request.auth.token.email_verified == true
         && request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails;
+    }
+
+    // The game owner: first email on config/admins (only they give owner_ items)
+    function isGameOwner() {
+      return isGoogleUser()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == get(/databases/$(database)/documents/config/admins).data.emails[0];
+    }
+
+    // An owner_ frame shows only on the owner, or on a player the owner gave it to
+    function isOwnerFrameOk(uid, data) {
+      return !('frame' in data)
+        || !data.frame.matches('^owner_.*')
+        || (isGameOwner() && uid == request.auth.uid)
+        || data.frame in get(/databases/$(database)/documents/ownerGifts/$(uid)).data.items;
+    }
+
+    // An admin changing someone's look on a board or card: name, fruit avatar, photo off, title off,
+    // frame off (or a frame the owner gave them). Never a staff-looking name they didn't have
+    function isAdminLookEdit(uid, keys) {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isAdmin()
+        && after.diff(before).affectedKeys().hasOnly(keys)
+        && isPlainText(after.name, 1, 40)
+        && (!isReservedName(after.name) || after.name == before.name)
+        && isPlainText(after.avatar, 1, 16)
+        && (!('photo' in after) || after.photo == before.get('photo', ''))
+        && (!('title' in after) || after.title == before.get('title', ''))
+        && (!('frame' in after) || after.frame == before.get('frame', '')
+          || (after.frame.matches('^owner_.*') && isOwnerFrameOk(uid, after)));
     }
 
     function isBanned() {
@@ -276,7 +312,7 @@ service cloud.firestore {
 
     function isValidProfile(userId, p) {
       return p is map
-        && p.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'createdAt', 'lastLoginAt', 'nickname', 'avatar', 'title', 'frame'])
+        && p.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'createdAt', 'lastLoginAt', 'nickname', 'avatar', 'title', 'frame', 'modAt'])
         && p.get('uid', '') == userId
         && isOptionalText(p, 'displayName', 100)
         && isOptionalText(p, 'email', 320)
@@ -286,7 +322,8 @@ service cloud.firestore {
         && isOptionalText(p, 'nickname', 40)
         && isOptionalText(p, 'avatar', 16)
         && isOptionalText(p, 'title', 40)
-        && isOptionalText(p, 'frame', 40);
+        && isOptionalText(p, 'frame', 40)
+        && isOptionalText(p, 'modAt', 40);
     }
 
     function isValidUserDoc(userId, data) {
@@ -321,6 +358,7 @@ service cloud.firestore {
         && isOptionalPhoto(data)
         && (!('title' in data) || !data.title.matches('^staff_.*') || isAdmin())
         && (!('frame' in data) || !data.frame.matches('^staff_.*') || isAdmin())
+        && isOwnerFrameOk(uid, data)
         && isOptionalVerified(data)
         && (!('proof' in data) || (data.proof is string && data.proof.size() == 64))
         && (!isReservedName(data.name) || isAdmin())
@@ -461,6 +499,7 @@ service cloud.firestore {
         && isOptionalPhoto(data)
         && (!('title' in data) || !data.title.matches('^staff_.*') || isAdmin())
         && (!('frame' in data) || !data.frame.matches('^staff_.*') || isAdmin())
+        && isOwnerFrameOk(uid, data)
         && isOptionalVerified(data)
         && data.level is int && data.level >= 1 && data.level <= 200
         && data.achievements is int && data.achievements >= 0 && data.achievements <= 60
@@ -555,6 +594,12 @@ service cloud.firestore {
       allow update: if isOwner(userId)
         && isValidUserDoc(userId, request.resource.data)
         && profileIdentityUnchanged();
+      // Admins change a player's nickname / avatar / title / frame (관리자 → 유저); modAt tells the
+      // player's device to take them
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['profile'])
+        && request.resource.data.profile.diff(resource.data.profile).affectedKeys().hasOnly(['nickname', 'avatar', 'title', 'frame', 'modAt'])
+        && isValidProfile(userId, request.resource.data.profile);
       allow delete: if isOwner(userId);
     }
 
@@ -582,6 +627,9 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'avatar', 'title', 'frame', 'photo', 'verified', 'at'])))
         && request.time > resource.data.at + duration.value(3, 's')
         && !isBanned();
+
+      // Admins change the look of a player's entry (관리자 → 유저); the score stays
+      allow update: if isAdminLookEdit(uid, ['name', 'avatar', 'title', 'frame', 'photo']);
 
       // Moderation: admins remove cheated scores or bad names
       allow delete: if isAdmin();
@@ -653,6 +701,8 @@ service cloud.firestore {
         && isValidPlayerCard(uid, request.resource.data)
         && request.resource.data.code == resource.data.code
         && request.time > resource.data.at + duration.value(2, 's');
+      allow update: if isAdminLookEdit(uid, ['name', 'avatar', 'title', 'frame', 'photo', 'at'])
+        && request.resource.data.at == request.time;
       allow delete: if isOwner(uid) || isAdmin();
     }
 
@@ -736,6 +786,19 @@ service cloud.firestore {
         && request.resource.data.coins <= 50
         && request.resource.data.sig == grantSig(request.auth.uid, grantId, request.resource.data.coins)
         && request.resource.data.at == request.time;
+    }
+
+    // Items only the game owner gives (관리자 → 유저 → 프리즘 테두리)
+    match /ownerGifts/{uid} {
+      allow get: if isOwner(uid) || isAdmin();
+      allow create, update: if isGameOwner()
+        && isValidId(uid)
+        && request.resource.data.keys().hasOnly(['items', 'at'])
+        && request.resource.data.items is list
+        && request.resource.data.items.size() <= 10
+        && request.resource.data.items.hasOnly(['owner_frame_prism'])
+        && request.resource.data.at == request.time;
+      allow delete: if isGameOwner();
     }
 
     // One doc per player per day: rounds played and time, counted for the admin stats

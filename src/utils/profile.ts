@@ -13,6 +13,27 @@ export interface PlayerProfile {
   frame: string;
 }
 
+// When an admin last changed this player's look (profile.modAt in the cloud). A newer one makes
+// this device take the cloud look as it is, even fields put back to empty.
+const MOD_KEY = 'fruit_arcade_profile_mod';
+
+export function loadProfileMod(): string {
+  try {
+    return localStorage.getItem(MOD_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function saveProfileMod(at: string): void {
+  try {
+    if (at) localStorage.setItem(MOD_KEY, at);
+    else localStorage.removeItem(MOD_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export const AVATARS = ['🍓', '🍉', '🍊', '🍋', '🍇', '🍑', '🍒', '🍍', '🥝', '🍎', '🫐', '🥥'];
 export const NICKNAME_MAX = 12;
 

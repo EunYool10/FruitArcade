@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal } from '../ui/Modal';
 import { APP_VERSION, GAME_ORDER } from '../../constants';
 import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
-import { SHOP_ITEMS } from '../../utils/shop';
+import { SHOP_ITEMS, forSale } from '../../utils/shop';
 import { STAGE_COUNT } from '../PuzzleGame/stages';
 import { TRACK_COUNT } from '../../utils/music';
 import { Emoji } from '../ui/Emoji';
@@ -34,7 +34,7 @@ const TESTERS = [
 const NUMBERS: [string, string][] = [
   ['🎮', `게임 ${GAME_ORDER.length}종`],
   ['🏆', `업적 ${ACHIEVEMENT_COUNT}개`],
-  ['🛍️', `상점 아이템 ${SHOP_ITEMS.filter((i) => !i.staff).length}개`],
+  ['🛍️', `상점 아이템 ${SHOP_ITEMS.filter(forSale).length}개`],
   ['🧩', `퍼즐 스테이지 ${STAGE_COUNT}개`],
   ['🎵', `배경음악 ${TRACK_COUNT}곡`],
 ];

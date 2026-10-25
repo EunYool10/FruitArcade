@@ -5,6 +5,7 @@ import {
   collection,
   count,
   deleteDoc,
+  deleteField,
   doc,
   getAggregateFromServer,
   getCountFromServer,
@@ -13,6 +14,8 @@ import {
   limit,
   orderBy,
   query,
+  serverTimestamp,
+  setDoc,
   sum,
   updateDoc,
   where,
@@ -21,7 +24,8 @@ import {
 import { db } from '../firestore';
 import { GAME_ORDER } from '../constants';
 import type { FeedbackKind, ReportReason } from './communityService';
-import { RANK_PERIODS, boardId, cleanPhoto, dayLabel, kstDay } from './ranking';
+import { RANK_PERIODS, boardId, cleanPhoto, dayLabel, kstDay, publicName } from './ranking';
+import { PRISM_FRAME } from './shop';
 import { maskBadWords } from './badWords';
 import type { GameType } from '../types';
 
@@ -249,6 +253,72 @@ export async function clearBoardsOf(uid: string): Promise<void> {
   const now = Date.now();
   for (const g of GAME_ORDER) for (const p of RANK_PERIODS) batch.delete(doc(db, 'leaderboards', boardId(g, p, now), 'scores', uid));
   await batch.commit();
+}
+
+// ───────── a player's look (관리자 → 유저) ─────────
+
+/** What an admin changes; missing fields stay as they are */
+export interface LookChange {
+  /** '' puts the default name back (과일러 1234) */
+  nickname?: string;
+  /** A fruit avatar (their Google photo comes off) */
+  avatar?: string;
+  /** Take the worn title off */
+  clearTitle?: boolean;
+  /** '' takes the frame off; an owner_ frame needs the owner's gift first */
+  frame?: string;
+}
+
+/**
+ * Change a player's look everywhere: their account (their device takes it the next time it opens
+ * or comes back to the front), their public card and their current board entries
+ */
+export async function changeLook(u: UserRow, c: LookChange): Promise<void> {
+  const profile: Record<string, unknown> = { 'profile.modAt': new Date().toISOString() };
+  const look: Record<string, unknown> = {};
+  if (c.nickname !== undefined) {
+    profile['profile.nickname'] = c.nickname;
+    look.name = publicName(c.nickname, u.uid, u.verified);
+  }
+  if (c.avatar) {
+    profile['profile.avatar'] = c.avatar;
+    look.avatar = c.avatar;
+    look.photo = deleteField();
+  }
+  if (c.clearTitle) {
+    profile['profile.title'] = '';
+    look.title = deleteField();
+  }
+  if (c.frame !== undefined) {
+    profile['profile.frame'] = c.frame;
+    look.frame = c.frame || deleteField();
+  }
+  await updateDoc(doc(db, 'users', u.uid), profile);
+  if (!Object.keys(look).length) return;
+  await updateDoc(doc(db, 'players', u.uid), { ...look, at: serverTimestamp() });
+  // Only the boards they are on today (entries from past days and weeks keep the old look)
+  const now = Date.now();
+  const refs = GAME_ORDER.flatMap((g) => RANK_PERIODS.map((p) => doc(db, 'leaderboards', boardId(g, p, now), 'scores', u.uid)));
+  const snaps = await Promise.all(refs.map((r) => getDoc(r)));
+  await Promise.all(snaps.flatMap((snap, i) => (snap.exists() ? [updateDoc(refs[i], look)] : [])));
+}
+
+/** The owner's gifts a player has */
+export async function ownerGiftsOf(uid: string): Promise<string[]> {
+  const snap = await getDoc(doc(db, 'ownerGifts', uid));
+  const items = snap.exists() ? snap.data().items : [];
+  return Array.isArray(items) ? items.filter((id): id is string => typeof id === 'string') : [];
+}
+
+/** Owner only: give the 프리즘 테두리 and put it on, or take it back (and off, when worn) */
+export async function setPrismGift(u: UserRow, give: boolean): Promise<void> {
+  if (give) {
+    await setDoc(doc(db, 'ownerGifts', u.uid), { items: [PRISM_FRAME], at: serverTimestamp() });
+    await changeLook(u, { frame: PRISM_FRAME });
+  } else {
+    await deleteDoc(doc(db, 'ownerGifts', u.uid));
+    if (u.frame === PRISM_FRAME) await changeLook(u, { frame: '' });
+  }
 }
 
 // ───────── the admin list (config/admins) ─────────

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Check, Gift } from 'lucide-react';
-import { ItemKind, Inventory, SHOP_ITEMS, ShopItem, bladeStyle, cardBackStyle, runnerStyle } from '../../utils/shop';
+import { ItemKind, Inventory, SHOP_ITEMS, ShopItem, bladeStyle, cardBackStyle, forSale, runnerStyle } from '../../utils/shop';
 import { SUIKA_DEFAULT, SUIKA_SKINS } from '../../utils/skins';
 import { titleDef } from '../../utils/titles';
 import { formatCompact, formatNumber, josa } from '../../utils/format';
@@ -155,8 +155,9 @@ const InUse = () => (
 export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, owned, player, equipped, onBuy, onTakeAll, onEquip }) => {
   const [tab, setTab] = useState<Tab>('frame');
   const tabs: [Tab, string][] = isAdmin ? [...TABS, ['staff', '🛡️ 운영진']] : TABS;
-  const items = SHOP_ITEMS.filter((i) => (tab === 'staff' ? i.staff : i.kind === tab && !i.staff));
-  const missing = SHOP_ITEMS.filter((i) => !i.staff && !owned[i.id]).length;
+  // The owner's gifts show only to whoever has one
+  const items = SHOP_ITEMS.filter((i) => (tab === 'staff' ? i.staff : i.kind === tab && !i.staff && (!i.gift || owned[i.id])));
+  const missing = SHOP_ITEMS.filter((i) => forSale(i) && !owned[i.id]).length;
   const unlimited = !Number.isFinite(balance);
 
   return (
@@ -230,6 +231,7 @@ export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, 
             >
               <Preview kind={item.kind} id={item.id} player={player} />
               <p className="text-sm font-bold">{item.name}</p>
+              {item.gift && <span className="chip h-5 bg-mango px-1.5 text-[10px] text-on-bright">👑 소유자 선물</span>}
               {isOn ? (
                 <InUse />
               ) : has ? (

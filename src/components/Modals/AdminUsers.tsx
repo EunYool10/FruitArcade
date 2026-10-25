@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Ban, ChevronDown, Copy, Search, ShieldCheck, Trash2, X } from 'lucide-react';
-import type { UserRow } from '../../utils/adminService';
+import { Ban, ChevronDown, Copy, Pencil, Search, ShieldCheck, Trash2, X } from 'lucide-react';
+import type { LookChange, UserRow } from '../../utils/adminService';
+import { AdminLookEditor } from './AdminLookEditor';
 import { AvatarFace, Framed } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
@@ -42,11 +43,17 @@ interface Props {
   onUnban: (u: UserRow) => void;
   onClearBoards: (u: UserRow) => void;
   onCopy: (text: string, what: string) => void;
+  /** First on the admin list (gives the 프리즘 테두리) */
+  isGameOwner: boolean;
+  onChangeLook: (u: UserRow, c: LookChange) => void;
+  onPrism: (u: UserRow, give: boolean) => void;
 }
 
 /** Every player with a public card: find them, see how they play, ban or clean up their records */
-export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onBan, onUnban, onClearBoards, onCopy }) => {
+export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onBan, onUnban, onClearBoards, onCopy, isGameOwner, onChangeLook, onPrism }) => {
   const [filter, setFilter] = useState<Filter>('all');
+  /** Whose look editor is open */
+  const [editing, setEditing] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>('seen');
   const [open, setOpen] = useState<string | null>(null);
   const [shown, setShown] = useState(PAGE);
@@ -208,9 +215,17 @@ export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onB
                       ))}
                     </div>
                     {u.bannedAt && <p className="text-xs font-bold text-berry-ink">🚫 {new Date(u.bannedAt).toLocaleDateString('ko-KR')}에 랭킹에서 차단됐어요</p>}
-                    <div className="grid gap-2 sm:grid-cols-3">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       <button type="button" className="btn btn-sm w-full" onClick={() => onCopy(u.uid, 'UID')}>
                         <Copy className="h-4 w-4" strokeWidth={2.5} /> UID 복사
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm w-full"
+                        aria-expanded={editing === u.uid}
+                        onClick={() => setEditing(editing === u.uid ? null : u.uid)}
+                      >
+                        <Pencil className="h-4 w-4" strokeWidth={2.5} /> 프로필 바꾸기
                       </button>
                       <ConfirmButton
                         className="btn btn-sm w-full"
@@ -235,6 +250,16 @@ export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onB
                         </ConfirmButton>
                       )}
                     </div>
+                    {editing === u.uid && (
+                      <AdminLookEditor
+                        key={u.uid + u.cardAt}
+                        u={u}
+                        isGameOwner={isGameOwner}
+                        busy={busy === u.uid}
+                        onSave={(c) => onChangeLook(u, c)}
+                        onPrism={(give) => onPrism(u, give)}
+                      />
+                    )}
                   </div>
                 )}
               </li>

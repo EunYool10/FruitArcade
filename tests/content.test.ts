@@ -1,6 +1,6 @@
 import { readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { SHOP_ITEMS, isStaffId } from '../src/utils/shop';
+import { FRAME_CLASS, PRISM_FRAME, SHOP_ITEMS, isOwnerGiftId, isStaffId, mergeInventory, usableItems } from '../src/utils/shop';
 import { SUIKA_DEFAULT, SUIKA_SKINS, skinPiece } from '../src/utils/skins';
 import { emojiSrc } from '../src/utils/emoji';
 import { AVATARS } from '../src/utils/profile';
@@ -11,6 +11,15 @@ describe('shop', () => {
     const ids = SHOP_ITEMS.map((i) => i.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const i of SHOP_ITEMS) expect(!!i.staff).toBe(isStaffId(i.id));
+  });
+
+  it('keeps the owner gifts out of the shop and the stored inventory', () => {
+    for (const i of SHOP_ITEMS) expect(!!i.gift).toBe(isOwnerGiftId(i.id));
+    expect(FRAME_CLASS[PRISM_FRAME]).toBe('frame-prism');
+    expect(mergeInventory({ [PRISM_FRAME]: 'x', frame_gold: 'y' }, {})).toEqual({ frame_gold: 'y' });
+    expect(usableItems({ [PRISM_FRAME]: 'x' }, true)[PRISM_FRAME]).toBeUndefined();
+    expect(usableItems({}, false, [PRISM_FRAME])[PRISM_FRAME]).toBe('gift');
+    expect(usableItems({}, true, [], true)[PRISM_FRAME]).toBe('gift');
   });
 
   it('fits the inventory cap in firestore.rules (200 keys) with room to spare', () => {

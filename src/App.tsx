@@ -33,9 +33,13 @@ import {
   avatarItem,
   clearInventory,
   coinsFor,
+  forSale,
+  isOwnerGiftId,
   loadInventory,
+  loadOwnerGifts,
   mergeInventory,
   saveInventory,
+  saveOwnerGifts,
   usableItems,
 } from './utils/shop';
 import { RankContext } from './components/RankContext';
@@ -78,7 +82,7 @@ import {
   currentStreak,
   loadStreak,
 } from './utils/progress';
-import { AVATARS, PlayerProfile, loadProfile, saveProfile } from './utils/profile';
+import { AVATARS, PlayerProfile, loadProfile, loadProfileMod, saveProfile, saveProfileMod } from './utils/profile';
 import { DailyState, applyDaily, loadDaily, saveDaily, todayKey } from './utils/missions';
 import { playSound } from './utils/audio';
 import { TrackName, music } from './utils/music';
@@ -172,6 +176,10 @@ export default function App() {
   const [, setUserTick] = useState(0);
   /** On the admin list (config/admins); the server rules check this again for every admin action */
   const [isAdmin, setIsAdmin] = useState(false);
+  /** First on the admin list: gives the owner's gifts (프리즘 테두리) */
+  const [isGameOwner, setIsGameOwner] = useState(false);
+  /** owner_ items the game owner gave this player */
+  const [ownerGifts, setOwnerGifts] = useState<string[]>(loadOwnerGifts);
   const userRef = useRef<User | null>(null);
   userRef.current = user;
   const screenRef = useRef(screen);
@@ -239,7 +247,7 @@ export default function App() {
   const qaMode = isAdmin && settings.qaMode;
   const asAdmin = isAdmin && !settings.qaMode;
   // Items in use: bought ones, plus the whole 운영진 series for admins (who also have unlimited coins)
-  const owned = usableItems(inventory, asAdmin);
+  const owned = usableItems(inventory, asAdmin, ownerGifts, isGameOwner && asAdmin);
   const coins = asAdmin ? Infinity : coinBalance(stats);
   const titles = earnedTitles(unlocked, wasChampion, owned);
   const title = wornTitle(profile.title, unlocked, wasChampion, owned);
@@ -587,7 +595,7 @@ export default function App() {
   /** Admins don't pay: their coins are unlimited */
   const buyItem = (item: ShopItem) => {
     const stats0 = statsRef.current;
-    if (item.staff || inventoryRef.current[item.id] || (!asAdmin && coinBalance(stats0) < item.price)) return;
+    if (!forSale(item) || inventoryRef.current[item.id] || (!asAdmin && coinBalance(stats0) < item.price)) return;
     saveBought({ ...inventoryRef.current, [item.id]: new Date().toISOString() });
     playSound('levelup', settings);
     pushToast({
@@ -607,7 +615,7 @@ export default function App() {
     if (!asAdmin) return;
     const now = new Date().toISOString();
     const inv = { ...inventoryRef.current };
-    const missing = SHOP_ITEMS.filter((i) => !i.staff && !inv[i.id]);
+    const missing = SHOP_ITEMS.filter((i) => forSale(i) && !inv[i.id]);
     if (!missing.length) return;
     for (const i of missing) inv[i.id] = now;
     saveBought(inv);
@@ -625,6 +633,32 @@ export default function App() {
 
   // ───────── auth & cloud sync ─────────
 
+  /** The owner's gifts as ownerGifts/{uid} lists them now; a new one gets a toast */
+  const takeGifts = useCallback(
+    (ids: string[]) => {
+      const next = ids.filter(isOwnerGiftId);
+      const before = loadOwnerGifts();
+      if (next.some((id) => !before.includes(id)))
+        pushToast({ icon: '🌈', title: '프리즘 테두리를 받았어요', sub: '게임 소유자의 선물이에요 · 상점 테두리에 있어요', tone: 'grape' });
+      setOwnerGifts(next);
+      saveOwnerGifts(next);
+    },
+    [pushToast]
+  );
+
+  /** An admin changed the look (profile.modAt): this device keeps it from now on */
+  const takeAdminLook = useCallback(
+    (custom: PlayerProfile, modAt: string) => {
+      setProfile(custom);
+      saveProfile(custom);
+      saveProfileMod(modAt);
+      // Not for an old change seen on a new device
+      if (Date.now() - Date.parse(modAt) < 7 * 86_400_000)
+        pushToast({ icon: '🛡️', title: '운영진이 프로필을 바꿨어요', sub: '프로필에서 다시 바꿀 수 있어요', tone: 'grape' });
+    },
+    [pushToast]
+  );
+
   /** Merge this device's data with the signed-in user's cloud data. */
   const syncCloud = useCallback(
     async (u: User) => {
@@ -637,14 +671,19 @@ export default function App() {
         writeJSON(SETTINGS_KEY, nextSettings);
         if (Object.keys(cloud.settings).length === 0) cloudWrite((api) => api.saveUserSettings(u.uid, nextSettings)).catch(() => {});
 
-        // Nickname / avatar / title: the cloud wins when set, otherwise keep this device's choice
+        // Nickname / avatar / title: the cloud wins when set, otherwise keep this device's choice.
+        // After an admin changed them the cloud look counts as it is, even fields put back to empty
         const local = loadProfile();
-        const mergedProfile = {
-          nickname: cloud.custom.nickname || local.nickname,
-          avatar: cloud.custom.avatar || local.avatar,
-          title: cloud.custom.title || local.title,
-          frame: cloud.custom.frame || local.frame,
-        };
+        const adminLook = !!cloud.modAt && cloud.modAt !== loadProfileMod();
+        const mergedProfile = adminLook
+          ? cloud.custom
+          : {
+              nickname: cloud.custom.nickname || local.nickname,
+              avatar: cloud.custom.avatar || local.avatar,
+              title: cloud.custom.title || local.title,
+              frame: cloud.custom.frame || local.frame,
+            };
+        if (adminLook) takeAdminLook(cloud.custom, cloud.modAt);
         setProfile(mergedProfile);
         saveProfile(mergedProfile);
         if (
@@ -673,6 +712,10 @@ export default function App() {
         if (Object.keys(mergedInv).some((id) => !(id in cloud.inventory))) {
           cloudWrite((api) => api.saveInventory(u.uid, mergedInv)).catch(() => {});
         }
+        cloudApi()
+          .then((api) => api.loadOwnerGifts(u.uid))
+          .then(takeGifts)
+          .catch((err) => console.warn('Failed to load the owner gifts:', err));
 
         // Achievements: union of both sides
         const { merged, cloudOutdated } = mergeAchievements(cloud.achievements);
@@ -689,8 +732,33 @@ export default function App() {
         pushToast({ icon: '⚠️', title: '클라우드 동기화에 실패했어요', tone: 'berry' });
       }
     },
-    [commitStats, pushToast, cloudWrite]
+    [commitStats, pushToast, cloudWrite, takeAdminLook, takeGifts]
   );
+
+  // An admin may change the look while the app stays open: look again when it comes back to the
+  // front (at most every 3 minutes; the sign-in sync just did)
+  useEffect(() => {
+    if (!user) return;
+    let last = Date.now();
+    const check = () => {
+      if (document.visibilityState !== 'visible' || Date.now() - last < 180_000) return;
+      last = Date.now();
+      cloudApi()
+        .then((api) => Promise.all([api.loadCloudLook(user.uid), api.loadOwnerGifts(user.uid)]))
+        .then(([look, gifts]) => {
+          if (userRef.current?.uid !== user.uid) return;
+          takeGifts(gifts);
+          if (look.modAt && look.modAt !== loadProfileMod()) takeAdminLook(look.custom, look.modAt);
+        })
+        .catch(() => {});
+    };
+    document.addEventListener('visibilitychange', check);
+    window.addEventListener('focus', check);
+    return () => {
+      document.removeEventListener('visibilitychange', check);
+      window.removeEventListener('focus', check);
+    };
+  }, [user, takeAdminLook, takeGifts]);
 
   /** Last week's #1 on any game earns the 주간 챔피언 title (kept as the latest winning week) */
   const checkChampion = useCallback(
@@ -728,6 +796,7 @@ export default function App() {
       unsubscribe = authApi.onAuthStateChanged(authApi.auth, (u) => {
         setUser(u);
         setIsAdmin(false);
+        setIsGameOwner(false);
         if (!u) return;
         // A newer Google photo from a sign-in on another device: fetch the account again
         u.reload()
@@ -739,9 +808,11 @@ export default function App() {
         refreshFriendBadge();
         if (loadReminderState().on) remindersApi().then((api) => api.refreshReminders(u.uid, loadStreak())).catch(() => {});
         rankApi()
-          .then((api) => api.checkAdmin())
-          .then((ok) => {
-            if (authApi.auth.currentUser?.uid === u.uid) setIsAdmin(ok);
+          .then((api) => api.adminRole(u.email))
+          .then((role) => {
+            if (authApi.auth.currentUser?.uid !== u.uid) return;
+            setIsAdmin(role !== null);
+            setIsGameOwner(role === 'owner');
           })
           .catch(() => {});
         checkChampion(u);
@@ -802,6 +873,8 @@ export default function App() {
     clearInventory();
     inventoryRef.current = {};
     setInventory({});
+    setOwnerGifts([]);
+    saveProfileMod('');
     clearStageProgress();
     stageProgressRef.current = {};
     setStageProgress({});
@@ -1411,7 +1484,7 @@ export default function App() {
         onTakeAll={takeAllItems}
         onEquip={equipItem}
       />
-      <AdminModal isOpen={modal === 'admin' && asAdmin} onClose={() => setModal(null)} adminUid={user?.uid ?? null} />
+      <AdminModal isOpen={modal === 'admin' && asAdmin} onClose={() => setModal(null)} adminUid={user?.uid ?? null} isGameOwner={isGameOwner} />
       <FeedbackModal
         isOpen={modal === 'feedback'}
         onClose={() => setModal(null)}

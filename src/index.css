@@ -455,7 +455,38 @@
     50% { box-shadow: 0 0 0 5px var(--mango); }
   }
 
-  /* 프리즘 테두리 (only the game owner gives it): the ring runs red → violet and back, with a glow */
+  /* RGB series: colours that keep running red → violet (the avatar, the title's letters) */
+  .rgb-hue {
+    animation: rgb-hue 4s linear infinite;
+  }
+  .rgb-text {
+    background: linear-gradient(90deg, #ff3b30, #ff9500, #ffd60a, #30d158, #0a84ff, #5e5ce6, #bf5af2);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: rgb-hue 4s linear infinite;
+  }
+  @keyframes rgb-hue {
+    from { filter: hue-rotate(0deg); }
+    to { filter: hue-rotate(360deg); }
+  }
+  /* RGB card back: the whole card runs through the colours */
+  .rgb-cycle {
+    background-color: #ff3b30;
+    animation: prism-ring 5s linear infinite alternate;
+  }
+  /* 레전드 테두리 (Lv.100): gold with a light sweeping round */
+  .frame-legend {
+    background: linear-gradient(110deg, #9a6b00 0%, #ffd23f 35%, #fff6cc 50%, #ffd23f 65%, #9a6b00 100%);
+    background-size: 250% 100%;
+    animation: legend-shine 2.6s linear infinite;
+  }
+  @keyframes legend-shine {
+    from { background-position: 125% 0; }
+    to { background-position: -125% 0; }
+  }
+
+  /* RGB 테두리 (an admins' gift): the ring runs red → violet and back, with a glow */
   .frame-prism {
     background-color: #ff3b30;
     animation: prism-ring 5s linear infinite alternate;
@@ -511,7 +542,8 @@
     scroll-behavior: auto !important;
   }
   /* Still all the colors, just not moving */
-  .frame-prism {
+  .frame-prism,
+  .rgb-cycle {
     background: conic-gradient(#ff3b30, #ff9500, #ffd60a, #30d158, #0a84ff, #5e5ce6, #bf5af2, #ff3b30);
   }
 }

@@ -104,8 +104,10 @@ export interface GameReward {
   stamp: boolean;
   /** Outcome when this round was a friend challenge */
   challenge: { name: string; target: number; won: boolean } | null;
-  /** Shop coins earned this round */
+  /** Shop coins earned this round (level-up coins included) */
   coins: number;
+  /** Reached a new level: its coins and the level reward items that unlocked */
+  levelReward?: { coins: number; items: string[] } | null;
 }
 
 export interface HistoryEntry extends GameResult {

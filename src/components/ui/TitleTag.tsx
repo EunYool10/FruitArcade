@@ -17,13 +17,13 @@ export const TitleTag: React.FC<{ title: TitleDef; variant?: 'chip' | 'line' }> 
       </span>
     ) : (
       <span className="block truncate text-[11px] font-semibold text-grape-ink" aria-label={label}>
-        {title.icon} {title.label}
+        {title.icon} <span className={title.rgb ? 'rgb-text font-black' : ''}>{title.label}</span>
       </span>
     );
   }
   return (
-    <span className={`chip ${title.staff ? `border-[#1e3a8a] ${STAFF_BADGE}` : 'bg-grape-soft'}`} aria-label={label}>
-      {title.icon} {title.label}
+    <span className={`chip ${title.staff ? `border-[#1e3a8a] ${STAFF_BADGE}` : title.rgb ? 'bg-[#1b1430] text-white' : 'bg-grape-soft'}`} aria-label={label}>
+      {title.icon} <span className={title.rgb ? 'rgb-text font-black' : ''}>{title.label}</span>
     </span>
   );
 };

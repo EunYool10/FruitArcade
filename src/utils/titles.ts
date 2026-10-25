@@ -14,6 +14,8 @@ export interface TitleDef {
   icon: string;
   /** 운영진 title, shown with its own badge */
   staff?: boolean;
+  /** RGB title: the letters run through the colours */
+  rgb?: boolean;
 }
 
 const CHAMPION: TitleDef = { id: WEEKLY_CHAMPION, label: '주간 챔피언', icon: '👑' };
@@ -22,7 +24,7 @@ export function titleDef(id: string | undefined | null): TitleDef | null {
   if (!id) return null;
   if (id === WEEKLY_CHAMPION) return CHAMPION;
   const item = shopItem(id);
-  if (item?.kind === 'title') return { id, label: item.name, icon: item.icon ?? '🏷️', ...(item.staff ? { staff: true } : {}) };
+  if (item?.kind === 'title') return { id, label: item.name, icon: item.icon ?? '🏷️', ...(item.staff ? { staff: true } : {}), ...(item.rgb ? { rgb: true } : {}) };
   const a = ACHIEVEMENT_DEFINITIONS.find((x) => x.id === id);
   return a ? { id, label: a.title, icon: a.icon } : null;
 }

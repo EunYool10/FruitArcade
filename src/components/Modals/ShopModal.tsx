@@ -10,7 +10,7 @@ import { Framed, PlayerView } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
 import { Emoji } from '../ui/Emoji';
 
-type Tab = ItemKind | 'staff';
+type Tab = ItemKind | 'staff' | 'rgb' | 'level';
 
 interface Props {
   isOpen: boolean;
@@ -39,6 +39,8 @@ const TABS: [Tab, string][] = [
   ['blade', '🔪 칼날'],
   ['runner', '🏃 러너'],
   ['suikaSkin', '🎨 과일 스킨'],
+  ['rgb', '🌈 RGB'],
+  ['level', '🎖️ 레벨 보상'],
 ];
 
 /** The free choice at the start of each tab */
@@ -61,6 +63,8 @@ const TAB_HINT: Record<Tab, string> = {
   runner: 'FRUIT DASH에서 달리는 캐릭터예요',
   suikaSkin: '수박 게임 · 과일 자르기 · FRUIT DASH · 과일 퍼즐의 과일이 다른 모양으로 바뀌어요 (크기와 점수는 그대로)',
   staff: '운영진만 쓸 수 있는 전용 시리즈예요. 칭호와 테두리는 다른 사람은 랭킹에 달 수 없어요',
+  rgb: '빨강부터 보라까지 색이 계속 바뀌는 시리즈예요. 아바타 · 칭호 · 카드 뒷면은 각 777억 코인, 테두리는 운영진 선물로만 받아요',
+  level: '레벨이 오르면 저절로 생기는 보상이에요. 레벨이 오를 때마다 코인도 받아요 (일반 플레이어 최고 Lv.100)',
 };
 
 const BladePreview: React.FC<{ id: string }> = ({ id }) => {
@@ -152,11 +156,25 @@ const InUse = () => (
   </span>
 );
 
+/** What a card without the item says instead of a price */
+const lockLabel = (item: ShopItem) => (item.level ? `🔒 Lv.${item.level} 달성 시` : item.gift ? '🔒 선물로만 받아요' : '');
+
+const price = (n: number) => (n >= 1_000_000 ? formatCompact(n) : formatNumber(n));
+
 export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, owned, player, equipped, onBuy, onTakeAll, onEquip }) => {
   const [tab, setTab] = useState<Tab>('frame');
   const tabs: [Tab, string][] = isAdmin ? [...TABS, ['staff', '🛡️ 운영진']] : TABS;
-  // The owner's gifts show only to whoever has one
-  const items = SHOP_ITEMS.filter((i) => (tab === 'staff' ? i.staff : i.kind === tab && !i.staff && (!i.gift || owned[i.id])));
+  // RGB and level rewards have their own tabs; in the kind tabs they show once you have them
+  const items = SHOP_ITEMS.filter((i) =>
+    tab === 'staff'
+      ? i.staff
+      : tab === 'rgb'
+        ? i.rgb
+        : tab === 'level'
+          ? !!i.level
+          : i.kind === tab && !i.staff && ((!i.gift && !i.level && !i.rgb) || owned[i.id])
+  );
+  const kindTab = tab !== 'staff' && tab !== 'rgb' && tab !== 'level';
   const missing = SHOP_ITEMS.filter((i) => forSale(i) && !owned[i.id]).length;
   const unlimited = !Number.isFinite(balance);
 
@@ -196,11 +214,13 @@ export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, 
               tab === id
                 ? id === 'staff'
                   ? '-translate-y-0.5 bg-[#1e3a8a] text-white shadow-hard-sm'
-                  : '-translate-y-0.5 bg-mango text-on-bright shadow-hard-sm'
+                  : id === 'rgb'
+                    ? '-translate-y-0.5 bg-[#1b1430] text-white shadow-hard-sm'
+                    : '-translate-y-0.5 bg-mango text-on-bright shadow-hard-sm'
                 : 'bg-surface-2 hover:bg-surface-3'
             }`}
           >
-            {label}
+            {id === 'rgb' ? <span className="rgb-text font-black">{label}</span> : label}
           </button>
         ))}
       </div>
@@ -208,7 +228,7 @@ export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, 
 
       <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
         {/* The free default */}
-        {tab !== 'staff' && (
+        {kindTab && (
           <li className={`flex flex-col items-center gap-2 rounded-2xl border-2 border-line p-3 text-center ${!equipped[tab] ? 'bg-mango-soft' : 'bg-surface-2'}`}>
             <Preview kind={tab} id="" player={player} />
             <p className="text-sm font-bold">{DEFAULT_LABEL[tab]}</p>
@@ -230,30 +250,33 @@ export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, 
               className={`flex flex-col items-center gap-2 rounded-2xl border-2 border-line p-3 text-center ${isOn ? 'bg-mango-soft' : 'bg-surface-2'}`}
             >
               <Preview kind={item.kind} id={item.id} player={player} />
-              <p className="text-sm font-bold">{item.name}</p>
+              <p className="text-sm font-bold">{item.rgb ? <span className="rgb-text font-black">{item.name}</span> : item.name}</p>
               {item.gift && <span className="chip h-5 bg-[#1e3a8a] px-1.5 text-[10px] text-white">🛡️ 운영진 선물</span>}
+              {item.level && <span className="chip h-5 bg-grape-soft px-1.5 text-[10px]">🎖️ Lv.{item.level} 보상</span>}
               {isOn ? (
                 <InUse />
               ) : has ? (
                 <button type="button" className="btn btn-sm w-full" onClick={() => onEquip(item.kind, item)}>
                   사용하기
                 </button>
+              ) : !forSale(item) ? (
+                <span className="chip h-8 w-full justify-center bg-surface text-xs text-ink-3">{lockLabel(item)}</span>
               ) : unlimited ? (
                 <button type="button" className="btn btn-sm btn-mango w-full" onClick={() => onBuy(item)}>
                   <Gift className="h-4 w-4" strokeWidth={2.5} /> 받기
                 </button>
               ) : balance < item.price ? (
                 <button type="button" className="btn btn-sm w-full" disabled>
-                  🪙 {formatNumber(item.price)} · 부족
+                  🪙 {price(item.price)} · 부족
                 </button>
               ) : (
                 <ConfirmButton
                   className="btn btn-sm btn-mango w-full"
-                  question={`${item.name}${josa(item.name, '을', '를')} 🪙 ${formatNumber(item.price)}에 살까요?`}
+                  question={`${item.name}${josa(item.name, '을', '를')} 🪙 ${price(item.price)}에 살까요?`}
                   confirmLabel="살게요"
                   onConfirm={() => onBuy(item)}
                 >
-                  🪙 {formatNumber(item.price)}
+                  🪙 {price(item.price)}
                 </ConfirmButton>
               )}
             </li>
@@ -263,7 +286,7 @@ export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, 
 
       <div className="well mt-4 p-3.5 text-xs text-ink-2">
         <p className="mb-1 font-bold text-ink">🪙 코인 모으는 법</p>
-        <p>한 판마다 10 + 점수 보너스(최대 40) · 이기면 +5 · 신기록 +20 · 오늘 첫 판 +10 · 미션 도장 +50</p>
+        <p>한 판마다 10 + 점수 보너스(최대 40) · 이기면 +5 · 신기록 +20 · 오늘 첫 판 +10 · 미션 도장 +50 · 레벨 업 +100 (Lv.5 · 10 · 20 · 30 · 40 · 50 · 70 · 100에는 더 많이)</p>
         {player.isGuest && <p className="mt-1">로그인하면 산 물건과 코인이 다른 기기에서도 그대로예요.</p>}
       </div>
     </Modal>

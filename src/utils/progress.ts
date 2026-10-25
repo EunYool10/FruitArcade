@@ -125,7 +125,16 @@ export function computeXp(stats: UserStatistics, achievements: number): number {
   );
 }
 
+/** Players stop at this level (XP keeps counting); admins show as ADMIN_LEVEL */
+export const LEVEL_MAX = 100;
+export const ADMIN_LEVEL = 999;
+
 const LEVEL_TITLES = [
+  { min: 100, emoji: '🌈', title: '무지개 전설' },
+  { min: 70, emoji: '💫', title: '은하 과일러' },
+  { min: 50, emoji: '🌟', title: '별빛 과일러' },
+  { min: 30, emoji: '🔥', title: '불꽃 과일러' },
+  { min: 20, emoji: '👑', title: '과일 왕' },
   { min: 15, emoji: '🍉', title: '수박 마스터' },
   { min: 12, emoji: '🍍', title: '파인애플' },
   { min: 9, emoji: '🍑', title: '복숭아' },
@@ -142,8 +151,10 @@ export interface LevelInfo {
   xp: number;
   /** XP at which the current level started */
   floor: number;
-  /** XP needed for the next level */
+  /** XP needed for the next level (the same as floor at the top) */
   next: number;
+  /** At the top: Lv.100 for players, Lv.999 for admins */
+  max: boolean;
 }
 
 /** Cumulative XP needed to reach a level: 0, 100, 300, 600, 1000, … */
@@ -153,9 +164,21 @@ export function levelInfo(xp: number): LevelInfo {
   let level = Math.max(1, Math.floor((1 + Math.sqrt(1 + 0.08 * xp)) / 2));
   while (xpForLevel(level + 1) <= xp) level++;
   while (level > 1 && xpForLevel(level) > xp) level--;
+  level = Math.min(LEVEL_MAX, level);
   const t = LEVEL_TITLES.find((x) => level >= x.min)!;
-  return { level, title: t.title, emoji: t.emoji, xp, floor: xpForLevel(level), next: xpForLevel(level + 1) };
+  const max = level >= LEVEL_MAX;
+  return { level, title: t.title, emoji: t.emoji, xp, floor: xpForLevel(level), next: max ? xpForLevel(level) : xpForLevel(level + 1), max };
 }
+
+/** Admins skip levels: always Lv.999 (the emoji stays the one their XP earned) */
+export const adminLevel = (info: LevelInfo): LevelInfo => ({ ...info, level: ADMIN_LEVEL, title: '운영진', max: true, floor: info.xp, next: info.xp });
+
+/**
+ * Coins for reaching a level: 100 each time, more at the milestones, where a level reward item
+ * (lv_* in the shop) unlocks as well
+ */
+export const LEVEL_MILESTONES = [5, 10, 20, 30, 40, 50, 70, 100];
+export const levelUpCoins = (level: number) => 100 + (LEVEL_MILESTONES.includes(level) ? level * 100 : 0);
 
 // ───────── History ─────────
 

@@ -63,6 +63,7 @@ const cases = [
   upd('admin changes a card level', 'DENY', ADMIN, `players/${U}`, card(U), card(U, { level: 99, at: T })),
   upd('gifted player wears the prism frame', 'ALLOW', PLAYER, `players/${U}`, card(U), card(U, { frame: 'owner_frame_prism', at: T })),
   upd('player without the gift wears it', 'DENY', OTHER, `players/${V}`, card(V), card(V, { frame: 'owner_frame_prism', at: T })),
+  upd('an admin card shows Lv.999', 'ALLOW', OWNER, `players/${OWNER_UID}`, card(OWNER_UID), card(OWNER_UID, { level: 999, at: T })),
   upd('an admin wears it', 'ALLOW', OWNER, `players/${OWNER_UID}`, card(OWNER_UID), card(OWNER_UID, { frame: 'owner_frame_prism', at: T })),
 
   // ownerGifts

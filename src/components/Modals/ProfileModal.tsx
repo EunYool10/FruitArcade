@@ -246,10 +246,10 @@ export const ProfileModal: React.FC<Props> = ({
           <div className="mb-1 flex justify-between text-[11px] font-bold text-ink-3">
             <span>경험치</span>
             <span className="tabular-nums">
-              {level.xp - level.floor} / {level.next - level.floor} XP
+              {level.max ? 'MAX' : `${level.xp - level.floor} / ${level.next - level.floor} XP`}
             </span>
           </div>
-          <Meter value={level.xp - level.floor} max={level.next - level.floor} label="경험치" className="h-3" />
+          <Meter value={level.max ? 1 : level.xp - level.floor} max={level.max ? 1 : level.next - level.floor} label="경험치" className="h-3" />
         </div>
         {user && <p className="mt-2 text-[11px] text-ink-3">🏆 랭킹 · 친구에게는 닉네임 · 아바타 · 칭호 · 테두리가 보여요. 기본 아바타는 Google 사진이에요.</p>}
       </section>

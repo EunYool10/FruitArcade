@@ -323,11 +323,14 @@ export async function setPrismGift(u: UserRow, give: boolean): Promise<void> {
 
 // ───────── the admin list (config/admins) ─────────
 
-/** Who is on the admin list; the first is the owner (firestore.rules lets only them take anyone off) */
-export async function listAdmins(): Promise<string[]> {
+const strings = (v: unknown) => (Array.isArray(v) ? v.filter((e): e is string => typeof e === 'string') : []);
+
+/** Who is on the admin list, and which of them are owners (firestore.rules lets only owners take anyone off) */
+export async function listAdmins(): Promise<{ emails: string[]; owners: string[] }> {
   const snap = await getDoc(doc(db, 'config', 'admins'));
-  const emails = snap.exists() ? snap.data().emails : [];
-  return Array.isArray(emails) ? emails.filter((e): e is string => typeof e === 'string') : [];
+  const emails = strings(snap.data()?.emails);
+  const owners = snap.data()?.owners === undefined ? emails.slice(0, 1) : strings(snap.data()?.owners);
+  return { emails, owners };
 }
 
 export const addAdmin = (email: string) => updateDoc(doc(db, 'config', 'admins'), { emails: arrayUnion(email.trim().toLowerCase()) });

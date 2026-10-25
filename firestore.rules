@@ -495,7 +495,7 @@ service cloud.firestore {
         && (!('frame' in data) || !data.frame.matches('^staff_.*') || isAdmin())
         && isOwnerFrameOk(uid, data)
         && isOptionalVerified(data)
-        && data.level is int && data.level >= 1 && data.level <= 200
+        && data.level is int && data.level >= 1 && (data.level <= 100 || (data.level == 999 && isAdmin()))
         && data.achievements is int && data.achievements >= 0 && data.achievements <= 60
         && data.best is map
         && data.best.keys().hasOnly(['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano'])
@@ -639,20 +639,26 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Admin list: admins can see that they are admins; nobody edits it from the app
-    // Admins also add admins (설정 → 운영진). Only the first one, the owner, may take anyone off,
-    // and the owner always stays first, so the list can't be locked out
+    // The owners: `owners` on config/admins (set from the console), or the first email before that
+    function ownersOf(d) {
+      return d.get('owners', [d.emails[0]]);
+    }
+
+    // Admin list: admins can see that they are admins, and add admins (설정 → 운영진). Only an
+    // owner may take anyone off; owners always stay and only the console changes who they are,
+    // so the list can't be locked out
     match /config/admins {
       allow get: if isGoogleUser()
         && request.auth.token.email_verified == true
         && request.auth.token.email in resource.data.emails;
       allow update: if isAdmin()
-        && request.resource.data.keys().hasOnly(['emails'])
+        && request.resource.data.keys().hasOnly(['emails', 'owners'])
+        && request.resource.data.get('owners', null) == resource.data.get('owners', null)
         && request.resource.data.emails is list
         && request.resource.data.emails.size() >= 1
         && request.resource.data.emails.size() <= 30
-        && request.resource.data.emails[0] == resource.data.emails[0]
-        && (request.resource.data.emails.hasAll(resource.data.emails) || request.auth.token.email == resource.data.emails[0]);
+        && request.resource.data.emails.hasAll(ownersOf(resource.data))
+        && (request.resource.data.emails.hasAll(resource.data.emails) || request.auth.token.email in ownersOf(resource.data));
     }
 
     // Players flag leaderboard entries; admins review them

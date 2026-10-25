@@ -62,8 +62,9 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   onOpenAchievements,
   onOpenRecords,
 }) => {
-  const into = level.xp - level.floor;
-  const span = level.next - level.floor;
+  // At the top (Lv.100, or Lv.999 for admins) the bar stays full
+  const into = level.max ? 1 : level.xp - level.floor;
+  const span = level.max ? 1 : level.next - level.floor;
   return (
     <section className="panel flex flex-col gap-4 p-5 sm:p-6" aria-label="내 정보">
       {/* Who: avatar, name with the blue check, level and title; editing sits in the corner */}
@@ -117,12 +118,10 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       <div>
         <div className="mb-1.5 flex justify-between text-xs font-bold text-ink-2">
           <span>경험치</span>
-          <span className="tabular-nums">
-            {into} / {span} XP
-          </span>
+          <span className="tabular-nums">{level.max ? `MAX · ${level.xp.toLocaleString('ko-KR')} XP` : `${into} / ${span} XP`}</span>
         </div>
         <Meter value={into} max={span} label="경험치" />
-        <p className="mt-1.5 text-xs text-ink-3">다음 레벨까지 {level.next - level.xp} XP</p>
+        <p className="mt-1.5 text-xs text-ink-3">{level.max ? '최고 레벨이에요 🎉' : `다음 레벨까지 ${level.next - level.xp} XP`}</p>
       </div>
 
       <div className="grid grid-cols-4 gap-2">

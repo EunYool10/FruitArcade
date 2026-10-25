@@ -174,6 +174,12 @@ export const ResultCard: React.FC<ResultCardProps> = ({
           {reward.coins > 0 && <span className="chip bg-mango text-on-bright">🪙 +{reward.coins}</span>}
           {reward.streak && <span className="chip bg-berry-soft">🔥 {reward.streak}일 연속!</span>}
           {reward.levelUp && <span className="chip bg-grape-deep text-white">🎉 레벨 업! Lv.{reward.levelUp}</span>}
+          {reward.levelReward && reward.levelReward.coins > 0 && <span className="chip bg-mango-soft">🎁 레벨 보상 🪙 +{reward.levelReward.coins}</span>}
+          {reward.levelReward?.items.map((name) => (
+            <span key={name} className="chip bg-grape-soft">
+              🎖️ {name} 획득
+            </span>
+          ))}
           {reward.missions.map((m) => (
             <span key={m} className="chip bg-melon-soft">
               ✅ {m}

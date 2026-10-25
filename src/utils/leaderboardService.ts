@@ -162,15 +162,16 @@ export async function myEntry(game: GameType, period: RankPeriod, uid: string): 
 // ───────── admin (firestore.rules only lets accounts on config/admins do these) ─────────
 
 /**
- * 'owner' when the signed-in Google account is first on the admin list, 'admin' when it is on it,
+ * 'owner' when the signed-in Google account is one of the owners on the admin list, 'admin' when it is on it,
  * null otherwise (only admins can read the list)
  */
 export async function adminRole(email: string | null): Promise<'owner' | 'admin' | null> {
   try {
     const snap = await getDoc(doc(db, 'config', 'admins'));
     if (!snap.exists()) return null;
-    const first = snap.data().emails?.[0];
-    return typeof first === 'string' && !!email && first.toLowerCase() === email.toLowerCase() ? 'owner' : 'admin';
+    const owners: unknown = snap.data().owners ?? [snap.data().emails?.[0]];
+    const me = email?.toLowerCase() ?? '';
+    return Array.isArray(owners) && owners.some((o) => typeof o === 'string' && o.toLowerCase() === me) ? 'owner' : 'admin';
   } catch {
     return null;
   }

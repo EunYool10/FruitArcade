@@ -21,6 +21,10 @@ export interface ShopItem {
   staff?: boolean;
   /** Only admins give it (never sold) */
   gift?: boolean;
+  /** RGB series: colours that keep running red → violet */
+  rgb?: boolean;
+  /** Level reward: anyone at this level has it (never sold) */
+  level?: number;
 }
 
 export const STAFF_PREFIX = 'staff_';
@@ -33,8 +37,15 @@ export const PRISM_FRAME = 'owner_frame_prism';
 const staff = (item: Omit<ShopItem, 'price' | 'staff'>): ShopItem => ({ ...item, price: 0, staff: true });
 const gift = (item: Omit<ShopItem, 'price' | 'gift'>): ShopItem => ({ ...item, price: 0, gift: true });
 
-/** Sold in the shop (not the 운영진 series, not the owner's gifts) */
-export const forSale = (item: ShopItem) => !item.staff && !item.gift;
+/** Sold in the shop (not the 운영진 series, not admins' gifts, not level rewards) */
+export const forSale = (item: ShopItem) => !item.staff && !item.gift && !item.level;
+
+/** 777억: every RGB item you can buy costs this */
+export const RGB_PRICE = 77_700_000_000;
+/** The RGB avatar: drawn with its colours running (see Emoji) */
+export const RGB_AVATAR = '🔮';
+const rgb = (item: Omit<ShopItem, 'price' | 'rgb'>): ShopItem => ({ ...item, price: RGB_PRICE, rgb: true });
+const reward = (level: number, item: Omit<ShopItem, 'price' | 'level'>): ShopItem => ({ ...item, price: 0, level });
 
 export const SHOP_ITEMS: ShopItem[] = [
   // Avatar frames
@@ -229,8 +240,22 @@ export const SHOP_ITEMS: ShopItem[] = [
   staff({ id: 'staff_frame_royal', kind: 'frame', name: '운영진 로열 테두리' }),
   staff({ id: 'staff_frame_flame', kind: 'frame', name: '운영진 불꽃 테두리' }),
 
-  // The owner's gifts
-  gift({ id: PRISM_FRAME, kind: 'frame', name: '프리즘 테두리' }),
+  // RGB series: the frame is an admins' gift, the rest is sold
+  { ...gift({ id: PRISM_FRAME, kind: 'frame', name: 'RGB 테두리' }), rgb: true },
+  rgb({ id: 'rgb_avatar', kind: 'avatar', name: 'RGB 수정구슬', icon: RGB_AVATAR }),
+  rgb({ id: 'rgb_title', kind: 'title', name: 'RGB', icon: '🌈' }),
+  rgb({ id: 'rgb_back', kind: 'cardBack', name: 'RGB 카드' }),
+
+  // Level rewards
+  reward(5, { id: 'lv_title_5', kind: 'title', name: '새싹 졸업', icon: '🌱' }),
+  reward(10, { id: 'lv_frame_10', kind: 'frame', name: '브론즈 테두리' }),
+  reward(20, { id: 'lv_avatar_20', kind: 'avatar', name: '메달', icon: '🏅' }),
+  reward(30, { id: 'lv_frame_30', kind: 'frame', name: '실버 테두리' }),
+  reward(40, { id: 'lv_title_40', kind: 'title', name: '열혈 과일러', icon: '🔥' }),
+  reward(50, { id: 'lv_frame_50', kind: 'frame', name: '챔피언 테두리' }),
+  reward(70, { id: 'lv_avatar_70', kind: 'avatar', name: '트로피', icon: '🏆' }),
+  reward(100, { id: 'lv_frame_100', kind: 'frame', name: '레전드 테두리' }),
+  reward(100, { id: 'lv_title_100', kind: 'title', name: '전설의 과일러', icon: '🎖️' }),
 ];
 
 export const shopItem = (id: string | null | undefined) => (id ? (SHOP_ITEMS.find((i) => i.id === id) ?? null) : null);
@@ -272,6 +297,10 @@ export const FRAME_CLASS: Record<string, string> = {
   staff_frame_flame: 'bg-[conic-gradient(#1e3a8a,#3b82f6,#ff9100,#ffea00,#3b82f6,#1e3a8a)]',
   // Animated in index.css
   owner_frame_prism: 'frame-prism',
+  lv_frame_10: 'bg-[linear-gradient(135deg,#f3c79a,#b8733a_50%,#6e3b17)]',
+  lv_frame_30: 'bg-[linear-gradient(135deg,#ffffff,#c0c7d0_45%,#6b7685)]',
+  lv_frame_50: 'bg-[conic-gradient(#ffd23f,#ff5a5f,#ffd23f,#ff9f1c,#ffd23f)]',
+  lv_frame_100: 'frame-legend',
 };
 
 /** Memory card backs: background pattern + the mark in the middle */
@@ -298,6 +327,7 @@ export const CARD_BACKS: Record<string, { className: string; mark: string }> = {
   back_diamond: { className: 'checker bg-[#9be7ff]', mark: '💎' },
   staff_back_gold: { className: 'stripes bg-[#b45309]', mark: '👑' },
   staff_back_galaxy: { className: 'dots bg-[#0b0b2b]', mark: '💫' },
+  rgb_back: { className: 'rgb-cycle', mark: '🌈' },
 };
 
 export const cardBackStyle = (id: string) => CARD_BACKS[id] ?? CARD_BACKS[''];
@@ -380,19 +410,20 @@ export function mergeInventory(a: Inventory, b: Inventory): Inventory {
   const out: Inventory = {};
   for (const src of [a, b])
     for (const [id, at] of Object.entries(src))
-      if (shopItem(id) && !isStaffId(id) && !isOwnerGiftId(id) && !(id in out)) out[id] = String(at).slice(0, 40);
+      if (shopItem(id) && !isStaffId(id) && !isOwnerGiftId(id) && !shopItem(id)?.level && !(id in out)) out[id] = String(at).slice(0, 40);
   return out;
 }
 
 /**
  * What the player can use: what they bought, plus the whole 운영진 series for admins, plus the
- * admins' gifts they were given (admins have those too)
+ * admins' gifts they were given and the level rewards they reached (admins have all of those)
  */
-export function usableItems(inv: Inventory, isAdmin: boolean, gifts: string[] = []): Inventory {
+export function usableItems(inv: Inventory, isAdmin: boolean, gifts: string[] = [], level = 1): Inventory {
   const out: Inventory = {};
-  for (const [id, at] of Object.entries(inv)) if (!isStaffId(id) && !isOwnerGiftId(id)) out[id] = at;
+  for (const [id, at] of Object.entries(inv)) if (!isStaffId(id) && !isOwnerGiftId(id) && !shopItem(id)?.level) out[id] = at;
   if (isAdmin) for (const item of SHOP_ITEMS) if (item.staff) out[item.id] = 'staff';
   for (const item of SHOP_ITEMS) if (item.gift && (isAdmin || gifts.includes(item.id))) out[item.id] = 'gift';
+  for (const item of SHOP_ITEMS) if (item.level && (isAdmin || level >= item.level)) out[item.id] = 'level';
   return out;
 }
 

@@ -8,11 +8,12 @@ const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 /**
  * 설정 → 운영진: who the admins are, and adding one by Google email (they become an admin the next
- * time they sign in with it). Only the owner (first on the list) can take someone off;
+ * time they sign in with it). Only an owner can take someone off, and owners stay;
  * firestore.rules enforces the same.
  */
 export const AdminRoster: React.FC<{ isOpen: boolean; myEmail: string }> = ({ isOpen, myEmail }) => {
   const [emails, setEmails] = useState<string[] | null>(null);
+  const [owners, setOwners] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
@@ -20,7 +21,10 @@ export const AdminRoster: React.FC<{ isOpen: boolean; myEmail: string }> = ({ is
   const load = () =>
     adminApi()
       .then((api) => api.listAdmins())
-      .then(setEmails)
+      .then((list) => {
+        setEmails(list.emails);
+        setOwners(list.owners.map((e) => e.toLowerCase()));
+      })
       .catch(() => setNotice({ text: '운영진 목록을 불러오지 못했어요.', ok: false }));
 
   useEffect(() => {
@@ -30,8 +34,7 @@ export const AdminRoster: React.FC<{ isOpen: boolean; myEmail: string }> = ({ is
   }, [isOpen]);
 
   const me = myEmail.toLowerCase();
-  const owner = emails?.[0] ?? '';
-  const isOwner = !!me && me === owner;
+  const isOwner = !!me && owners.includes(me);
 
   const run = async (fn: () => Promise<unknown>, done: string) => {
     setBusy(true);
@@ -60,7 +63,7 @@ export const AdminRoster: React.FC<{ isOpen: boolean; myEmail: string }> = ({ is
     <div className="space-y-2.5">
       <div>
         <p className="text-sm font-bold">👥 운영진 관리</p>
-        <p className="text-xs text-ink-3">Google 계정 이메일을 넣으면, 그 계정으로 로그인할 때 운영진이 돼요. 빼는 건 소유자만 할 수 있어요.</p>
+        <p className="text-xs text-ink-3">Google 계정 이메일을 넣으면, 그 계정으로 로그인할 때 운영진이 돼요. 빼는 건 소유자만 할 수 있고, 소유자는 빠지지 않아요.</p>
       </div>
       <form onSubmit={add} className="flex gap-2">
         <input
@@ -82,12 +85,12 @@ export const AdminRoster: React.FC<{ isOpen: boolean; myEmail: string }> = ({ is
         </p>
       ) : (
         <ul className="space-y-1.5" aria-label={`운영진 ${emails.length}명`}>
-          {emails.map((email, i) => (
+          {emails.map((email) => (
             <li key={email} className="flex items-center gap-2 rounded-xl border-2 border-line bg-surface px-3 py-1.5 text-sm">
               <span className="min-w-0 flex-1 truncate font-bold">{email}</span>
-              {i === 0 && <span className="chip h-5 shrink-0 bg-mango px-1.5 text-[10px] text-on-bright">소유자</span>}
+              {owners.includes(email.toLowerCase()) && <span className="chip h-5 shrink-0 bg-mango px-1.5 text-[10px] text-on-bright">소유자</span>}
               {email === me && <span className="shrink-0 text-[11px] text-ink-3">(나)</span>}
-              {isOwner && i > 0 && (
+              {isOwner && !owners.includes(email.toLowerCase()) && (
                 <ConfirmButton
                   className="btn btn-sm btn-icon h-7 w-7 shrink-0"
                   question={`${email}을(를) 운영진에서 뺄까요?`}

@@ -71,7 +71,9 @@ import {
   clearLocalProgress,
   coinBalance,
   computeXp,
+  adminLevel,
   levelInfo,
+  levelUpCoins,
   loadHistory,
   loadLocalStats,
   mergeStats,
@@ -235,7 +237,9 @@ export default function App() {
   const gamePaused = isPaused || modal !== null || tutorialGame !== null;
 
   const achievementCount = countUnlocked();
-  const level = levelInfo(computeXp(stats, achievementCount));
+  const xpLevel = levelInfo(computeXp(stats, achievementCount));
+  // Admins skip levels (Lv.999); QA mode shows the real one
+  const level = isAdmin && !settings.qaMode ? adminLevel(xpLevel) : xpLevel;
   const streakNow = currentStreak(streak);
   // Titles: one per unlocked achievement, plus 주간 챔피언 for anyone who topped a weekly board
   const unlocked = getUnlockedAchievements();
@@ -245,8 +249,10 @@ export default function App() {
   // admin rights stay as they are.
   const qaMode = isAdmin && settings.qaMode;
   const asAdmin = isAdmin && !settings.qaMode;
+  const asAdminRef = useRef(asAdmin);
+  asAdminRef.current = asAdmin;
   // Items in use: bought ones, plus the whole 운영진 series for admins (who also have unlimited coins)
-  const owned = usableItems(inventory, asAdmin, ownerGifts);
+  const owned = usableItems(inventory, asAdmin, ownerGifts, xpLevel.level);
   const coins = asAdmin ? Infinity : coinBalance(stats);
   const titles = earnedTitles(unlocked, wasChampion, owned);
   const title = wornTitle(profile.title, unlocked, wasChampion, owned);
@@ -987,7 +993,13 @@ export default function App() {
       setStreak(nextStreak);
 
       const newBest = !result.stage && result.score > 0 && result.score > prevBest;
-      const coins = coinsFor(result, { newBest, stamp: stampEarned, firstToday: extended });
+      // Level-up coins come with the round's (players only: admins have unlimited coins)
+      const levelBefore = levelInfo(computeXp(prev, achievements)).level;
+      const levelAfter = levelInfo(computeXp(applyResult(prev, result, stampEarned, nextStreak.count, 0), achievements)).level;
+      let levelCoins = 0;
+      if (!asAdminRef.current) for (let l = levelBefore + 1; l <= levelAfter; l++) levelCoins += levelUpCoins(l);
+      const unlockedItems = SHOP_ITEMS.filter((i) => i.level && i.level > levelBefore && i.level <= levelAfter).map((i) => i.name);
+      const coins = coinsFor(result, { newBest, stamp: stampEarned, firstToday: extended }) + levelCoins;
       const next = applyResult(prev, result, stampEarned, nextStreak.count, coins);
       commitStats(next);
 
@@ -1079,6 +1091,7 @@ export default function App() {
         stamp: stampEarned,
         challenge,
         coins,
+        levelReward: levelCoins > 0 || unlockedItems.length ? { coins: levelCoins, items: unlockedItems } : null,
       };
     },
     [commitStats, handleUnlockAchieve, cloudWrite]

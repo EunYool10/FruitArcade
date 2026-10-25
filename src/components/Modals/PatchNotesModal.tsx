@@ -9,6 +9,13 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.22.0',
+    title: '수박 게임 새 업적 4개',
+    items: [
+      ['🏆 새 업적', '🍉 쌍둥이 수박(한 판에 수박 2개) · 🧺 수박 농장(3개) · 💎 수박 재벌(100,000점) · 🎨 새 옷 입은 과일(스킨을 끼고 가장 큰 과일 만들기)이 생겼어요. 업적을 깨면 칭호로도 달 수 있어요.'],
+    ],
+  },
+  {
     version: '3.21.5',
     title: '새 버전 자동 적용 · 의견 보내기',
     items: [

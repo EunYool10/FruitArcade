@@ -579,6 +579,9 @@ export const SuikaGame: React.FC<Props> = ({
           watermelonsRef.current += 1;
           setWatermelons(watermelonsRef.current);
           onUnlockRef.current('suika_watermelon');
+          if (watermelonsRef.current >= 2) onUnlockRef.current('suika_twin_melons');
+          if (watermelonsRef.current >= 3) onUnlockRef.current('suika_melon_farm');
+          if (settingsRef.current.suikaSkin) onUnlockRef.current('suika_skin');
           playSound('victory', settingsRef.current);
           vibrate(HAPTIC.over, settingsRef.current);
           shakeRef.current = Math.max(shakeRef.current, 10);

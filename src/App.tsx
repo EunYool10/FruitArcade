@@ -990,6 +990,7 @@ export default function App() {
       unlockIf(nextStreak.count >= 7, 'streak_7');
       unlockIf(nextStreak.count >= 30, 'streak_30');
       unlockIf(result.game === 'suika' && result.score >= 10000, 'suika_10000');
+      unlockIf(result.game === 'suika' && result.score >= 100000, 'suika_100000');
 
       return {
         xpGained: after.xp - before.xp,

@@ -389,6 +389,52 @@ service cloud.firestore {
         && data.at == request.time;
     }
 
+    // ───────── coins ─────────
+
+    // The score server's signature on a checked round's coins (same as grantSig in server/api.mjs)
+    function grantSig(uid, grantId, coins) {
+      let key = scoreKey();
+      return hashing.sha256(key.secret + '|grant|' + uid + '|' + grantId + '|' + string(coins) + '|' + key.secret).toHexString();
+    }
+
+    function statNum(data, key) {
+      return data.get('statistics', {}).get(key, 0);
+    }
+
+    // A grant stored in this same write allows its coins plus up to 85 of round bonuses
+    // (new best 20, stamp 50, first today 10, a win 5; GRANT_BONUS in src/utils/shop.ts)
+    function grantRoom(grantId) {
+      let path = /databases/$(database)/documents/coinGrants/$(grantId);
+      return !exists(path) && existsAfter(path) ? getAfter(path).data.coins + 85 : 0;
+    }
+
+    // A gift to me claimed in this same write allows its coins
+    function claimRoom(giftId) {
+      let path = /databases/$(database)/documents/gifts/$(giftId);
+      return exists(path) && get(path).data.claimed == false && getAfter(path).data.claimed == true
+        && getAfter(path).data.to == request.auth.uid ? getAfter(path).data.amount : 0;
+    }
+
+    function coinRoom(st) {
+      let grantId = st.get('coinGrant', '');
+      let giftId = st.get('giftClaim', '');
+      return (grantId is string && grantId.size() > 0 ? grantRoom(grantId) : 0)
+        + (giftId is string && giftId.size() > 0 ? claimRoom(giftId) : 0);
+    }
+
+    // Coins earned only grow by a checked round's grant or a gift claimed in the same write, or once
+    // by up to 1000 that a new account brings from its device; coins spent never go down. A full
+    // reset (both back to 0) is fine, and admins have unlimited coins anyway.
+    function isCoinChangeOk() {
+      let e0 = statNum(resource.data, 'coinsEarned');
+      let e1 = statNum(request.resource.data, 'coinsEarned');
+      let s0 = statNum(resource.data, 'coinsSpent');
+      let s1 = statNum(request.resource.data, 'coinsSpent');
+      return (e1 == 0 && s1 == 0)
+        || isAdmin()
+        || (s1 >= s0 && (e1 <= e0 || (e0 == 0 && e1 <= 1000) || e1 - e0 <= coinRoom(request.resource.data.get('statistics', {}))));
+    }
+
     // ───────── friends ─────────
 
     function isBest(best, game, cap) {
@@ -550,10 +596,19 @@ service cloud.firestore {
     }
 
     // Admin list: admins can see that they are admins; nobody edits it from the app
+    // Admins also add admins (설정 → 운영진). Only the first one, the owner, may take anyone off,
+    // and the owner always stays first, so the list can't be locked out
     match /config/admins {
       allow get: if isGoogleUser()
         && request.auth.token.email_verified == true
         && request.auth.token.email in resource.data.emails;
+      allow update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['emails'])
+        && request.resource.data.emails is list
+        && request.resource.data.emails.size() >= 1
+        && request.resource.data.emails.size() <= 30
+        && request.resource.data.emails[0] == resource.data.emails[0]
+        && (request.resource.data.emails.hasAll(resource.data.emails) || request.auth.token.email == resource.data.emails[0]);
     }
 
     // Players flag leaderboard entries; admins review them
@@ -666,6 +721,21 @@ service cloud.firestore {
         && request.resource.data.at == request.time
         && request.time > resource.data.at + duration.value(20, 's');
       allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    // A checked round's coins (the score server signed them), stored once by the player, so one
+    // grant can't be counted twice
+    match /coinGrants/{grantId} {
+      allow get: if isGoogleUser() && (resource == null || resource.data.uid == request.auth.uid);
+      allow create: if isGoogleUser()
+        && grantId.matches('^[0-9a-f-]{36}$')
+        && request.resource.data.keys().hasOnly(['uid', 'coins', 'sig', 'at'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.coins is int
+        && request.resource.data.coins >= 0
+        && request.resource.data.coins <= 50
+        && request.resource.data.sig == grantSig(request.auth.uid, grantId, request.resource.data.coins)
+        && request.resource.data.at == request.time;
     }
 
     // One doc per player per day: rounds played and time, counted for the admin stats

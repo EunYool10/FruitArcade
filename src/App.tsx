@@ -1340,6 +1340,7 @@ export default function App() {
         settings={settings}
         loggedIn={!!user}
         isAdmin={isAdmin}
+        myEmail={user?.email ?? ''}
         onUpdateSettings={updateSettings}
         onResetAchievements={resetAllAchievements}
         onResetRecords={resetAllRecords}

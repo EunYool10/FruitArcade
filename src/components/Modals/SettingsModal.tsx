@@ -6,6 +6,7 @@ import { Modal } from '../ui/Modal';
 import { SettingRow, Toggle } from '../ui/Toggle';
 import { Segmented } from '../ui/Segmented';
 import { ConfirmButton } from '../ui/ConfirmButton';
+import { AdminRoster } from './AdminRoster';
 import { promptInstall, usePwa } from '../../utils/pwa';
 import { HAPTICS_SUPPORTED } from '../../utils/haptics';
 import { notificationsBlocked, reminderSupport } from '../../utils/reminderState';
@@ -65,6 +66,8 @@ interface Props {
   loggedIn: boolean;
   /** On the admin list: shows the QA mode switch */
   isAdmin?: boolean;
+  /** Signed-in Google email (the admin list marks who is me) */
+  myEmail?: string;
   onUpdateSettings: (next: GameSettings) => void;
   onResetAchievements: () => void;
   onResetRecords: () => void;
@@ -102,6 +105,7 @@ export const SettingsModal: React.FC<Props> = ({
   settings,
   loggedIn,
   isAdmin = false,
+  myEmail = '',
   onUpdateSettings,
   onResetAchievements,
   onResetRecords,
@@ -157,6 +161,7 @@ export const SettingsModal: React.FC<Props> = ({
                 : '일반 사용자처럼 테스트해요. 코인 · 수박 아이템 무한, 운영진 물건, 관리자 버튼이 꺼져요'
             )}
             <p className="text-xs text-ink-3">닉네임과 서버의 관리자 권한은 그대로예요. 켜 둔 동안 산 물건은 진짜 코인으로 사요.</p>
+            <AdminRoster isOpen={isOpen} myEmail={myEmail} />
           </Section>
         )}
 

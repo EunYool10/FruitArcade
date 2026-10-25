@@ -38,6 +38,16 @@ const RATE: Record<Exclude<Game, 'puzzle'>, { perSecond: number; burst: number }
 /** The round ticket can arrive late while a sleeping server wakes up */
 export const TICKET_SLACK_SECONDS = 90;
 
+/** Points per coin, as in coinsFor (src/utils/shop.ts) */
+const COIN_PER_SCORE: Record<Game, number> = { memory: 10, suika: 150, dash: 15, puzzle: 60, slice: 25 };
+
+/**
+ * Coins a checked round earns before its bonuses (new best, stamp, first today, a win): the same
+ * base as coinsFor. The server signs it as a grant; the rules let a round add at most this plus
+ * the bonuses (GRANT_BONUS in src/utils/shop.ts, 85 in firestore.rules).
+ */
+export const roundCoins = (game: Game, score: number) => 10 + Math.min(40, Math.floor(Math.max(0, score) / COIN_PER_SCORE[game]));
+
 /** The classic puzzle score for these swaps on this seed's board, or null if a swap is impossible */
 export function replayPuzzle(seed: string, moves: [number, number][]): number | null {
   if (moves.length > CLASSIC_MOVES) return null;

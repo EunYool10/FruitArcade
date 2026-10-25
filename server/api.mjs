@@ -2,11 +2,12 @@
 //
 //   GET  /api/health  → { ok, scores, key }   (key: short fingerprint of SCORE_SECRET, never the secret)
 //   POST /api/round   { game }                                   → { ticket }   (marks when a round began)
-//   POST /api/score   { game, score, seconds, ticket, replay? }  → { proof, day }
+//   POST /api/score   { game, score, seconds, ticket, replay? }  → { proof, day, grant }
 //
 // Both POSTs need "Authorization: Bearer <Firebase ID token>" of a Google sign-in. The proof is
 // SHA-256 of "<secret>|<uid>|<game>|<score>|<KST day>|<secret>" in upper-case hex, the same
 // value firestore.rules computes from config/scoreKey, so only checked rounds reach the boards.
+// grant = { id, coins, sig } signs the round's coins the same way ("<secret>|grant|<uid>|<id>|<coins>|<secret>").
 import crypto from 'node:crypto';
 
 const PROJECT = process.env.FIREBASE_PROJECT || 'ambient-post-1kpr3';
@@ -113,6 +114,9 @@ function readTicket(ticket, uid, game) {
 const dayIndex = (ms = Date.now()) => Math.floor((ms + KST) / DAY_MS);
 const proofFor = (uid, game, score, day) =>
   crypto.createHash('sha256').update(`${SECRET}|${uid}|${game}|${score}|${day}|${SECRET}`).digest('hex').toUpperCase();
+/** Same as grantSig() in firestore.rules */
+const grantSig = (uid, id, coins) =>
+  crypto.createHash('sha256').update(`${SECRET}|grant|${uid}|${id}|${coins}|${SECRET}`).digest('hex').toUpperCase();
 
 /** Sliding-window limiter: true when `key` made more than `max` calls in `windowMs` */
 const hits = new Map();
@@ -223,6 +227,10 @@ export async function handleApi(req, res, pathname) {
   }
   usedTickets.set(ticket.n, ticket.t + TICKET_TTL);
   const day = dayIndex();
-  console.log(`[score] ${short(uid)} ${game} ${body.score} in ${body.seconds}s: ok`);
-  return send(200, { proof: proofFor(uid, game, body.score, day), day });
+  // The round's coins, signed once per ticket: the rules let the player's coins grow by this grant
+  // (plus the round bonuses) in the write that stores coinGrants/<ticket nonce>
+  const coins = verify.roundCoins(game, body.score);
+  const grant = { id: ticket.n, coins, sig: grantSig(uid, ticket.n, coins) };
+  console.log(`[score] ${short(uid)} ${game} ${body.score} in ${body.seconds}s: ok (+${coins} coins)`);
+  return send(200, { proof: proofFor(uid, game, body.score, day), day, grant });
 }

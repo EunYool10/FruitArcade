@@ -1,11 +1,14 @@
 import {
   DocumentData,
+  arrayRemove,
+  arrayUnion,
   collection,
   count,
   deleteDoc,
   doc,
   getAggregateFromServer,
   getCountFromServer,
+  getDoc,
   getDocs,
   limit,
   orderBy,
@@ -247,3 +250,16 @@ export async function clearBoardsOf(uid: string): Promise<void> {
   for (const g of GAME_ORDER) for (const p of RANK_PERIODS) batch.delete(doc(db, 'leaderboards', boardId(g, p, now), 'scores', uid));
   await batch.commit();
 }
+
+// ───────── the admin list (config/admins) ─────────
+
+/** Who is on the admin list; the first is the owner (firestore.rules lets only them take anyone off) */
+export async function listAdmins(): Promise<string[]> {
+  const snap = await getDoc(doc(db, 'config', 'admins'));
+  const emails = snap.exists() ? snap.data().emails : [];
+  return Array.isArray(emails) ? emails.filter((e): e is string => typeof e === 'string') : [];
+}
+
+export const addAdmin = (email: string) => updateDoc(doc(db, 'config', 'admins'), { emails: arrayUnion(email.trim().toLowerCase()) });
+
+export const removeAdmin = (email: string) => updateDoc(doc(db, 'config', 'admins'), { emails: arrayRemove(email) });

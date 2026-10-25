@@ -27,6 +27,8 @@ const IDEAS = [
 const TESTERS = [
   { emoji: '🍑', name: '윤아' },
   { emoji: '🍋', name: '지우' },
+  { emoji: '🍇', name: '수빈' },
+  { emoji: '🍓', name: '하윤' },
 ];
 
 const NUMBERS: [string, string][] = [

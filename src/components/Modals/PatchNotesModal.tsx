@@ -9,6 +9,14 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.24.0',
+    title: '운영진 등록 · 새 테스터',
+    items: [
+      ['🛡️ 운영진 관리', '운영진은 설정 → 운영진에서 다른 Google 계정을 운영진으로 등록할 수 있어요. 운영진에서 빼는 건 소유자만 할 수 있어요.'],
+      ['🧪 테스터', '수빈님 · 하윤님이 테스트 · QA로 함께해요. 크레딧에서 볼 수 있어요.'],
+    ],
+  },
+  {
     version: '3.23.2',
     title: '보안 업데이트',
     items: [['🔒 보안', '로그인 · 저장에 쓰는 부품을 최신 버전으로 올리고, 알려진 보안 문제를 모두 정리했어요.']],

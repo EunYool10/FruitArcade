@@ -231,7 +231,7 @@ export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, 
             >
               <Preview kind={item.kind} id={item.id} player={player} />
               <p className="text-sm font-bold">{item.name}</p>
-              {item.gift && <span className="chip h-5 bg-mango px-1.5 text-[10px] text-on-bright">👑 소유자 선물</span>}
+              {item.gift && <span className="chip h-5 bg-[#1e3a8a] px-1.5 text-[10px] text-white">🛡️ 운영진 선물</span>}
               {isOn ? (
                 <InUse />
               ) : has ? (

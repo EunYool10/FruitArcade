@@ -265,7 +265,7 @@ export interface LookChange {
   avatar?: string;
   /** Take the worn title off */
   clearTitle?: boolean;
-  /** '' takes the frame off; an owner_ frame needs the owner's gift first */
+  /** '' takes the frame off; an owner_ frame needs an admin's gift first */
   frame?: string;
 }
 
@@ -303,14 +303,14 @@ export async function changeLook(u: UserRow, c: LookChange): Promise<void> {
   await Promise.all(snaps.flatMap((snap, i) => (snap.exists() ? [updateDoc(refs[i], look)] : [])));
 }
 
-/** The owner's gifts a player has */
+/** The admins' gifts a player has */
 export async function ownerGiftsOf(uid: string): Promise<string[]> {
   const snap = await getDoc(doc(db, 'ownerGifts', uid));
   const items = snap.exists() ? snap.data().items : [];
   return Array.isArray(items) ? items.filter((id): id is string => typeof id === 'string') : [];
 }
 
-/** Owner only: give the 프리즘 테두리 and put it on, or take it back (and off, when worn) */
+/** Give the 프리즘 테두리 and put it on, or take it back (and off, when worn) */
 export async function setPrismGift(u: UserRow, give: boolean): Promise<void> {
   if (give) {
     await setDoc(doc(db, 'ownerGifts', u.uid), { items: [PRISM_FRAME], at: serverTimestamp() });

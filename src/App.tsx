@@ -177,9 +177,7 @@ export default function App() {
   const [, setUserTick] = useState(0);
   /** On the admin list (config/admins); the server rules check this again for every admin action */
   const [isAdmin, setIsAdmin] = useState(false);
-  /** First on the admin list: gives the owner's gifts (프리즘 테두리) */
-  const [isGameOwner, setIsGameOwner] = useState(false);
-  /** owner_ items the game owner gave this player */
+  /** owner_ items an admin gave this player (프리즘 테두리) */
   const [ownerGifts, setOwnerGifts] = useState<string[]>(loadOwnerGifts);
   const userRef = useRef<User | null>(null);
   userRef.current = user;
@@ -248,7 +246,7 @@ export default function App() {
   const qaMode = isAdmin && settings.qaMode;
   const asAdmin = isAdmin && !settings.qaMode;
   // Items in use: bought ones, plus the whole 운영진 series for admins (who also have unlimited coins)
-  const owned = usableItems(inventory, asAdmin, ownerGifts, isGameOwner && asAdmin);
+  const owned = usableItems(inventory, asAdmin, ownerGifts);
   const coins = asAdmin ? Infinity : coinBalance(stats);
   const titles = earnedTitles(unlocked, wasChampion, owned);
   const title = wornTitle(profile.title, unlocked, wasChampion, owned);
@@ -636,13 +634,13 @@ export default function App() {
 
   // ───────── auth & cloud sync ─────────
 
-  /** The owner's gifts as ownerGifts/{uid} lists them now; a new one gets a toast */
+  /** Admins' gifts as ownerGifts/{uid} lists them now; a new one gets a toast */
   const takeGifts = useCallback(
     (ids: string[]) => {
       const next = ids.filter(isOwnerGiftId);
       const before = loadOwnerGifts();
       if (next.some((id) => !before.includes(id)))
-        pushToast({ icon: '🌈', title: '프리즘 테두리를 받았어요', sub: '게임 소유자의 선물이에요 · 상점 테두리에 있어요', tone: 'grape' });
+        pushToast({ icon: '🌈', title: '프리즘 테두리를 받았어요', sub: '운영진의 선물이에요 · 상점 테두리에 있어요', tone: 'grape' });
       setOwnerGifts(next);
       saveOwnerGifts(next);
     },
@@ -799,7 +797,6 @@ export default function App() {
       unsubscribe = authApi.onAuthStateChanged(authApi.auth, (u) => {
         setUser(u);
         setIsAdmin(false);
-        setIsGameOwner(false);
         if (!u) return;
         // A newer Google photo from a sign-in on another device: fetch the account again
         u.reload()
@@ -815,7 +812,6 @@ export default function App() {
           .then((role) => {
             if (authApi.auth.currentUser?.uid !== u.uid) return;
             setIsAdmin(role !== null);
-            setIsGameOwner(role === 'owner');
           })
           .catch(() => {});
         checkChampion(u);
@@ -1499,7 +1495,7 @@ export default function App() {
         onTakeAll={takeAllItems}
         onEquip={equipItem}
       />
-      <AdminModal isOpen={modal === 'admin' && asAdmin} onClose={() => setModal(null)} adminUid={user?.uid ?? null} isGameOwner={isGameOwner} />
+      <AdminModal isOpen={modal === 'admin' && asAdmin} onClose={() => setModal(null)} adminUid={user?.uid ?? null} />
       <FeedbackModal
         isOpen={modal === 'feedback'}
         onClose={() => setModal(null)}

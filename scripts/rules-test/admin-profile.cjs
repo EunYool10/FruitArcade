@@ -1,5 +1,5 @@
 // Rules :test for admins changing a player's look (users profile, board entries, player cards) and
-// for owner_ frames, which only the game owner gives (ownerGifts). Mocked; nothing is deployed.
+// for owner_ frames, which only admins give (ownerGifts). Mocked; nothing is deployed.
 const { firebaseToolsLib } = require('./_tools.cjs');
 const FT = firebaseToolsLib();
 const fs = require('fs');
@@ -63,13 +63,13 @@ const cases = [
   upd('admin changes a card level', 'DENY', ADMIN, `players/${U}`, card(U), card(U, { level: 99, at: T })),
   upd('gifted player wears the prism frame', 'ALLOW', PLAYER, `players/${U}`, card(U), card(U, { frame: 'owner_frame_prism', at: T })),
   upd('player without the gift wears it', 'DENY', OTHER, `players/${V}`, card(V), card(V, { frame: 'owner_frame_prism', at: T })),
-  upd('the owner wears it', 'ALLOW', OWNER, `players/${OWNER_UID}`, card(OWNER_UID), card(OWNER_UID, { frame: 'owner_frame_prism', at: T })),
+  upd('an admin wears it', 'ALLOW', OWNER, `players/${OWNER_UID}`, card(OWNER_UID), card(OWNER_UID, { frame: 'owner_frame_prism', at: T })),
 
   // ownerGifts
   make('owner gives the prism frame', 'ALLOW', OWNER, `ownerGifts/${V}`, { items: ['owner_frame_prism'], at: T }),
-  make('admin gives the prism frame', 'DENY', ADMIN, `ownerGifts/${V}`, { items: ['owner_frame_prism'], at: T }),
+  make('another admin gives the prism frame', 'ALLOW', ADMIN, `ownerGifts/${V}`, { items: ['owner_frame_prism'], at: T }),
   make('player gives it to themselves', 'DENY', OTHER, `ownerGifts/${V}`, { items: ['owner_frame_prism'], at: T }),
-  make('owner gives an unknown item', 'DENY', OWNER, `ownerGifts/${V}`, { items: ['owner_frame_prism', 'frame_holo'], at: T }),
+  make('admin gives an unknown item', 'DENY', ADMIN, `ownerGifts/${V}`, { items: ['owner_frame_prism', 'frame_holo'], at: T }),
   read('player reads their gifts', 'ALLOW', PLAYER, `ownerGifts/${U}`, { items: ['owner_frame_prism'], at: T }),
   read('player reads someone else\'s gifts', 'DENY', OTHER, `ownerGifts/${U}`, { items: ['owner_frame_prism'], at: T }),
 ];

@@ -97,10 +97,11 @@ rules_version = '2';
 // Document ID: uid
 // Fields: at (== request.time; at most every 20 s). Players who hide it delete the doc.
 //
-// Collection: ownerGifts  (items only the game owner gives, e.g. the 프리즘 테두리)
+// Collection: ownerGifts  (items only admins give, e.g. the 프리즘 테두리; the name is from when
+//                          only the owner could)
 // Doc ID: the player's uid
-// Fields: items (list of owner_ ids), at (server time). The owner (first on config/admins) writes;
-//         the player and admins read. Boards and cards only show an owner_ frame listed here.
+// Fields: items (list of owner_ ids), at (server time). Admins write; the player and admins read.
+//         Boards and cards only show an owner_ frame on an admin or a player listed here.
 //
 // Collection: activity/{dayId}/players  (daily play counts for the admin stats)
 // Day ID: d<dayIndex> (KST), only today or yesterday can be written
@@ -141,18 +142,11 @@ service cloud.firestore {
         && request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails;
     }
 
-    // The game owner: first email on config/admins (only they give owner_ items)
-    function isGameOwner() {
-      return isGoogleUser()
-        && request.auth.token.email_verified == true
-        && request.auth.token.email == get(/databases/$(database)/documents/config/admins).data.emails[0];
-    }
-
-    // An owner_ frame shows only on the owner, or on a player the owner gave it to
+    // An owner_ frame (an admin's gift) shows only on an admin, or on a player an admin gave it to
     function isOwnerFrameOk(uid, data) {
       return !('frame' in data)
         || !data.frame.matches('^owner_.*')
-        || (isGameOwner() && uid == request.auth.uid)
+        || (isAdmin() && uid == request.auth.uid)
         || data.frame in get(/databases/$(database)/documents/ownerGifts/$(uid)).data.items;
     }
 
@@ -533,14 +527,14 @@ service cloud.firestore {
       return (exists(p1) && get(p1).data.status == 'accepted') || (exists(p2) && get(p2).data.status == 'accepted');
     }
 
-    // "<me>_<today>_<n>": at most 5 gifts a day (admins 20)
+    // "<me>_<today>_<n>": at most 5 gifts a day (admins as many as they like)
     function isGiftSlot(giftId, data) {
       let parts = giftId.split('_');
       return parts.size() == 3
         && parts[0] == request.auth.uid
         && parts[1] == string(dayIndex())
         && data.day == dayIndex()
-        && (parts[2].matches('^[1-5]$') || (isAdmin() && parts[2].matches('^([6-9]|1[0-9]|20)$')));
+        && (parts[2].matches('^[1-5]$') || (isAdmin() && parts[2].matches('^[1-9][0-9]{0,4}$')));
     }
 
     function statsBefore(uid) {
@@ -793,14 +787,14 @@ service cloud.firestore {
     // Items only the game owner gives (관리자 → 유저 → 프리즘 테두리)
     match /ownerGifts/{uid} {
       allow get: if isOwner(uid) || isAdmin();
-      allow create, update: if isGameOwner()
+      allow create, update: if isAdmin()
         && isValidId(uid)
         && request.resource.data.keys().hasOnly(['items', 'at'])
         && request.resource.data.items is list
         && request.resource.data.items.size() <= 10
         && request.resource.data.items.hasOnly(['owner_frame_prism'])
         && request.resource.data.at == request.time;
-      allow delete: if isGameOwner();
+      allow delete: if isAdmin();
     }
 
     // One doc per player per day: rounds played and time, counted for the admin stats

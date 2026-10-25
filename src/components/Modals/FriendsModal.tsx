@@ -38,7 +38,183 @@ interface Props {
 type Tab = 'friends' | 'requests' | 'gifts';
 
 const PLAYER_AMOUNTS = [10, 50, 100, 300];
-const ADMIN_AMOUNTS = [1_000, 1_000_000, 100_000_000, COIN_MAX];
+const ADMIN_AMOUNTS = [1_000, 10_000, 1_000_000, 100_000_000, COIN_MAX];
+
+/** Sending coins to one friend: quick amounts or a typed one, and what's left afterwards */
+export const GiftForm: React.FC<{
+  name: string;
+  isAdmin: boolean;
+  /** Infinity for admins */
+  balance: number;
+  sentToday: number;
+  busy: boolean;
+  amount: string;
+  onAmount: (digits: string) => void;
+  onSend: () => void;
+}> = ({ name, isAdmin, balance, sentToday, busy, amount, onAmount, onSend }) => {
+  const limits = isAdmin ? GIFT_LIMITS.admin : GIFT_LIMITS.player;
+  const n = Number(amount) || 0;
+  const left = balance - n;
+  const problem =
+    sentToday >= limits.perDay
+      ? '오늘 보낼 수 있는 선물을 다 보냈어요. 내일 다시 보낼 수 있어요.'
+      : n > limits.max
+        ? `한 번에 ${formatNumber(limits.max)}코인까지 보낼 수 있어요.`
+        : left < 0
+          ? '코인이 모자라요.'
+          : '';
+  return (
+    <div className="mt-2.5 space-y-2.5 rounded-2xl border-2 border-line bg-surface p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-bold">🪙 {name}님에게 보내기</p>
+        {isAdmin ? (
+          <span className="chip h-6 bg-[#1e3a8a] px-2 text-[11px] text-white">🛡️ 운영진 · 횟수 · 금액 제한 없음</span>
+        ) : (
+          <span className="chip h-6 bg-surface-2 px-2 text-[11px]">
+            오늘 {sentToday}/{limits.perDay}번 · 한 번에 {limits.max}코인까지
+          </span>
+        )}
+      </div>
+      <div className={`grid gap-1.5 ${isAdmin ? 'grid-cols-3 sm:grid-cols-5' : 'grid-cols-4'}`}>
+        {(isAdmin ? ADMIN_AMOUNTS : PLAYER_AMOUNTS).map((a) => (
+          <button
+            key={a}
+            type="button"
+            aria-pressed={amount === String(a)}
+            onClick={() => onAmount(String(a))}
+            className={`h-10 rounded-xl border-2 border-line text-sm font-bold tabular-nums transition-all ${
+              amount === String(a) ? '-translate-y-0.5 bg-mango text-on-bright shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
+            }`}
+          >
+            {a === COIN_MAX ? '최대' : formatCompact(a)}
+          </button>
+        ))}
+      </div>
+      <label className="relative block">
+        <span className="sr-only">보낼 코인</span>
+        <input
+          value={amount ? formatNumber(n) : ''}
+          onChange={(e) => onAmount(e.target.value.replace(/[^0-9]/g, '').replace(/^0+/, '').slice(0, String(COIN_MAX).length))}
+          inputMode="numeric"
+          placeholder="직접 입력"
+          className="h-11 w-full select-text rounded-xl border-2 border-line bg-surface-2 pl-3 pr-12 text-right font-display text-lg tabular-nums outline-none focus:border-mango"
+        />
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-ink-3">코인</span>
+      </label>
+      <dl className="grid grid-cols-2 gap-1.5">
+        <div className="rounded-xl bg-surface-2 px-2.5 py-1.5">
+          <dt className="text-[10px] font-bold text-ink-3">지금 내 코인</dt>
+          <dd className="font-display text-sm tabular-nums">{Number.isFinite(balance) ? formatCompact(balance) : '∞'}</dd>
+        </div>
+        <div className={`rounded-xl px-2.5 py-1.5 ${left < 0 ? 'bg-berry-soft' : 'bg-surface-2'}`}>
+          <dt className="text-[10px] font-bold text-ink-3">보낸 뒤</dt>
+          <dd className="font-display text-sm tabular-nums">
+            {!Number.isFinite(left) ? '∞' : left < 0 ? `${formatCompact(-left)} 모자라요` : formatCompact(left)}
+          </dd>
+        </div>
+      </dl>
+      {problem && <p className="text-xs font-bold text-berry-ink">{problem}</p>}
+      <ConfirmButton
+        className="btn btn-mango w-full"
+        question={`${name}님에게 코인 ${formatNumber(n)}개를 보낼까요?`}
+        confirmLabel="보내기"
+        onConfirm={onSend}
+        disabled={!n || !!problem || busy}
+      >
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" strokeWidth={2.5} />} {n ? `🪙 ${formatCompact(n)} 보내기` : '보내기'}
+      </ConfirmButton>
+    </div>
+  );
+};
+
+type GiftFilter = 'all' | 'in' | 'out';
+
+/** Gifts sent and received (claimed), newest first, as a table with totals */
+export const GiftTable: React.FC<{ received: GiftDoc[]; sent: GiftDoc[]; nameOf: (id: string) => string }> = ({ received, sent, nameOf }) => {
+  const [filter, setFilter] = useState<GiftFilter>('all');
+  const got = received.filter((g) => g.claimed);
+  const rows = [...got.map((g) => ({ g, dir: 'in' as const })), ...sent.map((g) => ({ g, dir: 'out' as const }))]
+    .filter((r) => filter === 'all' || r.dir === filter)
+    .sort((a, b) => b.g.at - a.g.at);
+  const sum = (list: GiftDoc[]) => list.reduce((n, g) => n + g.amount, 0);
+  const FILTERS: [GiftFilter, string][] = [
+    ['all', '전체'],
+    ['in', '📥 받은'],
+    ['out', '📤 보낸'],
+  ];
+  return (
+    <section className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-display text-base">주고받은 기록</h3>
+        <div role="group" aria-label="보기" className="flex gap-1">
+          {FILTERS.map(([v, label]) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={filter === v}
+              onClick={() => setFilter(v)}
+              className={`chip h-7 px-2.5 text-xs ${filter === v ? 'bg-grape text-white' : 'bg-surface-2 hover:bg-surface-3'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-2xl border-2 border-line bg-melon-soft px-3 py-2">
+          <p className="text-[11px] font-bold text-ink-3">📥 받은 코인 · {got.length}번</p>
+          <p className="font-display text-lg tabular-nums">🪙 {formatCompact(sum(got))}</p>
+        </div>
+        <div className="rounded-2xl border-2 border-line bg-mango-soft px-3 py-2">
+          <p className="text-[11px] font-bold text-ink-3">📤 보낸 코인 · {sent.length}번</p>
+          <p className="font-display text-lg tabular-nums">🪙 {formatCompact(sum(sent))}</p>
+        </div>
+      </div>
+      {rows.length === 0 ? (
+        <p className="rounded-2xl bg-surface-2 p-3 text-center text-sm text-ink-3">아직 없어요.</p>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border-2 border-line">
+          <table className="w-full table-fixed text-sm">
+            <thead className="bg-surface-3 text-left text-[11px] text-ink-3">
+              <tr>
+                <th scope="col" className="w-16 px-2.5 py-1.5 font-bold">
+                  구분
+                </th>
+                <th scope="col" className="px-2 py-1.5 font-bold">
+                  친구
+                </th>
+                <th scope="col" className="w-24 px-2 py-1.5 text-right font-bold">
+                  코인
+                </th>
+                <th scope="col" className="w-[4.5rem] px-2.5 py-1.5 text-right font-bold">
+                  언제
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ g, dir }, i) => (
+                <tr key={g.id} className={i % 2 ? 'bg-surface-2' : 'bg-surface'}>
+                  <td className="px-2.5 py-2">
+                    <span className={`chip h-6 px-1.5 text-[11px] ${dir === 'in' ? 'bg-melon-soft' : 'bg-mango-soft'}`}>{dir === 'in' ? '받음' : '보냄'}</span>
+                  </td>
+                  <td className="px-2 py-2">
+                    <span className="block truncate font-bold">{nameOf(dir === 'in' ? g.from : g.to)}</span>
+                    {dir === 'out' && !g.claimed && <span className="block text-[10px] text-ink-3">아직 안 받았어요</span>}
+                  </td>
+                  <td className={`px-2 py-2 text-right font-display tabular-nums ${dir === 'in' ? 'text-melon-ink' : 'text-mango-ink'}`}>
+                    {dir === 'in' ? '+' : '−'}
+                    {formatCompact(g.amount)}
+                  </td>
+                  <td className="px-2.5 py-2 text-right text-[11px] text-ink-3">{g.at ? relativeTime(g.at) : ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+};
 
 /** `seen`: friends only, when they were last here (left out for requests) */
 const PlayerBadge: React.FC<{ p: PublicPlayer | null; fallback?: string; seen?: number | null }> = ({ p, fallback = '알 수 없는 플레이어', seen }) => {
@@ -318,8 +494,9 @@ export const FriendsModal: React.FC<Props> = ({
           ) : (
             <>
               <p className="text-xs text-ink-3">
-                🪙 오늘 보낸 선물 {sentToday}/{limits.perDay}번 · 한 번에 {isAdmin ? `최대 ${formatCompact(limits.max)}` : `1~${limits.max}`}코인
-                {Number.isFinite(balance) && ` · 내 코인 ${formatCompact(balance)}`}
+                {isAdmin
+                  ? '🛡️ 운영진은 횟수 · 금액 제한 없이 코인을 선물할 수 있어요'
+                  : `🪙 오늘 보낸 선물 ${sentToday}/${limits.perDay}번 · 한 번에 1~${limits.max}코인 · 내 코인 ${formatCompact(balance)}`}
               </p>
               <ul className="space-y-2">
                 {friends.map((l) => (
@@ -356,40 +533,16 @@ export const FriendsModal: React.FC<Props> = ({
                       </ConfirmButton>
                     </div>
                     {sendTo === l.otherUid && (
-                      <div className="mt-2.5 space-y-2 border-t-2 border-dashed border-line pt-2.5">
-                        <div className="flex flex-wrap gap-1.5">
-                          {(isAdmin ? ADMIN_AMOUNTS : PLAYER_AMOUNTS).map((a) => (
-                            <button
-                              key={a}
-                              type="button"
-                              className={`chip h-8 px-2.5 text-xs ${amount === String(a) ? 'bg-mango text-on-bright shadow-hard-sm' : 'bg-surface hover:bg-surface-3'}`}
-                              onClick={() => setAmount(String(a))}
-                            >
-                              🪙 {a === COIN_MAX ? '최대' : formatCompact(a)}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="space-y-2">
-                          <input
-                            value={amount ? formatNumber(Number(amount.replace(/[^0-9]/g, '')) || 0) : ''}
-                            onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, '').slice(0, String(limits.max).length))}
-                            inputMode="numeric"
-                            placeholder={`보낼 코인 (최대 ${formatCompact(limits.max)})`}
-                            aria-label="보낼 코인"
-                            className="w-full rounded-2xl border-2 border-line bg-surface px-3 py-2 text-sm tabular-nums outline-none focus:border-mango"
-                          />
-                          <ConfirmButton
-                            className="btn btn-sm btn-mango w-full"
-                            question={`${l.other?.name ?? '친구'}님에게 코인 ${formatNumber(Number(amount) || 0)}개를 보낼까요?`}
-                            confirmLabel="보내기"
-                            onConfirm={() => send(l.otherUid)}
-                            disabled={!amount || busy === 'send' || sentToday >= limits.perDay}
-                          >
-                            {busy === 'send' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" strokeWidth={2.5} />} 보내기
-                          </ConfirmButton>
-                        </div>
-                        {sentToday >= limits.perDay && <p className="text-xs font-bold text-berry-ink">오늘 보낼 수 있는 선물을 다 보냈어요. 내일 다시 보낼 수 있어요.</p>}
-                      </div>
+                      <GiftForm
+                        name={l.other?.name ?? '친구'}
+                        isAdmin={isAdmin}
+                        balance={balance}
+                        sentToday={sentToday}
+                        busy={busy === 'send'}
+                        amount={amount}
+                        onAmount={setAmount}
+                        onSend={() => send(l.otherUid)}
+                      />
                     )}
                   </li>
                 ))}
@@ -505,28 +658,7 @@ export const FriendsModal: React.FC<Props> = ({
               </ul>
             )}
           </section>
-          <section>
-            <h3 className="mb-2 font-display text-base">최근 주고받은 선물</h3>
-            {[...gifts.received.filter((g) => g.claimed), ...gifts.sent].length === 0 ? (
-              <p className="rounded-2xl bg-surface-2 p-3 text-center text-sm text-ink-3">아직 없어요.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {[...gifts.received.filter((g) => g.claimed), ...gifts.sent]
-                  .sort((a, b) => b.at - a.at)
-                  .slice(0, 20)
-                  .map((g) => (
-                    <li key={g.id} className="flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2 text-sm">
-                      <span aria-hidden="true">{g.from === uid ? '📤' : '📥'}</span>
-                      <span className="min-w-0 flex-1 truncate">
-                        {g.from === uid ? `${nameOf(g.to)}님에게` : `${nameOf(g.from)}님에게서`}
-                      </span>
-                      <span className="shrink-0 font-bold tabular-nums">🪙 {formatCompact(g.amount)}</span>
-                      <span className="shrink-0 text-[11px] text-ink-3">{g.at ? relativeTime(g.at) : ''}</span>
-                    </li>
-                  ))}
-              </ul>
-            )}
-          </section>
+          <GiftTable received={gifts.received} sent={gifts.sent} nameOf={nameOf} />
         </div>
       )}
     </Modal>

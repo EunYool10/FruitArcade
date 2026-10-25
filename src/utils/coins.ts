@@ -6,10 +6,13 @@
  */
 export const COIN_MAX = 99_999_999_999;
 
-/** Gifts a day and coins per gift. Same numbers as isGiftSlot / isValidGift in firestore.rules. */
+/**
+ * Gifts a day and coins per gift. Same numbers as isGiftSlot / isValidGift in firestore.rules:
+ * admins send as often as they like, up to the coin cap each time.
+ */
 export const GIFT_LIMITS = {
   player: { perDay: 5, max: 300 },
-  admin: { perDay: 20, max: COIN_MAX },
+  admin: { perDay: Infinity, max: COIN_MAX },
 };
 
 /** A checked round's coins, signed by the score server (stored as coinGrants/{id}) */

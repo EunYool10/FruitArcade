@@ -12,8 +12,6 @@ const adminApi = () => import('../../utils/adminService');
 
 interface Props {
   u: UserRow;
-  /** First on the admin list: may give and take back the 프리즘 테두리 */
-  isGameOwner: boolean;
   busy: boolean;
   onSave: (c: LookChange) => void;
   onPrism: (give: boolean) => void;
@@ -22,7 +20,7 @@ interface Props {
 const pick = (on: boolean) => `chip h-8 shrink-0 px-3 ${on ? 'bg-grape text-white' : 'bg-surface-2 hover:bg-surface-3'}`;
 
 /** 관리자 → 유저 → 프로필 바꾸기: a player's nickname, avatar, title and frame */
-export const AdminLookEditor: React.FC<Props> = ({ u, isGameOwner, busy, onSave, onPrism }) => {
+export const AdminLookEditor: React.FC<Props> = ({ u, busy, onSave, onPrism }) => {
   const [name, setName] = useState(u.rawName);
   const [avatar, setAvatar] = useState('');
   const [clearTitle, setClearTitle] = useState(false);
@@ -118,30 +116,28 @@ export const AdminLookEditor: React.FC<Props> = ({ u, isGameOwner, busy, onSave,
       </button>
       <p className="text-[11px] text-ink-3">계정 · 프로필 카드 · 오늘 · 이번 주 · 전체 랭킹이 바뀌어요. 그 사람 기기에는 다음에 앱을 열 때 적용돼요.</p>
 
-      {isGameOwner && (
-        <div className="flex items-center gap-3 rounded-2xl border-2 border-line bg-surface p-2.5">
-          <Framed frame={PRISM_FRAME}>
-            <span className="grid h-10 w-10 place-items-center rounded-full border-2 border-line bg-mango-soft text-xl" aria-hidden="true">
-              <Emoji e={u.avatar} />
-            </span>
-          </Framed>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold">👑 소유자 선물 · 프리즘 테두리</p>
-            <p className="text-[11px] text-ink-3">
-              {hasPrism === null ? '확인하는 중…' : hasPrism ? '이미 받았어요. 회수하면 끼고 있던 테두리도 내려가요.' : '소유자만 줄 수 있어요. 주면 바로 끼워져요.'}
-            </p>
-          </div>
-          {hasPrism === null ? null : hasPrism ? (
-            <ConfirmButton className="btn btn-sm shrink-0" question={`${u.name}님의 프리즘 테두리를 회수할까요?`} confirmLabel="회수" onConfirm={() => onPrism(false)}>
-              회수
-            </ConfirmButton>
-          ) : (
-            <button type="button" className="btn btn-sm btn-mango shrink-0" disabled={busy} onClick={() => onPrism(true)}>
-              🌈 주기
-            </button>
-          )}
+      <div className="flex items-center gap-3 rounded-2xl border-2 border-line bg-surface p-2.5">
+        <Framed frame={PRISM_FRAME}>
+          <span className="grid h-10 w-10 place-items-center rounded-full border-2 border-line bg-mango-soft text-xl" aria-hidden="true">
+            <Emoji e={u.avatar} />
+          </span>
+        </Framed>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold">🛡️ 운영진 선물 · 프리즘 테두리</p>
+          <p className="text-[11px] text-ink-3">
+            {hasPrism === null ? '확인하는 중…' : hasPrism ? '이미 받았어요. 회수하면 끼고 있던 테두리도 내려가요.' : '운영진만 줄 수 있어요. 주면 바로 끼워져요.'}
+          </p>
         </div>
-      )}
+        {hasPrism === null ? null : hasPrism ? (
+          <ConfirmButton className="btn btn-sm shrink-0" question={`${u.name}님의 프리즘 테두리를 회수할까요?`} confirmLabel="회수" onConfirm={() => onPrism(false)}>
+            회수
+          </ConfirmButton>
+        ) : (
+          <button type="button" className="btn btn-sm btn-mango shrink-0" disabled={busy} onClick={() => onPrism(true)}>
+            🌈 주기
+          </button>
+        )}
+      </div>
     </div>
   );
 };

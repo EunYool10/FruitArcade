@@ -5,8 +5,8 @@ import { GameResult } from '../types';
 // Ids starting with "staff_" are the 운영진 series: every admin has all of them (and unlimited
 // coins), nobody else can get them, and firestore.rules keep staff titles and frames off
 // everyone else's leaderboard entries.
-// Ids starting with "owner_" are gifts only the game owner (first on config/admins) gives, from
-// 관리자 → 유저. They aren't sold; the list of who has one lives in ownerGifts/{uid}.
+// Ids starting with "owner_" are gifts only admins give, from 관리자 → 유저 (admins have them too).
+// They aren't sold; the list of who has one lives in ownerGifts/{uid}.
 
 export type ItemKind = 'frame' | 'avatar' | 'title' | 'cardBack' | 'blade' | 'runner' | 'suikaSkin';
 
@@ -19,7 +19,7 @@ export interface ShopItem {
   icon?: string;
   /** 운영진 전용 */
   staff?: boolean;
-  /** Only the game owner gives it (never sold) */
+  /** Only admins give it (never sold) */
   gift?: boolean;
 }
 
@@ -27,7 +27,7 @@ export const STAFF_PREFIX = 'staff_';
 export const isStaffId = (id: string | null | undefined) => !!id && id.startsWith(STAFF_PREFIX);
 export const OWNER_PREFIX = 'owner_';
 export const isOwnerGiftId = (id: string | null | undefined) => !!id && id.startsWith(OWNER_PREFIX);
-/** The owner's gift frame: a ring that runs from red to violet and back */
+/** The admins' gift frame: a ring that runs from red to violet and back */
 export const PRISM_FRAME = 'owner_frame_prism';
 
 const staff = (item: Omit<ShopItem, 'price' | 'staff'>): ShopItem => ({ ...item, price: 0, staff: true });
@@ -386,17 +386,17 @@ export function mergeInventory(a: Inventory, b: Inventory): Inventory {
 
 /**
  * What the player can use: what they bought, plus the whole 운영진 series for admins, plus the
- * owner's gifts they were given (the owner has those too)
+ * admins' gifts they were given (admins have those too)
  */
-export function usableItems(inv: Inventory, isAdmin: boolean, gifts: string[] = [], isGameOwner = false): Inventory {
+export function usableItems(inv: Inventory, isAdmin: boolean, gifts: string[] = []): Inventory {
   const out: Inventory = {};
   for (const [id, at] of Object.entries(inv)) if (!isStaffId(id) && !isOwnerGiftId(id)) out[id] = at;
   if (isAdmin) for (const item of SHOP_ITEMS) if (item.staff) out[item.id] = 'staff';
-  for (const item of SHOP_ITEMS) if (item.gift && (isGameOwner || gifts.includes(item.id))) out[item.id] = 'gift';
+  for (const item of SHOP_ITEMS) if (item.gift && (isAdmin || gifts.includes(item.id))) out[item.id] = 'gift';
   return out;
 }
 
-// ───────── the owner's gifts (copied from ownerGifts/{uid} at sign-in) ─────────
+// ───────── admins' gifts (copied from ownerGifts/{uid} at sign-in) ─────────
 
 const GIFTS_KEY = 'fruit_arcade_owner_gifts';
 

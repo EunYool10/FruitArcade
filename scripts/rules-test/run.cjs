@@ -3,7 +3,7 @@
 const { execFileSync } = require('child_process');
 const path = require('path');
 
-const suites = ['score-proofs.cjs', 'player-cards.cjs', 'presence-and-admin.cjs', 'blue-check.cjs', 'coins.cjs', 'admin-list.cjs', 'admin-profile.cjs'];
+const suites = ['score-proofs.cjs', 'player-cards.cjs', 'presence-and-admin.cjs', 'blue-check.cjs', 'coins.cjs', 'admin-list.cjs', 'admin-profile.cjs', 'gifts.cjs'];
 let failed = false;
 for (const suite of suites) {
   console.log(`\n▶ ${suite}`);

@@ -115,7 +115,7 @@ export async function loadCloudLook(uid: string): Promise<{ custom: PlayerProfil
   return { custom: customOf(p), modAt: typeof p?.modAt === 'string' ? p.modAt : '' };
 }
 
-/** Items the game owner gave this player (ownerGifts/{uid}); [] when none */
+/** Items an admin gave this player (ownerGifts/{uid}); [] when none */
 export async function loadOwnerGifts(uid: string): Promise<string[]> {
   const snap = await getDoc(doc(db, 'ownerGifts', uid));
   const items = snap.exists() ? snap.data().items : [];

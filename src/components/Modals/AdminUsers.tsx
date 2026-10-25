@@ -43,14 +43,12 @@ interface Props {
   onUnban: (u: UserRow) => void;
   onClearBoards: (u: UserRow) => void;
   onCopy: (text: string, what: string) => void;
-  /** First on the admin list (gives the 프리즘 테두리) */
-  isGameOwner: boolean;
   onChangeLook: (u: UserRow, c: LookChange) => void;
   onPrism: (u: UserRow, give: boolean) => void;
 }
 
 /** Every player with a public card: find them, see how they play, ban or clean up their records */
-export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onBan, onUnban, onClearBoards, onCopy, isGameOwner, onChangeLook, onPrism }) => {
+export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onBan, onUnban, onClearBoards, onCopy, onChangeLook, onPrism }) => {
   const [filter, setFilter] = useState<Filter>('all');
   /** Whose look editor is open */
   const [editing, setEditing] = useState<string | null>(null);
@@ -254,7 +252,6 @@ export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onB
                       <AdminLookEditor
                         key={u.uid + u.cardAt}
                         u={u}
-                        isGameOwner={isGameOwner}
                         busy={busy === u.uid}
                         onSave={(c) => onChangeLook(u, c)}
                         onPrism={(give) => onPrism(u, give)}

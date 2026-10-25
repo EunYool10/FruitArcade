@@ -9,6 +9,11 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.23.2',
+    title: '보안 업데이트',
+    items: [['🔒 보안', '로그인 · 저장에 쓰는 부품을 최신 버전으로 올리고, 알려진 보안 문제를 모두 정리했어요.']],
+  },
+  {
     version: '3.23.1',
     title: '더 빠른 첫 화면',
     items: [['⚡ 빨라진 시작', '앱을 켤 때 받는 양을 20% 줄였어요. 상점 · 랭킹 · 친구 같은 창은 처음 열 때만 불러와서 휴대폰에서 첫 화면이 더 빨리 떠요.']],

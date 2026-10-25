@@ -50,6 +50,12 @@ const POOLS: Record<GameType | 'any', Mission[]> = {
     { id: 'slice-score-800', game: 'slice', kind: 'score', target: 800, icon: '🔥', text: '과일 자르기 800점 이상' },
     { id: 'slice-survive-60', game: 'slice', kind: 'survive', target: 60, icon: '⏱️', text: '과일 자르기 60초 버티기' },
   ],
+  piano: [
+    { id: 'piano-play-2', game: 'piano', kind: 'play', target: 2, icon: '🎹', text: '과일 피아노 2판 하기' },
+    { id: 'piano-score-60', game: 'piano', kind: 'score', target: 60, icon: '🎵', text: '과일 피아노 60점 이상' },
+    { id: 'piano-score-150', game: 'piano', kind: 'score', target: 150, icon: '🎶', text: '과일 피아노 150점 이상' },
+    { id: 'piano-win-1', game: 'piano', kind: 'win', target: 1, icon: '🎼', text: '과일 피아노 한 곡 완주하기' },
+  ],
   any: [
     { id: 'any-play-5', kind: 'play', target: 5, icon: '🎮', text: '아무 게임이나 5판 하기' },
     { id: 'any-time-300', kind: 'time', target: 300, icon: '⌛', text: '오늘 5분 이상 플레이' },
@@ -64,8 +70,13 @@ export function todayKey(d = new Date()): string {
 export function missionsFor(date: string): Mission[] {
   const rand = seededRandom(date);
   const pick = <T,>(list: T[]) => list[Math.floor(rand() * list.length)];
-  // 과일 자르기 joins the draw from the day after its release, so nobody's missions change mid-day
-  const games: GameType[] = date >= '2026-10-14' ? ['memory', 'suika', 'dash', 'puzzle', 'slice'] : ['memory', 'suika', 'dash', 'puzzle'];
+  // New games join the draw from the day after their release, so nobody's missions change mid-day
+  const games: GameType[] =
+    date >= '2026-10-26'
+      ? ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano']
+      : date >= '2026-10-14'
+        ? ['memory', 'suika', 'dash', 'puzzle', 'slice']
+        : ['memory', 'suika', 'dash', 'puzzle'];
   for (let i = games.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     [games[i], games[j]] = [games[j], games[i]];

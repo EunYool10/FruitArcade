@@ -10,9 +10,8 @@ const T = '2026-10-20T12:00:00Z';
 const DAY = Math.floor((Date.parse(T) + 9 * 3600e3) / 86400e3);
 const SECRET = 'x'.repeat(40);
 const U = 'aaaaaaaaaaaaaaaaaaaa';
-const board = `suika_d${DAY}`;
-const path = `/databases/${DB}/documents/leaderboards/${board}/scores/${U}`;
-const proof = (score, day = DAY) => crypto.createHash('sha256').update(`${SECRET}|${U}|suika|${score}|${day}|${SECRET}`).digest('hex').toUpperCase();
+const pathOf = (game) => `/databases/${DB}/documents/leaderboards/${game}_d${DAY}/scores/${U}`;
+const proof = (score, day = DAY, game = 'suika') => crypto.createHash('sha256').update(`${SECRET}|${U}|${game}|${score}|${day}|${SECRET}`).digest('hex').toUpperCase();
 const me = { uid: U, token: { email: 'p@x', email_verified: true, firebase: { sign_in_provider: 'google.com' } } };
 const entry = (score, extra = {}) => ({ uid: U, name: '플레이어', avatar: '🍓', score, at: T, ...extra });
 const mocks = (enforce) => [
@@ -28,14 +27,16 @@ const cases = [
   ['enforce on: higher score without proof', 'DENY', true, 'update', entry(6000), { data: entry(5000, { at: '2026-10-20T11:00:00Z' }) }],
   ['enforce on: same score, new look', 'ALLOW', true, 'update', entry(5000, { name: '새이름' }), { data: entry(5000, { at: '2026-10-20T11:00:00Z' }) }],
   ['enforce off (today): no proof', 'ALLOW', false, 'create', entry(5000), null],
+  ['piano board: valid proof', 'ALLOW', true, 'create', entry(120, { proof: proof(120, DAY, 'piano') }), null, 'piano'],
+  ['piano board: over the cap', 'DENY', true, 'create', entry(100001, { proof: proof(100001, DAY, 'piano') }), null, 'piano'],
 ];
 
 (async () => {
   const a = auth.getGlobalDefaultAccount();
   const t = (await auth.getAccessToken(a.tokens.refresh_token, [])).access_token;
-  const testCases = cases.map(([, expectation, enforce, method, data, resource]) => ({
+  const testCases = cases.map(([, expectation, enforce, method, data, resource, game = 'suika']) => ({
     expectation,
-    request: { auth: me, path, method, time: T, resource: { data } },
+    request: { auth: me, path: pathOf(game), method, time: T, resource: { data } },
     ...(resource ? { resource } : {}),
     functionMocks: mocks(enforce),
   }));

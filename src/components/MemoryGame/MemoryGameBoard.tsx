@@ -35,6 +35,7 @@ const STATUS_CLASS: Record<Tone, string> = {
   mango: 'bg-mango-soft text-mango-ink',
   grape: 'bg-grape-soft text-grape-ink',
   soda: 'bg-soda-soft text-soda-ink',
+  peach: 'bg-peach-soft text-peach-ink',
 };
 
 export const MODE_LABEL: Record<MemoryMode, string> = {

@@ -28,6 +28,9 @@ const cases = [
   ['level 250', 'DENY', card({ level: 250 })],
   ['60 achievements', 'ALLOW', card({ achievements: 60 })],
   ['70 achievements', 'DENY', card({ achievements: 70 })],
+  ['piano best under the board score', 'ALLOW', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, piano: 300 } })],
+  ['piano best above the board score', 'DENY', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, piano: 7000 } })],
+  ['unknown game', 'DENY', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, drums: 1 } })],
 ];
 
 (async () => {

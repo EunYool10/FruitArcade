@@ -359,7 +359,7 @@ export const ProfileModal: React.FC<Props> = ({
           </dl>
           <section>
             <p className="mb-1.5 text-[11px] font-bold text-ink-3">게임별 최고 기록</p>
-            <div className="grid grid-cols-5 gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
               {GAME_ORDER.map((g) => (
                 <div key={g} className={`min-w-0 rounded-xl border-2 border-line px-1 py-2 text-center ${TONE[GAMES[g].tone].soft}`}>
                   <p className="text-lg" aria-hidden="true">

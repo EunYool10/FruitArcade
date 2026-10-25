@@ -47,6 +47,11 @@
   --soda-deep: #108ae0;
   --soda-soft: #dbf0ff;
   --soda-ink: #0a64a8;
+
+  --peach: #ff8a5b;
+  --peach-deep: #ef6a3a;
+  --peach-soft: #ffe7dc;
+  --peach-ink: #b3431a;
 }
 
 :root[data-theme="dark"] {
@@ -72,6 +77,8 @@
   --grape-ink: #bcabff;
   --soda-soft: rgb(46 169 255 / 0.18);
   --soda-ink: #8fd0ff;
+  --peach-soft: rgb(255 138 91 / 0.2);
+  --peach-ink: #ffb495;
 }
 
 @theme {
@@ -157,6 +164,10 @@
   --color-soda-deep: var(--soda-deep);
   --color-soda-soft: var(--soda-soft);
   --color-soda-ink: var(--soda-ink);
+  --color-peach: var(--peach);
+  --color-peach-deep: var(--peach-deep);
+  --color-peach-soft: var(--peach-soft);
+  --color-peach-ink: var(--peach-ink);
 
   --shadow-hard-sm: 0 3px 0 0 var(--shadow);
   --shadow-hard: 0 4px 0 0 var(--shadow);
@@ -311,6 +322,10 @@
   }
   .btn-soda {
     --btn-bg: var(--soda);
+    --btn-fg: var(--on-bright);
+  }
+  .btn-peach {
+    --btn-bg: var(--peach);
     --btn-fg: var(--on-bright);
   }
   .btn-ghost {

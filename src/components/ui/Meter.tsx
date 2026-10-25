@@ -7,6 +7,7 @@ const FILL: Record<Tone, string> = {
   mango: 'bg-mango',
   grape: 'bg-grape',
   soda: 'bg-soda',
+  peach: 'bg-peach',
 };
 
 interface MeterProps {

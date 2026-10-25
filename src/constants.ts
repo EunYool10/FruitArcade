@@ -1,6 +1,6 @@
 import { GameSettings, GameType, ScreenType } from './types';
 
-export const APP_VERSION = '3.25.0';
+export const APP_VERSION = '3.26.0';
 
 export const DEFAULT_SETTINGS: GameSettings = {
   theme: 'light',
@@ -24,7 +24,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   qaMode: false,
 };
 
-export type Tone = 'berry' | 'melon' | 'mango' | 'grape' | 'soda';
+export type Tone = 'berry' | 'melon' | 'mango' | 'grape' | 'soda' | 'peach';
 
 // Full class names (not built at runtime) so Tailwind can see them
 export const TONE: Record<Tone, { bg: string; soft: string; ink: string; btn: string }> = {
@@ -33,6 +33,7 @@ export const TONE: Record<Tone, { bg: string; soft: string; ink: string; btn: st
   mango: { bg: 'bg-mango', soft: 'bg-mango-soft', ink: 'text-mango-ink', btn: 'btn-mango' },
   grape: { bg: 'bg-grape', soft: 'bg-grape-soft', ink: 'text-grape-ink', btn: 'btn-grape' },
   soda: { bg: 'bg-soda', soft: 'bg-soda-soft', ink: 'text-soda-ink', btn: 'btn-soda' },
+  peach: { bg: 'bg-peach', soft: 'bg-peach-soft', ink: 'text-peach-ink', btn: 'btn-peach' },
 };
 
 export interface GameMeta {
@@ -130,7 +131,7 @@ export const GAMES: Record<GameType, GameMeta> = {
     emoji: '🔪',
     tone: 'soda',
     screen: 'slice',
-    tag: 'NEW',
+    tag: 'SWIPE',
     desc: '날아오르는 과일을 그어서 싹둑! 폭탄은 조심하세요.',
     how: ['화면을 그어 과일을 잘라요', '한 번에 3개 이상 자르면 콤보!', '💣 폭탄을 자르거나 3번 놓치면 끝'],
     startHint: '마우스를 누른 채 긋거나 손가락으로 밀어요',
@@ -140,9 +141,26 @@ export const GAMES: Record<GameType, GameMeta> = {
       { emoji: '💣', title: '폭탄은 피하기', text: '폭탄을 자르면 바로 끝나요. 과일을 자르지 못하고 3개 떨어뜨려도 끝!' },
     ],
   },
+  piano: {
+    id: 'piano',
+    name: '과일 피아노',
+    short: '피아노',
+    emoji: '🎹',
+    tone: 'peach',
+    screen: 'piano',
+    tag: 'NEW',
+    desc: '내려오는 과일 타일을 눌러 노래를 연주해요. 하나라도 놓치면 끝!',
+    how: ['곡을 고르고 맨 아래 과일 타일부터 눌러요', '누를 때마다 노래가 한 음씩 연주돼요', '빈 칸을 누르거나 타일을 놓치면 끝!'],
+    startHint: '터치하거나 키보드 D F J K 로 눌러요',
+    tutorial: [
+      { emoji: '🎵', title: '곡 고르기', text: '반짝반짝 작은 별부터 엘리제를 위하여까지, 연주하고 싶은 곡을 골라요.' },
+      { emoji: '👆🍓', title: '아래부터 차례로', text: '내려오는 과일 타일을 맨 아래 것부터 눌러요. 누를 때마다 노래가 한 음씩 연주되고 1점씩 올라요. 키보드는 D F J K.' },
+      { emoji: '🔁', title: '완주하면 더 빠르게', text: '한 곡을 끝까지 치면 조금 더 빨라져서 처음부터 다시! 빈 칸을 누르거나 타일을 놓치면 끝나요.' },
+    ],
+  },
 };
 
-export const GAME_ORDER: GameType[] = ['memory', 'suika', 'dash', 'puzzle', 'slice'];
+export const GAME_ORDER: GameType[] = ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano'];
 
 export const SCREEN_GAME: Partial<Record<ScreenType, GameType>> = {
   'memory-setup': 'memory',
@@ -151,6 +169,7 @@ export const SCREEN_GAME: Partial<Record<ScreenType, GameType>> = {
   dash: 'dash',
   puzzle: 'puzzle',
   slice: 'slice',
+  piano: 'piano',
 };
 
-export const PLAY_SCREENS: ScreenType[] = ['memory-play', 'suika', 'dash', 'puzzle', 'slice'];
+export const PLAY_SCREENS: ScreenType[] = ['memory-play', 'suika', 'dash', 'puzzle', 'slice', 'piano'];

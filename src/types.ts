@@ -1,6 +1,6 @@
-export type ScreenType = 'lobby' | 'memory-setup' | 'memory-play' | 'suika' | 'dash' | 'puzzle' | 'slice';
+export type ScreenType = 'lobby' | 'memory-setup' | 'memory-play' | 'suika' | 'dash' | 'puzzle' | 'slice' | 'piano';
 
-export type GameType = 'memory' | 'suika' | 'dash' | 'puzzle' | 'slice';
+export type GameType = 'memory' | 'suika' | 'dash' | 'puzzle' | 'slice' | 'piano';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -63,11 +63,13 @@ export interface UserStatistics {
   dashPlayCount: number;
   puzzlePlayCount: number;
   slicePlayCount: number;
+  pianoPlayCount: number;
   memoryHighScore: number;
   suikaHighScore: number;
   dashHighScore: number;
   puzzleHighScore: number;
   sliceHighScore: number;
+  pianoHighScore: number;
   missionStamps: number; // days on which every daily mission was cleared
   bestStreak: number; // longest run of consecutive play days
   lastChampionWeek: number; // latest week (KST index) the player topped a weekly board, 0 = never

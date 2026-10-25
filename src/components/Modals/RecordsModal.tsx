@@ -42,7 +42,7 @@ export const RecordsModal: React.FC<Props> = ({ isOpen, onClose, stats, history,
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-5">
+      <div className="grid gap-2 sm:grid-cols-3">
         {GAME_ORDER.map((g) => {
           const meta = GAMES[g];
           return (

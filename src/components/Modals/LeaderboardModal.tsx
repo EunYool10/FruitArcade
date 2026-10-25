@@ -358,7 +358,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
         )
       }
     >
-      <div role="tablist" aria-label="게임" className="mb-2 grid grid-cols-5 gap-1.5">
+      <div role="tablist" aria-label="게임" className="mb-2 grid grid-cols-6 gap-1">
         {GAME_ORDER.map((g) => (
           <button
             key={g}

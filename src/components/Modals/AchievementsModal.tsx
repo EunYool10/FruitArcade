@@ -19,6 +19,7 @@ const TABS: { id: Filter; label: string }[] = [
   { id: 'dash', label: '🏃 대시' },
   { id: 'puzzle', label: '🧩 퍼즐' },
   { id: 'slice', label: '🔪 자르기' },
+  { id: 'piano', label: '🎹 피아노' },
   { id: 'all', label: '🏅 기타' },
 ];
 

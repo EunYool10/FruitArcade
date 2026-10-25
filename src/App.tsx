@@ -114,6 +114,7 @@ const SuikaGame = lazy(() => import('./components/SuikaGame/SuikaGame').then((m)
 const FruitDashGame = lazy(() =>
   import('./components/FruitDashGame/FruitDashGame').then((m) => ({ default: m.FruitDashGame }))
 );
+const PianoGame = lazy(() => import('./components/PianoGame/PianoGame').then((m) => ({ default: m.PianoGame })));
 const FruitSliceGame = lazy(() =>
   import('./components/FruitSliceGame/FruitSliceGame').then((m) => ({ default: m.FruitSliceGame }))
 );
@@ -338,7 +339,9 @@ export default function App() {
   }, [settings.bgmEnabled, settings.bgmVolume]);
 
   useEffect(() => {
-    const track: TrackName = screen === 'memory-play' ? 'memory' : screen === 'lobby' || screen === 'memory-setup' ? 'lobby' : screen;
+    // 과일 피아노 plays its own notes, so no music under it
+    const track: TrackName | null =
+      screen === 'piano' ? null : screen === 'memory-play' ? 'memory' : screen === 'lobby' || screen === 'memory-setup' ? 'lobby' : screen;
     music.play(track);
   }, [screen]);
 
@@ -1376,6 +1379,18 @@ export default function App() {
                     onHelp={() => setTutorialGame('slice')}
                     seed={activeChallenge?.g === 'slice' ? activeChallenge.s : undefined}
                     onRoundSeed={(seed: string) => (roundSeeds.current.slice = seed)}
+                  />
+                )}
+                {screen === 'piano' && (
+                  <PianoGame
+                    key={gameKey}
+                    {...gameCommon}
+                    autoStart={autoStart}
+                    dark={resolvedTheme === 'dark'}
+                    best={stats.pianoHighScore}
+                    onHelp={() => setTutorialGame('piano')}
+                    seed={activeChallenge?.g === 'piano' ? activeChallenge.s : undefined}
+                    onRoundSeed={(seed: string) => (roundSeeds.current.piano = seed)}
                   />
                 )}
               </Suspense>

@@ -44,6 +44,11 @@ export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
   { id: 'slice_500', title: '날쌘 칼솜씨', desc: '과일 자르기에서 500점 이상 기록', icon: '🔪', game: 'slice' },
   { id: 'slice_perfect_60', title: '하나도 안 놓쳐', desc: '과일 자르기에서 과일을 놓치지 않고 60초 버티기', icon: '🎯', game: 'slice' },
 
+  // Fruit Piano
+  { id: 'piano_song', title: '첫 연주회', desc: '과일 피아노에서 한 곡을 끝까지 치기', icon: '🎹', game: 'piano' },
+  { id: 'piano_200', title: '건반 위의 과일', desc: '과일 피아노에서 200점 이상 기록', icon: '🎵', game: 'piano' },
+  { id: 'piano_lap_3', title: '앙코르 앙코르', desc: '과일 피아노에서 같은 곡을 3바퀴 완주', icon: '🎶', game: 'piano' },
+
   // Progress
   { id: 'challenge_win', title: '도전 성공', desc: '친구의 도전장에서 이기기', icon: '🥊', game: 'all' },
   { id: 'level_5', title: '어엿한 딸기', desc: '레벨 5 달성', icon: '🍓', game: 'all' },

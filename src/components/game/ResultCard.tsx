@@ -9,7 +9,7 @@ import { useChallenge } from '../ChallengeContext';
 import { useRank } from '../RankContext';
 import { Emoji } from '../ui/Emoji';
 
-const TONE_HEX: Record<Tone, string> = { berry: '#ff4778', melon: '#2ec27e', mango: '#ffb627', grape: '#7a5cff', soda: '#2ea9ff' };
+const TONE_HEX: Record<Tone, string> = { berry: '#ff4778', melon: '#2ec27e', mango: '#ffb627', grape: '#7a5cff', soda: '#2ea9ff', peach: '#ff8a5b' };
 
 /** Link to this app (works under a sub-path such as /FruitArcade/) */
 export const appUrl = () => window.location.origin + window.location.pathname;

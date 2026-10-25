@@ -56,6 +56,7 @@ import { maskBadWords } from './utils/badWords';
 import { earnedTitles, wornTitle } from './utils/titles';
 import { josa } from './utils/format';
 import { PRESENCE_EVERY_MS } from './utils/presence';
+import { setUpdateIdle } from './utils/pwa';
 import { StageProgress, clearStageProgress, loadStageProgress, mergeStageProgress, saveStageProgress } from './components/PuzzleGame/stages';
 import { DayStats, clearDays, loadDays, recordDay } from './utils/dailyStats';
 import { Challenge, challengeLink, takeChallengeFromUrl } from './utils/challenge';
@@ -1070,9 +1071,13 @@ export default function App() {
       }),
   };
 
+  // A downloaded update reloads the page only in an idle lobby (no window open, no round)
+  useEffect(() => setUpdateIdle(screen === 'lobby' && modal === null && !isPlaying), [screen, modal, isPlaying]);
+
   const rankCtx = {
     result: rank,
     signedIn: !!user,
+    feedback: () => setModal('feedback'),
     open: (g: GameType) => {
       setRankGame(g);
       setModal('leaderboard');
@@ -1420,6 +1425,7 @@ export default function App() {
         onResume={() => setIsPaused(false)}
         onRestart={restartGame}
         onExit={() => goTo('lobby')}
+        onFeedback={() => setModal('feedback')}
       />
     </div>
     </RankContext.Provider>

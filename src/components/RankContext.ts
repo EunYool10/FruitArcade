@@ -8,6 +8,8 @@ interface RankApi {
   signedIn: boolean;
   /** Open the leaderboard on a game's boards */
   open: (game: GameType) => void;
+  /** Open "의견 보내기" */
+  feedback?: () => void;
 }
 
 export const RankContext = createContext<RankApi>({ result: null, signedIn: false, open: () => {} });

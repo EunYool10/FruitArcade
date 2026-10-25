@@ -1,6 +1,6 @@
 import { GameSettings, GameType, ScreenType } from './types';
 
-export const APP_VERSION = '3.21.4';
+export const APP_VERSION = '3.21.5';
 
 export const DEFAULT_SETTINGS: GameSettings = {
   theme: 'light',

@@ -218,6 +218,11 @@ export const ResultCard: React.FC<ResultCardProps> = ({
             <Home className="h-4 w-4" strokeWidth={2.5} /> 로비로
           </button>
         </div>
+        {rank.feedback && (
+          <button type="button" className="w-full pt-1 text-center text-xs font-bold text-ink-3 underline-offset-2 hover:underline" onClick={rank.feedback}>
+            🐞 이상한 점이 있었나요? 의견 · 버그 보내기
+          </button>
+        )}
       </div>
     </div>
   );

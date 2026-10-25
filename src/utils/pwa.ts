@@ -19,6 +19,24 @@ export interface PwaState {
 
 let deferred: InstallPromptEvent | null = null;
 let waiting: ServiceWorker | null = null;
+/** The app says when nothing would be lost by reloading (lobby, no window open, no round) */
+let idle = false;
+let idleTimer: ReturnType<typeof setTimeout> | null = null;
+/** A downloaded update waits this long in an idle lobby, then the page reloads into it */
+const AUTO_APPLY_MS = 3000;
+/** Long sessions look for a new version this often (as well as when the app comes back to the front) */
+const CHECK_EVERY_MS = 30 * 60_000;
+
+function scheduleApply() {
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = idle && waiting ? setTimeout(() => idle && applyUpdate(), AUTO_APPLY_MS) : null;
+}
+
+/** Called by the app whenever it becomes idle or busy */
+export function setUpdateIdle(next: boolean): void {
+  idle = next;
+  scheduleApply();
+}
 const listeners = new Set<() => void>();
 
 const isStandalone = () =>
@@ -35,6 +53,7 @@ let state: PwaState = {
 function emit() {
   state = { ...state, canInstall: !!deferred && !isStandalone(), installed: isStandalone(), updateReady: !!waiting };
   listeners.forEach((l) => l());
+  scheduleApply();
 }
 
 export function initPwa(): void {
@@ -67,6 +86,7 @@ export function initPwa(): void {
       reg.addEventListener('updatefound', () => reg.installing && watch(reg.installing));
       // Look for a new version whenever the app comes back to the foreground
       document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && reg.update().catch(() => {}));
+      setInterval(() => reg.update().catch(() => {}), CHECK_EVERY_MS);
     })
     .catch(() => {});
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { RotateCcw, Trash2 } from 'lucide-react';
 import { GameSettings, ThemeMode } from '../../types';
-import { DEFAULT_SETTINGS } from '../../constants';
+import { APP_VERSION, DEFAULT_SETTINGS } from '../../constants';
 import { Modal } from '../ui/Modal';
 import { SettingRow, Toggle } from '../ui/Toggle';
 import { Segmented } from '../ui/Segmented';
@@ -310,6 +310,7 @@ export const SettingsModal: React.FC<Props> = ({
             </ConfirmButton>
           </div>
         </Section>
+        <p className="text-center text-xs text-ink-3">상큼 과일 아케이드 존 v{APP_VERSION}</p>
       </div>
     </Modal>
   );

@@ -9,6 +9,13 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.23.0',
+    title: '과일 스킨이 모든 게임에',
+    items: [
+      ['🎨 과일 스킨', '상점의 스킨이 이제 "과일 스킨"이에요. 낀 스킨이 수박 게임뿐 아니라 과일 자르기 · FRUIT DASH · 과일 퍼즐의 과일에도 적용돼요. 폭탄 · 별 · 아이템은 그대로예요.'],
+    ],
+  },
+  {
     version: '3.22.0',
     title: '수박 게임 새 업적 4개',
     items: [

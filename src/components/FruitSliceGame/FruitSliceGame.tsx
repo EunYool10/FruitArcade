@@ -12,6 +12,7 @@ import { StartCard } from '../game/StartCard';
 import { ResultCard } from '../game/ResultCard';
 import { bladeStyle } from '../../utils/shop';
 import { drawEmoji, preloadEmoji } from '../../utils/emoji';
+import { skinPiece } from '../../utils/skins';
 
 const CW = 440;
 const CH = 600;
@@ -55,6 +56,8 @@ const SPECIAL: Record<Exclude<Kind, 'fruit'>, { emoji: string; juice: string; r:
 };
 
 preloadEmoji([...FRUITS.map((f) => f.emoji), ...Object.values(SPECIAL).map((s) => s.emoji)]);
+/** The fruit in order, for the shop's fruit skins */
+const SLICE_FRUITS = FRUITS.map((f) => f.emoji);
 
 interface Flyer {
   kind: Kind;
@@ -726,7 +729,7 @@ export const FruitSliceGame: React.FC<Props> = ({
         ctx.rect(-R, h.side > 0 ? 0 : -R, R * 2, R);
         ctx.clip();
         ctx.rotate(-h.cut);
-        drawEmoji(ctx, h.emoji, 0, h.r * 0.05, h.r * 1.9);
+        drawEmoji(ctx, skinPiece(live.current.settings.suikaSkin, SLICE_FRUITS, h.emoji), 0, h.r * 0.05, h.r * 1.9);
         // The juicy inside along the cut
         ctx.rotate(h.cut);
         ctx.fillStyle = h.juice;
@@ -748,7 +751,7 @@ export const FruitSliceGame: React.FC<Props> = ({
           ctx.fill();
         }
         ctx.rotate(f.rot);
-        drawEmoji(ctx, f.emoji, 0, f.r * 0.05, f.r * 1.9);
+        drawEmoji(ctx, skinPiece(live.current.settings.suikaSkin, SLICE_FRUITS, f.emoji), 0, f.r * 0.05, f.r * 1.9);
         if (f.kind === 'bomb') {
           // Fizzing fuse
           ctx.fillStyle = Math.sin(time * 0.05) > 0 ? '#ffd23f' : '#ff7a1a';

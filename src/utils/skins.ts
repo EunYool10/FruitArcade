@@ -1,5 +1,6 @@
-// 수박 게임 skins from the shop (kind 'suikaSkin'): the 11 sizes, smallest first, become something
-// other than fruit. Sizes, colours and points stay the same; only the picture and the name change.
+// Fruit skins from the shop (kind 'suikaSkin', setting suikaSkin): the 11 Suika sizes, smallest
+// first, become something other than fruit, and so do the fruit of 과일 자르기, FRUIT DASH and
+// 과일 퍼즐 (skinPiece). Sizes, colours and points stay the same; only the picture changes.
 // Every emoji needs its picture in public/emoji (see emoji.ts).
 
 export interface SuikaSkin {
@@ -12,6 +13,18 @@ export const SUIKA_DEFAULT: SuikaSkin = {
   emojis: ['🍒', '🍓', '🍇', '🍊', '🍅', '🍎', '🍐', '🍑', '🍍', '🍈', '🍉'],
   names: ['체리', '딸기', '포도', '한라봉', '감', '사과', '배', '복숭아', '파인애플', '멜론', '수박'],
 };
+
+/**
+ * A game's own fruit as the skin's pieces: the game's fruit list, in order, maps onto the skin's
+ * pieces (all different as long as the game has no more than 11 kinds). Anything else (bombs,
+ * stars, items) stays as it is, and so does everything without a skin.
+ */
+export function skinPiece(skinId: string, fruits: readonly string[], emoji: string): string {
+  const skin = SUIKA_SKINS[skinId];
+  if (!skin) return emoji;
+  const i = fruits.indexOf(emoji);
+  return i < 0 ? emoji : skin.emojis[i % skin.emojis.length];
+}
 
 export const SUIKA_SKINS: Record<string, SuikaSkin> = {
   skin_veggie: {

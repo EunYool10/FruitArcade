@@ -38,7 +38,7 @@ const TABS: [Tab, string][] = [
   ['cardBack', '🃏 카드 뒷면'],
   ['blade', '🔪 칼날'],
   ['runner', '🏃 러너'],
-  ['suikaSkin', '🍉 수박 스킨'],
+  ['suikaSkin', '🎨 과일 스킨'],
 ];
 
 /** The free choice at the start of each tab */
@@ -59,7 +59,7 @@ const TAB_HINT: Record<Tab, string> = {
   cardBack: '과일 메모리 카드의 뒷면이에요',
   blade: '과일 자르기에서 긋는 칼날 자국 색이에요',
   runner: 'FRUIT DASH에서 달리는 캐릭터예요',
-  suikaSkin: '수박 게임의 과일이 다른 모양으로 바뀌어요 (크기와 점수는 그대로)',
+  suikaSkin: '수박 게임 · 과일 자르기 · FRUIT DASH · 과일 퍼즐의 과일이 다른 모양으로 바뀌어요 (크기와 점수는 그대로)',
   staff: '운영진만 쓸 수 있는 전용 시리즈예요. 칭호와 테두리는 다른 사람은 랭킹에 달 수 없어요',
 };
 

@@ -13,6 +13,7 @@ import { Segmented } from '../ui/Segmented';
 import { ResultCard } from '../game/ResultCard';
 import { runnerStyle } from '../../utils/shop';
 import { drawEmoji, preloadEmoji } from '../../utils/emoji';
+import { skinPiece } from '../../utils/skins';
 
 const CW = 440;
 const CH = 600;
@@ -46,6 +47,8 @@ const POWERS: Record<PowerKind, { emoji: string; color: string; label: string; f
 const POWER_KINDS = Object.keys(POWERS) as PowerKind[];
 
 preloadEmoji([...FRUIT_TYPES.map((f) => f.emoji), ...Object.values(POWERS).map((p) => p.emoji)]);
+/** The falling fruit in order, for the shop's fruit skins (stars and items keep their look) */
+const DASH_FRUITS = FRUIT_TYPES.filter((t) => t.hazard).map((t) => t.emoji);
 /** Frames between power-ups (about 13 to 20 seconds) */
 const POWER_GAP = [780, 1200];
 
@@ -657,7 +660,7 @@ export const FruitDashGame: React.FC<Props> = ({
         ctx.globalAlpha = 1;
 
         ctx.rotate(f.rot);
-        drawEmoji(ctx, f.emoji, 0, 1, f.r * 1.4);
+        drawEmoji(ctx, skinPiece(live.current.settings.suikaSkin, DASH_FRUITS, f.emoji), 0, 1, f.r * 1.4);
         ctx.restore();
       }
 

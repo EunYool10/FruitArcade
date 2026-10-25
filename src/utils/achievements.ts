@@ -31,7 +31,7 @@ export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
   { id: 'suika_twin_melons', title: '쌍둥이 수박', desc: '수박 게임 한 판에서 수박 2개 만들기', icon: '🍉', game: 'suika' },
   { id: 'suika_melon_farm', title: '수박 농장', desc: '수박 게임 한 판에서 수박 3개 만들기', icon: '🧺', game: 'suika' },
   { id: 'suika_100000', title: '수박 재벌', desc: '수박 게임에서 100,000점 이상 기록', icon: '💎', game: 'suika' },
-  { id: 'suika_skin', title: '새 옷 입은 과일', desc: '수박 스킨을 끼고 가장 큰 과일 만들기', icon: '🎨', game: 'suika' },
+  { id: 'suika_skin', title: '새 옷 입은 과일', desc: '과일 스킨을 끼고 수박 게임에서 가장 큰 과일 만들기', icon: '🎨', game: 'suika' },
   { id: 'puzzle_combo_5', title: '연쇄 반응', desc: '과일 퍼즐에서 한 번에 5연쇄 터뜨리기', icon: '⛓️', game: 'puzzle' },
   { id: 'puzzle_bomb', title: '과일 폭탄', desc: '과일 퍼즐에서 큰 폭탄 만들기', icon: '💣', game: 'puzzle' },
   { id: 'puzzle_stage_10', title: '스테이지 탐험가', desc: '과일 퍼즐 스테이지 10 클리어', icon: '🗺️', game: 'puzzle' },

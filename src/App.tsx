@@ -17,26 +17,14 @@ import { Navbar, NavTarget } from './components/Navbar';
 import { MobileTabBar } from './components/MobileTabBar';
 import { Lobby, LobbyTarget } from './components/lobby/Lobby';
 import { MemorySetup } from './components/MemoryGame/MemorySetup';
-import { AchievementsModal } from './components/Modals/AchievementsModal';
-import { PatchNotesModal } from './components/Modals/PatchNotesModal';
-import { TermsModal } from './components/Modals/TermsModal';
-import { FriendsModal, SendResult } from './components/Modals/FriendsModal';
-import { PlayerModal } from './components/Modals/PlayerModal';
-import { SettingsModal } from './components/Modals/SettingsModal';
-import { CreditsModal } from './components/Modals/CreditsModal';
-import { AppsModal } from './components/Modals/AppsModal';
+import type { SendResult } from './components/Modals/FriendsModal';
 import { PauseModal } from './components/Modals/PauseModal';
-import { ProfileModal } from './components/Modals/ProfileModal';
-import { RecordsModal } from './components/Modals/RecordsModal';
+import { lazyModal } from './components/ui/lazyModal';
 import { Toast, ToastHost } from './components/ui/Toast';
 import { PlayerView } from './components/ui/Avatar';
 import { PlayerContext } from './components/PlayerContext';
 import { ChallengeContext } from './components/ChallengeContext';
 import { ChallengeModal } from './components/Modals/ChallengeModal';
-import { LeaderboardModal } from './components/Modals/LeaderboardModal';
-import { AdminModal } from './components/Modals/AdminModal';
-import { FeedbackModal } from './components/Modals/FeedbackModal';
-import { ShopModal } from './components/Modals/ShopModal';
 import {
   Inventory,
   ItemKind,
@@ -96,6 +84,22 @@ import { playSound } from './utils/audio';
 import { TrackName, music } from './utils/music';
 import { askProof, dropClaim, endScoredRound, pendingClaims, proveRound, queueClaim, startScoredRound, wakeScoreServer } from './utils/scoreServer';
 import { loadReminderState } from './utils/reminderState';
+
+// Windows load their code the first time they open, not with the app
+const AchievementsModal = lazyModal(() => import('./components/Modals/AchievementsModal').then((m) => m.AchievementsModal));
+const PatchNotesModal = lazyModal(() => import('./components/Modals/PatchNotesModal').then((m) => m.PatchNotesModal));
+const TermsModal = lazyModal(() => import('./components/Modals/TermsModal').then((m) => m.TermsModal));
+const PlayerModal = lazyModal(() => import('./components/Modals/PlayerModal').then((m) => m.PlayerModal));
+const SettingsModal = lazyModal(() => import('./components/Modals/SettingsModal').then((m) => m.SettingsModal));
+const CreditsModal = lazyModal(() => import('./components/Modals/CreditsModal').then((m) => m.CreditsModal));
+const AppsModal = lazyModal(() => import('./components/Modals/AppsModal').then((m) => m.AppsModal));
+const ProfileModal = lazyModal(() => import('./components/Modals/ProfileModal').then((m) => m.ProfileModal));
+const RecordsModal = lazyModal(() => import('./components/Modals/RecordsModal').then((m) => m.RecordsModal));
+const LeaderboardModal = lazyModal(() => import('./components/Modals/LeaderboardModal').then((m) => m.LeaderboardModal));
+const AdminModal = lazyModal(() => import('./components/Modals/AdminModal').then((m) => m.AdminModal));
+const FeedbackModal = lazyModal(() => import('./components/Modals/FeedbackModal').then((m) => m.FeedbackModal));
+const ShopModal = lazyModal(() => import('./components/Modals/ShopModal').then((m) => m.ShopModal));
+const FriendsModal = lazyModal(() => import('./components/Modals/FriendsModal').then((m) => m.FriendsModal));
 
 // Games are code-split so the lobby loads fast
 const MemoryGameBoard = lazy(() =>

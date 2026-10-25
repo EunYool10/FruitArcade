@@ -126,8 +126,8 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
-        <MissionsCard daily={daily} streak={streak} />
-        <RecentPlays history={history} onOpenRecords={() => onOpen('records')} />
+        <MissionsCard daily={daily} streak={streak} stamps={stats.missionStamps} onPlay={(g) => onPlay(g)} />
+        <RecentPlays history={history} onOpenRecords={() => onOpen('records')} onPlay={(g) => onPlay(g)} />
       </section>
 
       <footer className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 pb-2 text-sm font-semibold text-ink-3">

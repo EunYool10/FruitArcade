@@ -209,7 +209,7 @@ export const AdminStats: React.FC<Props> = ({ stats, people, refreshing, onOpen 
         <dl className="grid grid-cols-3 gap-2 text-center">
           {[
             ['🟢', '지금 접속', people ? `${formatNumber(people.online)}명` : '…'],
-            ['🧑‍🤝‍🧑', '전체 유저', people ? `${formatNumber(people.total)}명` : '…'],
+            ['👥', '전체 유저', people ? `${formatNumber(people.total)}명` : '…'],
             ['🏆', '랭킹 기록', `${formatNumber(stats.todayEntries)}개`],
           ].map(([icon, label, value]) => (
             <div key={label} className="min-w-0 rounded-xl bg-surface px-2 py-1.5">

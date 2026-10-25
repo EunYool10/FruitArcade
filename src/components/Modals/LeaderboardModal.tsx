@@ -42,7 +42,7 @@ const MEDAL = ['🥇', '🥈', '🥉'];
 const ERRORS: Record<Exclude<Status, 'loading' | 'ready'>, { icon: string; text: string }> = {
   denied: { icon: '🛠️', text: '랭킹을 준비하고 있어요. 조금만 기다려 주세요!' },
   offline: { icon: '📡', text: '랭킹은 인터넷에 연결되어 있을 때 볼 수 있어요.' },
-  other: { icon: '😵', text: '랭킹을 불러오지 못했어요.' },
+  other: { icon: '😢', text: '랭킹을 불러오지 못했어요.' },
 };
 
 const REASONS: [ReportReason, string][] = [

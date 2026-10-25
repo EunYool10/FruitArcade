@@ -1,6 +1,6 @@
 import { GameSettings, GameType, ScreenType } from './types';
 
-export const APP_VERSION = '3.29.0';
+export const APP_VERSION = '3.30.0';
 
 export const DEFAULT_SETTINGS: GameSettings = {
   theme: 'light',
@@ -133,12 +133,13 @@ export const GAMES: Record<GameType, GameMeta> = {
     screen: 'slice',
     tag: 'SWIPE',
     desc: '날아오르는 과일을 그어서 싹둑! 폭탄은 조심하세요.',
-    how: ['화면을 그어 과일을 잘라요', '한 번에 3개 이상 자르면 콤보!', '💣 폭탄을 자르거나 3번 놓치면 끝'],
+    how: ['화면을 그어 과일을 잘라요', '한 번에 3개 이상 자르면 콤보! ❤️ 하트는 회복', '💣 폭탄을 2번 자르거나 3번 놓치면 끝'],
     startHint: '마우스를 누른 채 긋거나 손가락으로 밀어요',
     tutorial: [
       { emoji: '👆🍉', title: '그어서 자르기', text: '마우스를 누른 채로 긋거나 손가락으로 화면을 밀어, 날아오르는 과일을 잘라요. 빠르게 그어야 잘려요.' },
       { emoji: '🔥', title: '한 번에 여러 개', text: '한 번 그을 때 3개 이상 자르면 콤보 보너스! ⭐ 황금 별은 +50점, ❄️ 얼음을 자르면 잠깐 느려져요.' },
-      { emoji: '💣', title: '폭탄은 피하기', text: '폭탄을 자르면 바로 끝나요. 과일을 자르지 못하고 3개 떨어뜨려도 끝!' },
+      { emoji: '💣', title: '폭탄은 피하기', text: '폭탄을 2번 자르면 끝나요. 과일을 자르지 못하고 3개 떨어뜨려도 끝!' },
+      { emoji: '❤️', title: '하트로 회복', text: '하트를 자르면 목숨이 하나 돌아와요. 목숨이 가득하면 맞은 폭탄 하나를 지워 줘요.' },
     ],
   },
   piano: {

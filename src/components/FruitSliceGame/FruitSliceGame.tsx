@@ -19,6 +19,10 @@ const CH = 600;
 /** px per frame², 60 frames a second */
 const GRAVITY = 0.25;
 const LIVES = 3;
+/** The second bomb cut ends the round */
+const BOMBS = 2;
+/** A heart with every life and no bomb hit to undo is worth this */
+const HEART_POINTS = 30;
 const FRUIT_POINTS = 10;
 const STAR_POINTS = 50;
 /** Combo bonus per fruit when one stroke cuts 3 or more */
@@ -34,7 +38,7 @@ const ICE_PACE = 0.45;
 /** Frames before the first wave */
 const START_DELAY = 50;
 
-type Kind = 'fruit' | 'bomb' | 'star' | 'ice';
+type Kind = 'fruit' | 'bomb' | 'star' | 'ice' | 'heart';
 
 const FRUITS = [
   { emoji: '🍎', juice: '#ff4d4f', r: 27 },
@@ -53,6 +57,7 @@ const SPECIAL: Record<Exclude<Kind, 'fruit'>, { emoji: string; juice: string; r:
   bomb: { emoji: '💣', juice: '#3a3150', r: 26 },
   star: { emoji: '⭐', juice: '#ffd23f', r: 24 },
   ice: { emoji: '❄️', juice: '#8fd8ff', r: 25 },
+  heart: { emoji: '❤️', juice: '#ff4d6d', r: 24 },
 };
 
 preloadEmoji([...FRUITS.map((f) => f.emoji), ...Object.values(SPECIAL).map((s) => s.emoji)]);
@@ -194,7 +199,8 @@ function makeWave(rand: Rng, n: number): Launch[] {
   let delay = 0;
   for (let i = 0; i < count; i++) {
     const roll = rand();
-    const kind: Kind = roll < bombChance ? 'bomb' : roll > 0.965 ? 'star' : n >= 8 && roll > 0.94 ? 'ice' : 'fruit';
+    const kind: Kind =
+      roll < bombChance ? 'bomb' : roll > 0.965 ? 'star' : n >= 8 && roll > 0.94 ? 'ice' : n >= 5 && roll > 0.915 ? 'heart' : 'fruit';
     out.push({ delay, flyer: launch(rand, kind) });
     delay += together ? 0 : 8 + rand() * 10;
   }
@@ -215,6 +221,7 @@ function segmentHitsCircle(ax: number, ay: number, bx: number, by: number, cx: n
 }
 
 const hearts = (n: number) => '❤️'.repeat(Math.max(0, n)) + '🤍'.repeat(Math.max(0, LIVES - n));
+const bombMarks = (n: number) => '💥'.repeat(Math.max(0, n)) + '💣'.repeat(Math.max(0, BOMBS - n));
 
 interface Props {
   settings: GameSettings;
@@ -253,6 +260,8 @@ export const FruitSliceGame: React.FC<Props> = ({
   const [gameState, setGameState] = useState<'IDLE' | 'PLAYING' | 'OVER'>('IDLE');
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(LIVES);
+  /** Bombs cut this round (BOMBS ends it) */
+  const [bombHits, setBombHits] = useState(0);
   const [cutCount, setCutCount] = useState(0);
   const [maxCombo, setMaxCombo] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -278,6 +287,7 @@ export const FruitSliceGame: React.FC<Props> = ({
   const isPlayingRef = useRef(false);
   const scoreRef = useRef(0);
   const livesRef = useRef(LIVES);
+  const bombHitsRef = useRef(0);
   const cutRef = useRef(0);
   const missedRef = useRef(0);
   const maxComboRef = useRef(0);
@@ -360,6 +370,8 @@ export const FruitSliceGame: React.FC<Props> = ({
     endRef.current = null;
     scoreRef.current = 0;
     livesRef.current = LIVES;
+    bombHitsRef.current = 0;
+    setBombHits(0);
     cutRef.current = 0;
     missedRef.current = 0;
     maxComboRef.current = 0;
@@ -498,7 +510,29 @@ export const FruitSliceGame: React.FC<Props> = ({
       floatsRef.current.push({ x: f.x, y: f.y - 20, text: '펑!', big: true, life: 0 });
       playSound('bomb', s);
       vibrate(HAPTIC.crash, s);
-      endRound('bomb');
+      bombHitsRef.current += 1;
+      setBombHits(bombHitsRef.current);
+      if (bombHitsRef.current >= BOMBS) endRound('bomb');
+      else floatsRef.current.push({ x: Math.max(90, Math.min(CW - 90, f.x)), y: f.y + 14, text: '한 번 더 자르면 끝!', big: false, life: 0 });
+      return;
+    }
+
+    if (f.kind === 'heart') {
+      burst(f.x, f.y, f.juice, 14, 5);
+      // A life back; with every life, a bomb hit undone; otherwise points
+      let text = `+${HEART_POINTS}`;
+      if (livesRef.current < LIVES) {
+        livesRef.current += 1;
+        setLives(livesRef.current);
+        text = '목숨 +1';
+      } else if (bombHitsRef.current > 0) {
+        bombHitsRef.current -= 1;
+        setBombHits(bombHitsRef.current);
+        text = '폭탄 1개 지움';
+      } else addScore(HEART_POINTS);
+      floatsRef.current.push({ x: f.x, y: f.y - 16, text, big: false, life: 0 });
+      playSound('levelup', s);
+      vibrate(HAPTIC.match, s);
       return;
     }
 
@@ -745,7 +779,14 @@ export const FruitSliceGame: React.FC<Props> = ({
         ctx.translate(f.x, f.y);
         if (f.kind !== 'fruit') {
           const pulse = 1 + Math.sin(time * (f.kind === 'bomb' ? 0.02 : 0.012)) * 0.12;
-          ctx.fillStyle = f.kind === 'bomb' ? 'rgba(255, 71, 87, 0.3)' : f.kind === 'star' ? 'rgba(255, 210, 63, 0.4)' : 'rgba(143, 216, 255, 0.45)';
+          ctx.fillStyle =
+            f.kind === 'bomb'
+              ? 'rgba(255, 71, 87, 0.3)'
+              : f.kind === 'star'
+                ? 'rgba(255, 210, 63, 0.4)'
+                : f.kind === 'heart'
+                  ? 'rgba(255, 140, 170, 0.45)'
+                  : 'rgba(143, 216, 255, 0.45)';
           ctx.beginPath();
           ctx.arc(0, 0, (f.r + 9) * pulse, 0, Math.PI * 2);
           ctx.fill();
@@ -913,7 +954,11 @@ export const FruitSliceGame: React.FC<Props> = ({
               value={<span className="text-[0.7em] tracking-[-0.12em]" aria-label={`${lives}개 남음`}>{hearts(lives)}</span>}
               tone={lives === 1 && gameState === 'PLAYING' ? 'warn' : 'default'}
             />
-            <HudStat label="자른 과일" value={`${cutCount}개`} />
+            <HudStat
+              label="폭탄"
+              value={<span className="text-[0.7em] tracking-[-0.12em]" aria-label={`폭탄 ${bombHits}번 맞음, ${BOMBS}번이면 끝`}>{bombMarks(bombHits)}</span>}
+              tone={bombHits === BOMBS - 1 && gameState === 'PLAYING' ? 'warn' : 'default'}
+            />
           </Hud>
         }
         board={
@@ -969,7 +1014,7 @@ export const FruitSliceGame: React.FC<Props> = ({
                   💣
                 </span>
                 <span>
-                  폭탄을 자르거나 과일을 <b>{LIVES}개</b> 놓치면 끝
+                  폭탄을 <b>{BOMBS}번</b> 자르거나 과일을 <b>{LIVES}개</b> 놓치면 끝 · ❤️ 하트는 <b>회복</b>
                 </span>
               </li>
             </ul>
@@ -997,7 +1042,7 @@ export const FruitSliceGame: React.FC<Props> = ({
             game="slice"
             emoji={ending.cause === 'bomb' ? '💥' : '🍉'}
             title={ending.cause === 'bomb' ? 'BOOM!' : 'GAME OVER'}
-            subtitle={ending.cause === 'bomb' ? '폭탄을 잘랐어요' : `과일을 ${LIVES}개 놓쳤어요`}
+            subtitle={ending.cause === 'bomb' ? `폭탄을 ${BOMBS}번 잘랐어요` : `과일을 ${LIVES}개 놓쳤어요`}
             tone={ending.cause === 'bomb' ? 'berry' : 'soda'}
             score={score}
             stats={[

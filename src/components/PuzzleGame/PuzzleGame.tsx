@@ -11,7 +11,8 @@ import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/Ga
 import { StartCard } from '../game/StartCard';
 import { ResultCard, appUrl } from '../game/ResultCard';
 import { Segmented } from '../ui/Segmented';
-import { STAGES, STAGE_COUNT, Stage, StageProgress, goalProgress, goalTarget, goalText, isUnlocked, nextStage, starsFor } from './stages';
+import { STAGES, STAGE_COUNT, Stage, StageProgress, goalProgress, goalTarget, goalText, nextStage, starsFor } from './stages';
+import { StageMap } from './StageMap';
 import {
   CLASSIC_MOVES,
   FRUIT,
@@ -95,6 +96,8 @@ export const PuzzleGame: React.FC<Props> = ({
 
   // Stage mode: the stage being played, progress toward its goal, and how it ended
   const [mode, setMode] = useState<'classic' | 'stage'>('classic');
+  /** The stage map is open (instead of the start card) */
+  const [mapOpen, setMapOpen] = useState(false);
   const [stage, setStage] = useState<Stage | null>(null);
   const stageRef = useRef<Stage | null>(null);
   const [goalValue, setGoalValue] = useState(0);
@@ -107,6 +110,10 @@ export const PuzzleGame: React.FC<Props> = ({
   // Classic rounds keep their seed and swaps so the score server can replay them
   const replayRef = useRef<{ seed: string; moves: [number, number][] } | null>(null);
   const aliveRef = useRef(true);
+  /** Bumped by every start: a swap or cascade from an earlier round stops instead of touching this one */
+  const roundRef = useRef(0);
+  /** Still mounted and still the same round as when `round` was read */
+  const current = (round: number) => aliveRef.current && roundRef.current === round;
   const lastActionRef = useRef(Date.now());
   const dragRef = useRef<{ i: number; x: number; y: number } | null>(null);
   const live = useRef({ settings, isPaused, onUnlockAchieve });
@@ -174,6 +181,7 @@ export const PuzzleGame: React.FC<Props> = ({
 
   /** null = classic (30 moves, leaderboard); a stage = its own moves and goal */
   const handleStartGame = (st: Stage | null = null) => {
+    roundRef.current += 1;
     const s = st ? randomSeed() : seed ?? randomSeed();
     rngRef.current = seededRandom(s);
     if (!st) onRoundSeed?.(s);
@@ -210,6 +218,7 @@ export const PuzzleGame: React.FC<Props> = ({
 
   /** Clear matches, drop fruit, repeat until the board settles */
   const resolve = async (start: Grid, focus: number[]) => {
+    const round = roundRef.current;
     let g = start;
     let cascade = 0;
     for (let step = clearStep(g, focus); step; step = clearStep(g, [])) {
@@ -239,22 +248,23 @@ export const PuzzleGame: React.FC<Props> = ({
       setMaxCombo((m) => Math.max(m, cascade));
 
       await wait(POP_MS);
-      if (!aliveRef.current) return;
+      if (!current(round)) return;
       setPopping(new Set());
       g = collapse(step.grid, rngRef.current);
       commit(g);
       await wait(FALL_MS);
-      if (!aliveRef.current) return;
+      if (!current(round)) return;
     }
 
     if (!findMove(g)) {
       flash('섞는 중… 🔀');
       await wait(450);
+      if (!current(round)) return;
       g = reshuffle(g, rngRef.current);
       commit(g);
       await wait(FALL_MS);
     }
-    if (!aliveRef.current) return;
+    if (!current(round)) return;
     const st = stageRef.current;
     if (st) {
       const value = st.goal.type === 'score' ? scoreRef.current : goalRef.current;
@@ -281,6 +291,7 @@ export const PuzzleGame: React.FC<Props> = ({
   const trySwap = useCallback(
     async (a: number, b: number) => {
       if (busy || gameState !== 'PLAYING' || live.current.isPaused || !adjacent(a, b)) return;
+      const round = roundRef.current;
       lastActionRef.current = Date.now();
       setSelected(null);
       setHint(null);
@@ -290,14 +301,14 @@ export const PuzzleGame: React.FC<Props> = ({
       commit(after);
       playSound('flip', live.current.settings);
       await wait(SWAP_MS);
-      if (!aliveRef.current) return;
+      if (!current(round)) return;
 
       if (!findRuns(after).length) {
         commit(before);
         playSound('wrong', live.current.settings);
         vibrate(HAPTIC.wrong, live.current.settings);
         await wait(SWAP_MS);
-        setBusy(false);
+        if (current(round)) setBusy(false);
         return;
       }
 
@@ -305,7 +316,7 @@ export const PuzzleGame: React.FC<Props> = ({
       setMoves(movesRef.current);
       replayRef.current?.moves.push([a, b]);
       await resolve(after, [a, b]);
-      if (aliveRef.current) setBusy(false);
+      if (current(round)) setBusy(false);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [busy, gameState]
@@ -443,50 +454,54 @@ export const PuzzleGame: React.FC<Props> = ({
 
               {gameState === 'IDLE' && (
                 <BoardOverlay>
-                  <StartCard
-                    meta={GAMES.puzzle}
-                    best={best}
-                    onStart={() => handleStartGame(mode === 'stage' ? STAGES[nextStage(stageProgress) - 1] : null)}
-                    onHelp={onHelp}
-                  >
-                    {!seed && (
-                      <>
-                        <Segmented<'classic' | 'stage'>
-                          ariaLabel="모드"
-                          columns={2}
-                          value={mode}
-                          onChange={setMode}
-                          options={[
-                            { value: 'classic', label: '클래식', sub: '30번 · 랭킹' },
-                            { value: 'stage', label: '스테이지', sub: `${Object.keys(stageProgress).length}/${STAGE_COUNT} 클리어` },
-                          ]}
-                        />
-                        {mode === 'stage' && (
-                          <div className="mt-2.5 grid max-h-40 grid-cols-6 gap-1.5 overflow-y-auto p-0.5" role="group" aria-label="스테이지 고르기">
-                            {STAGES.map((st) => {
-                              const stars = stageProgress[st.no] || 0;
-                              const open = isUnlocked(stageProgress, st.no);
-                              return (
-                                <button
-                                  key={st.no}
-                                  type="button"
-                                  disabled={!open}
-                                  onClick={() => handleStartGame(st)}
-                                  aria-label={`스테이지 ${st.no}${stars ? ` 별 ${stars}개` : ''}${open ? '' : ' 잠김'}`}
-                                  className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-line ${
-                                    stars ? 'bg-grape-soft' : open ? 'bg-surface hover:bg-surface-3' : 'bg-surface-3 opacity-50'
-                                  }`}
-                                >
-                                  <span className="font-display text-sm leading-none">{open ? st.no : '🔒'}</span>
-                                  <span className="h-2 text-[8px] leading-none text-mango-ink">{'★'.repeat(stars)}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </StartCard>
+                  {mapOpen ? (
+                    <StageMap
+                      progress={stageProgress}
+                      onPlay={(st) => {
+                        setMapOpen(false);
+                        handleStartGame(st);
+                      }}
+                      onClose={() => setMapOpen(false)}
+                    />
+                  ) : (
+                    <StartCard
+                      meta={GAMES.puzzle}
+                      best={best}
+                      onStart={() => handleStartGame(mode === 'stage' ? STAGES[nextStage(stageProgress) - 1] : null)}
+                      onHelp={onHelp}
+                    >
+                      {!seed && (
+                        <>
+                          <Segmented<'classic' | 'stage'>
+                            ariaLabel="모드"
+                            columns={2}
+                            value={mode}
+                            onChange={setMode}
+                            options={[
+                              { value: 'classic', label: '클래식', sub: '30번 · 랭킹' },
+                              { value: 'stage', label: '스테이지', sub: `${Object.keys(stageProgress).length}/${STAGE_COUNT} 클리어` },
+                            ]}
+                          />
+                          {mode === 'stage' && (
+                            <button
+                              type="button"
+                              onClick={() => setMapOpen(true)}
+                              className="mt-2.5 flex w-full items-center gap-2.5 rounded-2xl border-2 border-line bg-grape-soft p-2.5 text-left transition-colors hover:bg-surface-3"
+                            >
+                              <span className="sticker h-10 w-10 shrink-0 bg-grape text-lg text-white shadow-none" aria-hidden="true">
+                                🗺️
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-[11px] font-bold text-ink-3">다음 · 스테이지 {nextStage(stageProgress)}</span>
+                                <span className="block truncate text-sm font-bold">{goalText(STAGES[nextStage(stageProgress) - 1].goal)}</span>
+                              </span>
+                              <span className="chip h-7 shrink-0 bg-surface px-2 text-xs">지도 ›</span>
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </StartCard>
+                  )}
                 </BoardOverlay>
               )}
             </div>
@@ -569,9 +584,10 @@ export const PuzzleGame: React.FC<Props> = ({
               outcome?.won && stage.no < STAGE_COUNT
                 ? { label: '다음 스테이지 ▶', onClick: () => handleStartGame(STAGES[stage.no]) }
                 : {
-                    label: '스테이지 고르기',
+                    label: '🗺️ 스테이지 지도',
                     onClick: () => {
                       setMode('stage');
+                      setMapOpen(true);
                       setGameState('IDLE');
                     },
                   }

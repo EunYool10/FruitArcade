@@ -22,9 +22,10 @@ function serviceWorker(): Plugin {
     name: 'fruit-arcade-sw',
     apply: 'build',
     generateBundle(_, bundle) {
-      // Firestore (cloud sync, leaderboards) only loads online, so it isn't precached
+      // Firestore (cloud sync, leaderboards) only loads online, so it isn't precached; nor are the
+      // emoji pictures (hundreds of small files): each is cached the first time it shows
       const built = Object.keys(bundle).filter((f) => !f.endsWith('.map') && !/userDataService|leaderboardService|firestore-/.test(f));
-      const files = ['./', ...built.filter((f) => f !== 'index.html'), ...publicFiles(path.resolve(__dirname, 'public'))];
+      const files = ['./', ...built.filter((f) => f !== 'index.html'), ...publicFiles(path.resolve(__dirname, 'public')).filter((f) => !f.startsWith('emoji/'))];
       const version = createHash('sha1').update(files.join('|')).digest('hex').slice(0, 10);
       const source = readFileSync(path.resolve(__dirname, 'pwa/sw.js'), 'utf8')
         .replace('__VERSION__', version)
@@ -39,11 +40,13 @@ export default defineConfig(({isSsrBuild}) => {
     // Relative asset paths so the build works under any sub-path (GitHub Pages serves /FruitArcade/)
     base: './',
     // The SSR build is the score server's round checker (server/verify.ts): plain Node code, no app plugins
-    plugins: isSsrBuild ? [] : [react(), tailwindcss(), serviceWorker()],
+    // JSX goes through src/emoji-jsx, which shows emoji in text as the bundled pictures
+    plugins: isSsrBuild ? [] : [react({jsxImportSource: '@emoji-jsx'}), tailwindcss(), serviceWorker()],
     publicDir: isSsrBuild ? false : 'public',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        '@emoji-jsx': path.resolve(__dirname, 'src/emoji-jsx'),
       },
     },
     build: {

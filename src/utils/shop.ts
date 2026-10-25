@@ -185,6 +185,10 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'skin_animal', kind: 'suikaSkin', name: '동물 친구들 스킨', price: 500 },
   { id: 'skin_dessert', kind: 'suikaSkin', name: '달콤 디저트 스킨', price: 600 },
   { id: 'skin_space', kind: 'suikaSkin', name: '우주 여행 스킨', price: 800 },
+  { id: 'skin_sea', kind: 'suikaSkin', name: '바다 친구들 스킨', price: 600 },
+  { id: 'skin_snack', kind: 'suikaSkin', name: '분식집 스킨', price: 700 },
+  { id: 'skin_sports', kind: 'suikaSkin', name: '스포츠 스킨', price: 900 },
+  { id: 'skin_weather', kind: 'suikaSkin', name: '날씨 스킨', price: 1000 },
 
   // v3.21.0
   { id: 'av_turtle', kind: 'avatar', name: '거북이', icon: '🐢', price: 120 },

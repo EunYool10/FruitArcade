@@ -48,7 +48,11 @@ npm run dev      # http://localhost:3000
 npm run build    # dist/ 에 빌드
 npm start        # dist/ 를 서빙 (PORT, 기본 3000)
 npm run lint     # 타입 검사
+npm test         # 자동 테스트 (tests/: 수박 물리, 점수 서버 검사, 상점 · 스킨 · 그림 목록, 업적 수)
+npm run test:rules  # Firestore 규칙 테스트 (scripts/rules-test/, 규칙 :test API · 배포 안 함 · Firebase CLI 로그인 필요)
 ```
+
+GitHub Pages 배포는 `npm run lint`와 `npm test`가 통과해야 진행됩니다. 규칙(`firestore.rules`)을 바꾸면 배포 전에 `npm run test:rules`를 돌려 주세요.
 
 ## 배포
 

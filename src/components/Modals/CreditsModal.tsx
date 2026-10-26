@@ -1,12 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
-import { APP_VERSION, GAME_ORDER, GAMES } from '../../constants';
-import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
-import { SHOP_ITEMS, forSale } from '../../utils/shop';
-import { LEVEL_MAX } from '../../utils/progress';
-import { STAGE_COUNT } from '../PuzzleGame/stages';
-import { SONGS } from '../PianoGame/songs';
-import { TRACK_COUNT } from '../../utils/music';
+import { APP_VERSION, GAME_ORDER, GAMES, TONE, Tone } from '../../constants';
 import { Emoji } from '../ui/Emoji';
 
 interface Props {
@@ -14,13 +8,15 @@ interface Props {
   onClose: () => void;
 }
 
-// What 은율 worked on, grouped; friends chipped in with ideas and testing
+// What 은율 did, in six roles (no technology names: the stack is private); friends chipped in with ideas and testing
 const MAKER = { emoji: '🍓', name: '은율' };
-const ROLES: [string, string, string[]][] = [
-  ['🎨', '기획 · 디자인', ['기획', 'UI/UX 디자인']],
-  ['🛠️', '개발', ['프론트엔드 개발', '게임 개발', '서버 · 데이터베이스', '보안']],
-  ['🎵', '사운드', ['효과음', '배경음악', '피아노 편곡']],
-  ['🚀', '운영', ['QA · 테스트', '배포 · 운영']],
+const ROLES: { icon: string; title: string; detail: string; tone: Tone }[] = [
+  { icon: '🎨', title: '기획 · 디자인', detail: '게임 기획 · 화면 디자인', tone: 'berry' },
+  { icon: '🎮', title: '게임 개발', detail: `게임 ${GAME_ORDER.length}종 · 밸런스`, tone: 'mango' },
+  { icon: '💻', title: '앱 개발', detail: '화면 · 서버 · 데이터', tone: 'soda' },
+  { icon: '🔒', title: '보안', detail: '계정 · 기록 보호', tone: 'grape' },
+  { icon: '🎵', title: '사운드', detail: '효과음 · 배경음악 · 편곡', tone: 'peach' },
+  { icon: '🚀', title: '테스트 · 운영', detail: 'QA · 배포 · 업데이트', tone: 'melon' },
 ];
 const IDEAS = [
   { emoji: '🍊', name: '예찬' },
@@ -33,17 +29,6 @@ const TESTERS = [
   { emoji: '🍋', name: '지우' },
   { emoji: '🍇', name: '수빈' },
   { emoji: '🍓', name: '하윤' },
-];
-
-const NUMBERS: [string, number, string][] = [
-  ['🎮', GAME_ORDER.length, '게임'],
-  ['🏆', ACHIEVEMENT_COUNT, '업적'],
-  ['🛍️', SHOP_ITEMS.filter(forSale).length, '상점 아이템'],
-  ['🎨', SHOP_ITEMS.filter((i) => i.kind === 'suikaSkin' && forSale(i)).length, '과일 스킨'],
-  ['🧩', STAGE_COUNT, '퍼즐 스테이지'],
-  ['🎹', SONGS.length, '피아노 곡'],
-  ['🎵', TRACK_COUNT, '배경음악'],
-  ['📈', LEVEL_MAX, '최고 레벨'],
 ];
 
 const Person: React.FC<{ emoji: string; name: string; role: string }> = ({ emoji, name, role }) => (
@@ -77,11 +62,10 @@ const Rolling: React.FC<{ onDone: () => void }> = ({ onDone }) => {
       <div className="credits-roll absolute inset-x-0 top-full px-4">
         <p className="mb-10 font-display text-3xl">🍓 FRUIT ARCADE</p>
         {block('만든 사람', [MAKER.name])}
-        {ROLES.map(([icon, group, items]) => block(`${icon} ${group}`, items.map((i) => `${i} · ${MAKER.name}`)))}
+        {block('맡은 일', ROLES.map((r) => `${r.icon} ${r.title}`))}
         {block('💡 아이디어', IDEAS.map((m) => m.name))}
         {block('🧪 테스트 · QA', TESTERS.map((m) => m.name))}
         {block('🎮 게임', GAME_ORDER.map((g) => GAMES[g].name))}
-        {block('🎹 과일 피아노 곡', SONGS.map((s) => `${s.name} — ${s.by}`))}
         <p className="font-display text-2xl">플레이해 주셔서 고마워요! 💖</p>
       </div>
       <button type="button" className="btn btn-sm absolute bottom-3 right-3" onClick={onDone}>
@@ -114,7 +98,7 @@ export const CreditsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
           </section>
 
-          {/* Who made it */}
+          {/* Who made it, and what they did */}
           <section className="well p-4">
             <div className="mb-3 flex items-center gap-3">
               <span className="sticker h-12 w-12 shrink-0 -rotate-6 bg-mango text-2xl" aria-hidden="true">
@@ -125,35 +109,14 @@ export const CreditsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <p className="font-display text-2xl leading-tight">{MAKER.name}</p>
               </div>
             </div>
-            <ul className="grid gap-2 sm:grid-cols-2" aria-label={`${MAKER.name}이 맡은 분야`}>
-              {ROLES.map(([icon, group, items]) => (
-                <li key={group} className="rounded-xl border-2 border-line bg-surface p-2.5">
-                  <p className="text-xs font-bold">
-                    {icon} {group}
-                  </p>
-                  <p className="mt-1 flex flex-wrap gap-1">
-                    {items.map((i) => (
-                      <span key={i} className="chip h-6 bg-surface-2 px-2 text-[11px]">
-                        {i}
-                      </span>
-                    ))}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {/* In numbers */}
-          <section>
-            <h3 className="mb-2 font-display text-lg">📊 숫자로 보면</h3>
-            <ul className="grid grid-cols-4 gap-2">
-              {NUMBERS.map(([icon, n, label]) => (
-                <li key={label} className="flex flex-col items-center rounded-2xl border-2 border-line bg-surface-2 px-1 py-2 text-center">
-                  <span className="text-lg leading-none" aria-hidden="true">
-                    {icon}
+            <ul className="divide-y-2 divide-dashed divide-line rounded-2xl border-2 border-line bg-surface px-3" aria-label={`${MAKER.name}이 맡은 일`}>
+              {ROLES.map((r) => (
+                <li key={r.title} className="flex items-center gap-2.5 py-2">
+                  <span className={`sticker h-8 w-8 shrink-0 text-base shadow-none ${TONE[r.tone].soft}`} aria-hidden="true">
+                    {r.icon}
                   </span>
-                  <span className="mt-1 font-display text-xl leading-none tabular-nums">{n}</span>
-                  <span className="mt-0.5 text-[10px] font-bold leading-tight text-ink-3">{label}</span>
+                  <span className="shrink-0 text-sm font-bold">{r.title}</span>
+                  <span className="ml-auto min-w-0 text-right text-[11px] font-bold leading-snug text-ink-3">{r.detail}</span>
                 </li>
               ))}
             </ul>
@@ -180,20 +143,6 @@ export const CreditsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 </ul>
               </div>
             </div>
-          </section>
-
-          {/* The piano's songs and who wrote them */}
-          <section>
-            <h3 className="mb-1 font-display text-lg">🎹 과일 피아노 곡</h3>
-            <p className="mb-2 text-xs text-ink-3">모두 저작권이 끝난 동요 · 캐럴 · 클래식이에요. 지은 분들께 감사해요.</p>
-            <ul className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-1.5">
-              {SONGS.map((s) => (
-                <li key={s.id} className="min-w-0 rounded-xl border-2 border-line bg-surface px-2.5 py-1.5">
-                  <span className="block text-xs font-bold leading-tight">{s.name}</span>
-                  <span className="mt-0.5 block text-[10px] font-bold text-ink-3">{s.by}</span>
-                </li>
-              ))}
-            </ul>
           </section>
 
           <div className="flex flex-col items-center gap-2 pt-1">

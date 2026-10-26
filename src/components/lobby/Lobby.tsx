@@ -31,11 +31,11 @@ interface LobbyProps {
 }
 
 type Kind = 'all' | GameMeta['kind'];
-const KINDS: [Kind, string, string][] = [
-  ['all', '🎮', '전체'],
-  ['reflex', '⚡', '순발력'],
-  ['brain', '🧠', '두뇌'],
-  ['party', '🎉', '여럿이'],
+const KINDS: [Kind, string][] = [
+  ['all', '전체'],
+  ['reflex', '순발력'],
+  ['brain', '두뇌'],
+  ['party', '여럿이'],
 ];
 
 /** Plain text links along the bottom of the lobby */
@@ -124,7 +124,7 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
           </h2>
           {/* Filter by kind, so a long list stays easy to scan */}
           <div role="tablist" aria-label="게임 종류" className="grid w-full grid-cols-4 gap-1.5 sm:flex sm:w-auto">
-            {KINDS.map(([k, icon, label]) => {
+            {KINDS.map(([k, label]) => {
               const count = GAME_ORDER.filter((g) => k === 'all' || GAMES[g].kind === k).length;
               const on = kind === k;
               return (
@@ -136,7 +136,7 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
                   onClick={() => setKind(k)}
                   className={`chip h-9 shrink-0 justify-center gap-1 px-1 text-[13px] sm:px-3 sm:text-sm ${on ? 'bg-ink text-surface shadow-hard-sm' : 'bg-surface hover:bg-surface-2'}`}
                 >
-                  {icon} {label} <span className={`tabular-nums ${on ? 'opacity-70' : 'text-ink-3'}`}>{count}</span>
+                  {label} <span className={`tabular-nums ${on ? 'opacity-70' : 'text-ink-3'}`}>{count}</span>
                 </button>
               );
             })}

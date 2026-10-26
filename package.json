@@ -1,7 +1,7 @@
 {
   "name": "fruit-arcade",
   "private": true,
-  "version": "3.36.0",
+  "version": "3.36.1",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",

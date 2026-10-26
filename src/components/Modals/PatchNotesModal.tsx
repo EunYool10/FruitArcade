@@ -9,6 +9,11 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.36.1',
+    title: '게임 고르기 다듬기',
+    items: [['🎮 게임 고르기', '종류 버튼(전체 · 순발력 · 두뇌 · 여럿이)에서 이모지를 빼고 글자만 깔끔하게 보이게 했어요.']],
+  },
+  {
     version: '3.36.0',
     title: '과일 주스 가게 새 단장',
     items: [

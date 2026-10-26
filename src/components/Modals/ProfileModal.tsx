@@ -8,7 +8,7 @@ import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
 import { formatNumber } from '../../utils/format';
 import { Modal } from '../ui/Modal';
 import { Avatar, PlayerView } from '../ui/Avatar';
-import { AVATARS, NICKNAME_MAX, PlayerProfile, cleanNickname, isReservedNickname } from '../../utils/profile';
+import { NICKNAME_MAX, PlayerProfile, cleanNickname, isReservedNickname } from '../../utils/profile';
 import { hasBadWords } from '../../utils/badWords';
 import { googlePhotoOf } from '../../utils/ranking';
 import { Meter } from '../ui/Meter';
@@ -16,8 +16,11 @@ import { ConfirmButton } from '../ui/ConfirmButton';
 import type { TitleDef } from '../../utils/titles';
 import { Emoji } from '../ui/Emoji';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
+import { TitleTag } from '../ui/TitleTag';
+import type { ShopItem } from '../../utils/shop';
+import { ProfileEquip } from './ProfileEquip';
 
-type Tab = 'avatar' | 'title' | 'stats';
+type Tab = 'avatar' | 'frame' | 'title' | 'stats';
 
 /** Total play time: "1시간 48분", "35분" */
 const playTime = (sec: number) => {
@@ -39,8 +42,9 @@ interface Props {
   achievementCount: number;
   /** Titles the player has earned */
   titles: TitleDef[];
-  /** Avatars bought in the shop (emoji), offered after the free fruit */
-  boughtAvatars: string[];
+  /** Avatars and frames the player has (bought, level rewards, gifts, 운영진) */
+  avatarItems: ShopItem[];
+  frameItems: ShopItem[];
   onLogin: () => Promise<{ success: boolean; error?: string }>;
   onLogout: () => void;
   onOpenAdmin?: () => void;
@@ -75,7 +79,8 @@ export const ProfileModal: React.FC<Props> = ({
   level,
   achievementCount,
   titles,
-  boughtAvatars,
+  avatarItems,
+  frameItems,
   onLogin,
   onLogout,
   onOpenAdmin,
@@ -130,55 +135,13 @@ export const ProfileModal: React.FC<Props> = ({
 
   // Email is only shown to its owner, and even then half hidden (screens get shared)
   const email = user?.email ? user.email.replace(/^(.{3}).*(@.*)$/, '$1***$2') : '';
-  const bought = boughtAvatars.filter((a) => !AVATARS.includes(a));
-  const staffTitles = titles.filter((t) => t.staff);
-  const myTitles = titles.filter((t) => !t.staff);
-  const tabs: [Tab, string][] = user
-    ? [
-        ['avatar', '😀 아바타'],
-        ['title', '🏷️ 칭호'],
-        ['stats', '📊 기록'],
-      ]
-    : [
-        ['avatar', '😀 아바타'],
-        ['title', '🏷️ 칭호'],
-      ];
+  const tabs: [Tab, string][] = [
+    ['avatar', '😀 아바타'],
+    ['frame', '🖼️ 테두리'],
+    ['title', '🏷️ 칭호'],
+    ...(user ? ([['stats', '📊 기록']] as [Tab, string][]) : []),
+  ];
   const shown = !user && tab === 'stats' ? 'avatar' : tab;
-
-  const avatarButton = (a: string) => (
-    <button
-      key={a}
-      type="button"
-      aria-pressed={profile.avatar === a}
-      aria-label={`아바타 ${a}`}
-      onClick={() => onUpdateProfile({ ...profile, avatar: a })}
-      className={`grid aspect-square place-items-center rounded-xl border-2 border-line text-xl transition-transform hover:-translate-y-0.5 ${
-        profile.avatar === a ? 'bg-mango shadow-hard-sm' : 'bg-surface'
-      }`}
-    >
-      <Emoji e={a} />
-    </button>
-  );
-
-  const titleButton = (t: TitleDef) => (
-    <button
-      key={t.id}
-      type="button"
-      aria-pressed={profile.title === t.id}
-      onClick={() => onUpdateProfile({ ...profile, title: t.id })}
-      className={`chip h-8 px-3 text-xs ${
-        profile.title === t.id
-          ? t.staff
-            ? 'bg-[#1e3a8a] text-white shadow-hard-sm'
-            : 'bg-grape text-white shadow-hard-sm'
-          : t.staff
-            ? 'border-[#3b82f6] bg-[#dbeafe] text-[#1e3a8a] hover:bg-[#bfdbfe]'
-            : 'bg-surface hover:bg-surface-3'
-      }`}
-    >
-      {t.icon} {t.label}
-    </button>
-  );
 
   return (
     <Modal
@@ -229,6 +192,7 @@ export const ProfileModal: React.FC<Props> = ({
               <span className="chip h-6 bg-mango-soft px-2 text-[11px]">
                 <Emoji e={level.emoji} /> Lv.{level.level} {level.title}
               </span>
+              {player.title && <TitleTag title={player.title} />}
               {isAdmin && (
                 <button type="button" className="chip h-6 bg-grape-deep px-2 text-[11px] text-white hover:bg-grape" onClick={onOpenAdmin} aria-label="관리자 화면 열기">
                   🛡️ 관리자
@@ -254,7 +218,7 @@ export const ProfileModal: React.FC<Props> = ({
         {user && <p className="mt-2 text-[11px] text-ink-3">🏆 랭킹 · 친구에게는 닉네임 · 아바타 · 칭호 · 테두리가 보여요. 기본 아바타는 Google 사진이에요.</p>}
       </section>
 
-      <div role="tablist" aria-label="프로필 메뉴" className={`mb-3 grid gap-1.5 ${tabs.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+      <div role="tablist" aria-label="프로필 메뉴" className={`mb-3 grid gap-1.5 ${tabs.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
         {tabs.map(([id, label]) => (
           <button
             key={id}
@@ -271,75 +235,18 @@ export const ProfileModal: React.FC<Props> = ({
         ))}
       </div>
 
-      {shown === 'avatar' && (
-        <div className="space-y-3">
-          <section>
-            <p className="mb-1.5 text-[11px] font-bold text-ink-3">기본 · 무료 과일</p>
-            <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8" role="group" aria-label="무료 아바타">
-              <button
-                type="button"
-                aria-pressed={!profile.avatar}
-                aria-label="기본 아바타"
-                onClick={() => onUpdateProfile({ ...profile, avatar: '' })}
-                className={`grid aspect-square place-items-center rounded-xl border-2 border-line ${!profile.avatar ? 'bg-mango shadow-hard-sm' : 'bg-surface'}`}
-              >
-                <Avatar player={defaultLook} size="sm" />
-              </button>
-              {AVATARS.map(avatarButton)}
-            </div>
-          </section>
-          <section>
-            <div className="mb-1.5 flex items-center justify-between gap-2">
-              <p className="text-[11px] font-bold text-ink-3">상점에서 산 아바타 {bought.length > 0 && `(${bought.length})`}</p>
-              <button type="button" className="text-[11px] font-bold text-grape-ink underline-offset-2 hover:underline" onClick={onOpenShop}>
-                🛍️ 상점에서 더 보기
-              </button>
-            </div>
-            {bought.length ? (
-              <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8" role="group" aria-label="산 아바타">
-                {bought.map(avatarButton)}
-              </div>
-            ) : (
-              <p className="rounded-xl bg-surface-2 px-3 py-2.5 text-xs text-ink-3">아직 산 아바타가 없어요. 상점에서 동물 · 음식 아바타를 살 수 있어요.</p>
-            )}
-          </section>
-        </div>
-      )}
-
-      {shown === 'title' && (
-        <div className="space-y-3">
-          <p className="text-[11px] font-bold text-ink-3">이름 옆에 붙고 랭킹에도 보여요</p>
-          {titles.length === 0 ? (
-            <p className="rounded-xl bg-surface-2 px-3 py-2.5 text-xs text-ink-3">업적을 달성하거나 상점에서 칭호를 사면 달 수 있어요.</p>
-          ) : (
-            <>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  aria-pressed={!profile.title}
-                  onClick={() => onUpdateProfile({ ...profile, title: '' })}
-                  className={`chip h-8 px-3 text-xs ${!profile.title ? 'bg-grape text-white shadow-hard-sm' : 'bg-surface hover:bg-surface-3'}`}
-                >
-                  칭호 없음
-                </button>
-              </div>
-              {staffTitles.length > 0 && (
-                <section>
-                  <p className="mb-1.5 text-[11px] font-bold text-[#1e3a8a] dark:text-[#93c5fd]">🛡️ 운영진 칭호 ({staffTitles.length})</p>
-                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="운영진 칭호">
-                    {staffTitles.map(titleButton)}
-                  </div>
-                </section>
-              )}
-              <section>
-                <p className="mb-1.5 text-[11px] font-bold text-ink-3">🏷️ 내 칭호 ({myTitles.length})</p>
-                <div className="flex flex-wrap gap-1.5" role="group" aria-label="칭호">
-                  {myTitles.map(titleButton)}
-                </div>
-              </section>
-            </>
-          )}
-        </div>
+      {shown !== 'stats' && (
+        <ProfileEquip
+          tab={shown}
+          player={player}
+          defaultLook={defaultLook}
+          profile={profile}
+          onUpdateProfile={onUpdateProfile}
+          titles={titles}
+          avatarItems={avatarItems}
+          frameItems={frameItems}
+          onOpenShop={onOpenShop}
+        />
       )}
 
       {shown === 'stats' && user && (

@@ -1422,7 +1422,8 @@ export default function App() {
         level={level}
         achievementCount={achievementCount}
         titles={titles}
-        boughtAvatars={SHOP_ITEMS.filter((i) => i.kind === 'avatar' && owned[i.id]).map((i) => i.icon ?? '')}
+        avatarItems={SHOP_ITEMS.filter((i) => i.kind === 'avatar' && owned[i.id])}
+        frameItems={SHOP_ITEMS.filter((i) => i.kind === 'frame' && owned[i.id])}
         onLogin={handleLogin}
         onLogout={handleLogout}
         onOpenAdmin={() => setModal('admin')}

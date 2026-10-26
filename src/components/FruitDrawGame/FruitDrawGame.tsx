@@ -720,6 +720,15 @@ export const FruitDrawGame: React.FC<Props> = ({ settings, best, autoStart = fal
                           : '아무도 그리지 않았어요'}
                       </p>
                     )}
+                    {!solo && (
+                      <div className="mt-2 flex flex-wrap justify-center gap-1" aria-label="지금까지 점수">
+                        {standings.map((st, i) => (
+                          <span key={i} className={`chip h-6 px-2 text-[11px] font-bold ${st.wins === Math.max(...standings.map((x) => x.wins)) && st.wins > 0 ? 'bg-mango-soft' : 'bg-surface-2'}`}>
+                            {playerName(i)} {st.wins}점
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <button type="button" className="btn btn-grape mt-3 w-full" onClick={nextRound} autoFocus>
                       {round < game.current.setup.rounds - 1 ? '다음 라운드' : '최종 결과 보기'}
                     </button>

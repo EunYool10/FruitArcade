@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { RotateCcw, Trash2 } from 'lucide-react';
+import { Check, RotateCcw, Trash2 } from 'lucide-react';
 import { GameResult, GameReward, GameSettings } from '../../types';
 import { GAMES } from '../../constants';
 import { playSound } from '../../utils/audio';
@@ -42,6 +42,44 @@ function levelRules(level: number) {
 /** Same fruits, any order */
 const sameJuice = (a: string[], b: string[]) => a.length === b.length && [...a].sort().join() === [...b].sort().join();
 
+/** For each fruit of the order: is it in the jar already? (each fruit in the jar counts once) */
+function ticks(order: string[], jar: string[]): boolean[] {
+  const left = [...jar];
+  return order.map((f) => {
+    const i = left.indexOf(f);
+    if (i < 0) return false;
+    left.splice(i, 1);
+    return true;
+  });
+}
+
+/** Everything in the jar belongs to this order: the juice is on its way to this guest */
+function fits(order: string[], jar: string[]): boolean {
+  const left = [...order];
+  return jar.every((f) => {
+    const i = left.indexOf(f);
+    if (i < 0) return false;
+    left.splice(i, 1);
+    return true;
+  });
+}
+
+/** Juice colours, mixed in the jar */
+const JUICE: Record<string, [number, number, number]> = {
+  '🍓': [255, 77, 109],
+  '🍌': [255, 224, 102],
+  '🍊': [255, 159, 28],
+  '🍇': [155, 89, 182],
+  '🍋': [255, 241, 118],
+  '🍉': [255, 107, 129],
+  '🥝': [139, 195, 74],
+  '🍍': [255, 197, 61],
+};
+const mixed = (jar: string[]) => {
+  const c = [0, 1, 2].map((k) => Math.round(jar.reduce((n, f) => n + JUICE[f][k], 0) / jar.length));
+  return `rgb(${c.join(', ')})`;
+};
+
 interface Guest {
   id: number;
   face: string;
@@ -52,6 +90,8 @@ interface Guest {
   mood: 'wait' | 'happy' | 'angry';
   /** Game clock when a leaving guest disappears */
   gone: number;
+  /** Their seat at the counter (guests don't shuffle when someone leaves) */
+  slot: number;
 }
 
 interface Props {
@@ -106,6 +146,8 @@ export const FruitJuiceGame: React.FC<Props> = ({
   const guestsRef = useRef<Guest[]>([]);
   const blenderRef = useRef<string[]>([]);
   const nextGuestRef = useRef(0);
+  /** When the wait for the next guest began (for the "다음 손님" bar) */
+  const lastGuestRef = useRef(0);
   const idRef = useRef(0);
   const levelRef = useRef(1);
   const servedRef = useRef(0);
@@ -165,6 +207,7 @@ export const FruitJuiceGame: React.FC<Props> = ({
     guestsRef.current = [];
     blenderRef.current = [];
     nextGuestRef.current = 0.6;
+    lastGuestRef.current = 0;
     idRef.current = 0;
     levelRef.current = 1;
     servedRef.current = 0;
@@ -219,10 +262,13 @@ export const FruitJuiceGame: React.FC<Props> = ({
     if (r.newBest && s.celebrateEffect) celebrate();
   }, []);
 
-  /** A new guest with an order from the open bins (seeded dice) */
+  /** A new guest in the first free seat, with an order from the open bins (seeded dice); false when every seat is taken */
   const spawnGuest = () => {
     const rand = rngRef.current;
     const rules = levelRules(levelRef.current);
+    const taken = guestsRef.current.map((g) => g.slot);
+    const slot = Array.from({ length: rules.slots }, (_, i) => i).find((i) => !taken.includes(i));
+    if (slot === undefined) return false;
     const open = FRUITS.slice(0, rules.fruits);
     const size = rules.minSize + Math.floor(rand() * (rules.maxSize - rules.minSize + 1));
     const order: string[] = [];
@@ -233,7 +279,8 @@ export const FruitJuiceGame: React.FC<Props> = ({
     const used = guestsRef.current.map((g) => g.face);
     let face = GUESTS[Math.floor(rand() * GUESTS.length)];
     if (used.includes(face)) face = GUESTS.find((g) => !used.includes(g)) ?? face;
-    guestsRef.current = [...guestsRef.current, { id: ++idRef.current, face, order, arrive: clockRef.current, patience: rules.patience, mood: 'wait', gone: 0 }];
+    guestsRef.current = [...guestsRef.current, { id: ++idRef.current, face, order, arrive: clockRef.current, patience: rules.patience, mood: 'wait', gone: 0, slot }];
+    return true;
   };
 
   const loseHeart = () => {
@@ -261,10 +308,9 @@ export const FruitJuiceGame: React.FC<Props> = ({
         let changed = false;
         if (isPlayingRef.current) {
           const rules = levelRules(levelRef.current);
-          const waiting = guestsRef.current.filter((g) => g.mood === 'wait').length;
           if (now >= nextGuestRef.current) {
-            if (guestsRef.current.length < rules.slots && waiting < rules.slots) {
-              spawnGuest();
+            if (spawnGuest()) {
+              lastGuestRef.current = now;
               nextGuestRef.current = now + rules.gap;
               changed = true;
             } else nextGuestRef.current = now + 0.4;
@@ -274,8 +320,7 @@ export const FruitJuiceGame: React.FC<Props> = ({
               g.mood = 'angry';
               g.gone = now + 0.9;
               changed = true;
-              const slot = guestsRef.current.indexOf(g);
-              float(slot, '너무 늦어요!', false);
+              float(g.slot, '너무 늦어요!', false);
               playSound('wrong', live.current.settings);
               vibrate(HAPTIC.wrong, live.current.settings);
               loseHeart();
@@ -327,9 +372,9 @@ export const FruitJuiceGame: React.FC<Props> = ({
   /** Hand the juice to a guest: the right one pays (faster = more), the wrong one loses patience */
   const serve = (id: number) => {
     if (!isPlayingRef.current || isPausedRef.current) return;
-    const slot = guestsRef.current.findIndex((g) => g.id === id);
-    const g = guestsRef.current[slot];
+    const g = guestsRef.current.find((x) => x.id === id);
     if (!g || g.mood !== 'wait') return;
+    const slot = g.slot;
     if (!blenderRef.current.length) {
       float(slot, '과일을 먼저 넣어요', false);
       return;
@@ -377,8 +422,13 @@ export const FruitJuiceGame: React.FC<Props> = ({
   };
 
   // Keys: 1–8 add fruit, Enter serves the guest the juice is for, Backspace empties; Space/Enter starts
-  const keyRef = useRef({ addFruit, serve, emptyBlender, start: handleStartGame });
-  keyRef.current = { addFruit, serve, emptyBlender, start: handleStartGame };
+  // No guest ordered what's in the jar: a shake, never a wrong juice handed out by key
+  const nudge = () => {
+    setShake((n) => n + 1);
+    playSound('wrong', settings);
+  };
+  const keyRef = useRef({ addFruit, serve, emptyBlender, nudge, start: handleStartGame });
+  keyRef.current = { addFruit, serve, emptyBlender, nudge, start: handleStartGame };
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => {
       if (isPausedRef.current || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -400,8 +450,9 @@ export const FruitJuiceGame: React.FC<Props> = ({
         k.emptyBlender();
       } else if (e.key === 'Enter' || e.code === 'Space') {
         e.preventDefault();
-        const g = guestsRef.current.find((x) => x.mood === 'wait' && sameJuice(blenderRef.current, x.order)) ?? guestsRef.current.find((x) => x.mood === 'wait');
+        const g = guestsRef.current.find((x) => x.mood === 'wait' && sameJuice(blenderRef.current, x.order));
         if (g) k.serve(g.id);
+        else if (blenderRef.current.length) k.nudge();
       }
     };
     window.addEventListener('keydown', onDown);
@@ -410,7 +461,13 @@ export const FruitJuiceGame: React.FC<Props> = ({
 
   const rules = levelRules(level);
   const now = clockRef.current;
-  const slotsShown = Math.max(rules.slots, guests.length);
+  const seats = Math.max(rules.slots, ...guests.map((g) => g.slot + 1));
+  const waiting = guests.filter((g) => g.mood === 'wait');
+  // A jar nobody ordered: say so, so it gets emptied
+  const unwanted = blender.length > 0 && !waiting.some((g) => fits(g.order, blender));
+  const nextIn = Math.max(0, Math.min(1, (now - lastGuestRef.current) / Math.max(0.1, nextGuestRef.current - lastGuestRef.current)));
+  const firstFree = Array.from({ length: seats }, (_, i) => i).find((i) => !guests.some((g) => g.slot === i));
+  const levelCups = served % PER_LEVEL;
 
   return (
     <>
@@ -434,69 +491,126 @@ export const FruitJuiceGame: React.FC<Props> = ({
         board={
           <div className="board-fit w-full" style={{ maxWidth: 'calc((100dvh - var(--board-offset)) * 0.7333)' }}>
             <div className="@container relative aspect-[440/600] w-full select-none overflow-clip rounded-[28px] border-2 border-line bg-[#ffe9d6] shadow-pop dark:bg-[#3a2a3f]">
-              {/* Awning */}
+              {/* Awning with a scalloped edge, and the shop's wall */}
               <div
-                className="absolute inset-x-0 top-0 h-[7%] border-b-2 border-line"
-                style={{ background: 'repeating-linear-gradient(90deg, #ff6b8b 0 12%, #fff4e8 12% 24%)' }}
+                className="absolute inset-x-0 top-0 h-[6%] border-b-2 border-line"
+                style={{ background: 'repeating-linear-gradient(90deg, #ff6b8b 0 12.5%, #fff4e8 12.5% 25%)' }}
                 aria-hidden="true"
               />
-              {gameState === 'PLAYING' && (
-                <span className="chip absolute left-[3%] top-[9%] z-10 h-[6.5cqw] bg-surface px-[2.5cqw] font-display text-[3.6cqw]">
-                  LV.{level}
-                  {combo >= 2 && <span className="ml-1 text-berry-ink">· {combo}연속</span>}
-                </span>
+              <div
+                className="absolute inset-x-0 top-[6%] h-[2.2%]"
+                style={{ background: 'radial-gradient(circle at 50% 0, #ff6b8b 0 56%, transparent 60%) 0 0 / 12.5% 100% repeat-x' }}
+                aria-hidden="true"
+              />
+              <div className="dots absolute inset-x-0 top-[8.2%] h-[41.8%] opacity-40" aria-hidden="true" />
+
+              {/* Level, streak and how many juices to the next level */}
+              {gameState !== 'IDLE' && (
+                <div className="absolute inset-x-[3%] top-[9.5%] z-10 flex items-center justify-between gap-[2cqw]">
+                  <span className="flex items-center gap-[1.5cqw]">
+                    <span className="chip h-[7cqw] bg-surface px-[2.5cqw] font-display text-[3.8cqw]">LV.{level}</span>
+                    {combo >= 2 && (
+                      <span key={combo} className="chip h-[7cqw] bg-berry px-[2.5cqw] font-display text-[3.6cqw] text-white animate-pop-in">
+                        🔥 {combo}연속
+                      </span>
+                    )}
+                  </span>
+                  <span className="chip h-[7cqw] gap-[1.2cqw] bg-surface px-[2.5cqw] text-[3cqw] font-bold" aria-label={`다음 레벨까지 주스 ${PER_LEVEL - levelCups}잔`}>
+                    <span className="text-ink-3">다음 레벨</span>
+                    <span className="flex gap-[0.4cqw] text-[3.8cqw] leading-none" aria-hidden="true">
+                      {Array.from({ length: PER_LEVEL }, (_, i) => (
+                        <span key={i} className={i < levelCups ? '' : 'opacity-25 grayscale'}>
+                          <Emoji e="🧃" />
+                        </span>
+                      ))}
+                    </span>
+                  </span>
+                </div>
               )}
 
-              {/* Guests */}
-              <ul className="absolute inset-x-[2%] top-[15%] grid h-[33%] gap-[2%]" style={{ gridTemplateColumns: `repeat(${slotsShown}, minmax(0, 1fr))` }}>
-                {Array.from({ length: slotsShown }, (_, slot) => {
-                  const g = guests[slot];
-                  if (!g) return <li key={`empty-${slot}`} aria-hidden="true" />;
+              {/* Seats: a guest keeps theirs until they leave; an empty one shows the next guest coming */}
+              <ul className="absolute inset-x-[2%] top-[17%] grid h-[32%] gap-[2%]" style={{ gridTemplateColumns: `repeat(${seats}, minmax(0, 1fr))` }}>
+                {Array.from({ length: seats }, (_, slot) => {
+                  const g = guests.find((x) => x.slot === slot);
+                  if (!g) {
+                    const next = gameState === 'PLAYING' && slot === firstFree;
+                    return (
+                      <li key={`seat-${slot}`} className="flex flex-col items-center justify-end pb-[3cqw]" aria-hidden="true">
+                        <span className="grid aspect-square w-[62%] max-w-[17cqw] place-items-center rounded-full border-2 border-dashed border-ink-3/40 text-center text-[2.8cqw] font-bold leading-tight text-ink-3">
+                          {next ? (
+                            <>
+                              다음
+                              <br />
+                              손님
+                            </>
+                          ) : (
+                            '빈 자리'
+                          )}
+                        </span>
+                        {next && (
+                          <span className="mt-[1.5cqw] h-[1.6cqw] w-[55%] overflow-hidden rounded-full bg-surface/80">
+                            <span className="block h-full rounded-full bg-ink-3/50" style={{ width: `${nextIn * 100}%` }} />
+                          </span>
+                        )}
+                      </li>
+                    );
+                  }
                   const left = g.mood === 'wait' ? Math.max(0, 1 - (now - g.arrive) / g.patience) : 0;
                   const ready = g.mood === 'wait' && blender.length > 0 && sameJuice(blender, g.order);
+                  const making = g.mood === 'wait' && blender.length > 0 && !ready && fits(g.order, blender);
+                  const marks = ticks(g.order, blender);
                   return (
-                    <li key={g.id} className="relative flex min-w-0 flex-col items-center justify-end">
+                    <li key={g.id} className="relative flex min-w-0 flex-col items-center justify-end animate-pop-in">
                       <button
                         type="button"
                         onClick={() => serve(g.id)}
                         disabled={g.mood !== 'wait' || gameState !== 'PLAYING'}
                         aria-label={`손님 주문: ${g.order.map((f) => NAMES[f]).join(', ')}. 눌러서 주스 주기`}
-                        className={`flex w-full flex-col items-center gap-[1cqw] rounded-[4cqw] p-[1cqw] transition-transform ${
+                        className={`flex w-full flex-col items-center gap-[1.2cqw] rounded-[4cqw] p-[1cqw] transition-transform ${
                           g.mood === 'happy' ? 'animate-pop-in' : g.mood === 'angry' ? 'opacity-60' : left < 0.3 ? 'animate-wiggle' : ''
-                        } ${ready ? '-translate-y-[1cqw]' : ''}`}
+                        } ${ready ? '-translate-y-[1.5cqw]' : ''}`}
                       >
-                        {/* Order bubble */}
+                        {/* Order bubble: fruit already in the jar get a tick */}
                         <span
-                          className={`relative flex min-h-[10cqw] flex-wrap items-center justify-center gap-[0.5cqw] rounded-[3cqw] border-2 border-line px-[1.5cqw] py-[1cqw] text-[6.4cqw] leading-none ${
-                            ready ? 'bg-melon-soft ring-4 ring-melon' : 'bg-surface'
+                          className={`relative flex min-h-[10cqw] flex-wrap items-center justify-center gap-[0.8cqw] rounded-[3cqw] border-2 border-line px-[1.8cqw] py-[1.2cqw] text-[6.2cqw] leading-none ${
+                            ready ? 'bg-melon-soft ring-4 ring-melon' : making ? 'bg-mango-soft' : 'bg-surface'
                           }`}
                         >
                           {g.mood === 'happy' ? (
-                            <span className="text-[4cqw] font-bold">맛있어요! 😋</span>
+                            <span className="text-[3.8cqw] font-bold">맛있어요! 😋</span>
                           ) : g.mood === 'angry' ? (
-                            <span className="text-[4cqw] font-bold">흥! 😠</span>
+                            <span className="text-[3.8cqw] font-bold">흥! 😠</span>
                           ) : (
-                            g.order.map((f, i) => <Emoji key={i} e={show(f)} />)
+                            g.order.map((f, i) => (
+                              <span key={i} className="relative">
+                                <Emoji e={show(f)} />
+                                {marks[i] && (
+                                  <span className="absolute -bottom-[0.8cqw] -right-[0.8cqw] grid h-[3.4cqw] w-[3.4cqw] place-items-center rounded-full border border-line bg-melon text-white">
+                                    <Check className="h-[2.4cqw] w-[2.4cqw]" strokeWidth={4} />
+                                  </span>
+                                )}
+                              </span>
+                            ))
                           )}
+                          <span className="absolute -bottom-[1.5cqw] left-1/2 h-[2.6cqw] w-[2.6cqw] -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-line bg-inherit" aria-hidden="true" />
                         </span>
-                        <span className="text-[13cqw] leading-none">
+                        <span className="mt-[0.5cqw] text-[14cqw] leading-none">
                           <Emoji e={g.face} />
                         </span>
                         {/* Patience */}
-                        <span className="h-[2cqw] w-[80%] overflow-hidden rounded-full border-2 border-line bg-surface">
-                          <span
-                            className={`block h-full ${left > 0.5 ? 'bg-melon' : left > 0.25 ? 'bg-mango' : 'bg-berry'}`}
-                            style={{ width: `${left * 100}%` }}
-                          />
+                        <span className="h-[2.2cqw] w-[78%] overflow-hidden rounded-full border-2 border-line bg-surface">
+                          <span className={`block h-full ${left > 0.5 ? 'bg-melon' : left > 0.25 ? 'bg-mango' : 'bg-berry'}`} style={{ width: `${left * 100}%` }} />
                         </span>
-                        {ready && <span className="text-[3.2cqw] font-bold text-melon-ink">눌러서 주기!</span>}
+                        <span className={`h-[3.6cqw] text-[3.1cqw] font-bold leading-none ${ready ? 'text-melon-ink' : 'text-ink-3'}`}>
+                          {ready ? '👆 눌러서 주기!' : making ? `${marks.filter(Boolean).length} / ${g.order.length}` : ''}
+                        </span>
                       </button>
                       {floats
                         .filter((f) => f.slot === slot)
                         .map((f) => (
                           <span
                             key={f.id}
-                            className={`pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 whitespace-nowrap rounded-full px-[2cqw] py-[0.5cqw] font-display text-[4cqw] animate-pop-in ${
+                            className={`pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-[2cqw] py-[0.5cqw] font-display text-[4cqw] animate-pop-in ${
                               f.good ? 'bg-mango text-on-bright' : 'bg-berry text-white'
                             }`}
                           >
@@ -509,42 +623,67 @@ export const FruitJuiceGame: React.FC<Props> = ({
               </ul>
 
               {/* Counter */}
-              <div className="absolute inset-x-0 top-[50%] h-[3%] border-y-2 border-line bg-[#c98b55]" aria-hidden="true" />
+              <div className="absolute inset-x-0 top-[50%] h-[4%] border-y-2 border-line" style={{ background: 'linear-gradient(#e2ab78, #c98b55 45%, #b2733d)' }} aria-hidden="true" />
 
-              {/* Blender */}
-              <div className="absolute inset-x-0 top-[55%] flex h-[15%] items-center justify-center gap-[3cqw]">
+              {/* The jar: the juice colour mixes as fruit goes in */}
+              <div className="absolute inset-x-0 top-[56.5%] flex h-[16%] justify-center">
                 <div
                   key={shake}
-                  className={`relative flex h-full w-[34%] items-center justify-center rounded-b-[6cqw] rounded-t-[2cqw] border-2 border-line bg-white/80 dark:bg-white/15 ${shake ? 'animate-shake' : ''}`}
+                  className={`relative h-full w-[30%] ${shake ? 'animate-shake' : ''}`}
                   aria-label={`믹서: ${blender.length ? blender.map((f) => NAMES[f]).join(', ') : '비어 있음'}`}
                   role="status"
                 >
-                  {blender.length ? (
-                    <span className="grid grid-cols-2 gap-[0.5cqw] text-[7cqw] leading-none">
-                      {blender.map((f, i) => (
-                        <Emoji key={i} e={show(f)} />
-                      ))}
-                    </span>
-                  ) : (
-                    <span className="text-[3.4cqw] font-bold text-ink-3">과일을 넣어요</span>
-                  )}
-                  <span className="absolute -top-[3cqw] text-[5cqw]" aria-hidden="true">
-                    <Emoji e="🥤" />
-                  </span>
+                  <span className="absolute -top-[1.4cqw] left-[10%] right-[10%] z-10 h-[2.6cqw] rounded-full border-2 border-line bg-surface-3" aria-hidden="true" />
+                  <div className="absolute inset-0 overflow-hidden rounded-b-[7cqw] rounded-t-[2.5cqw] border-2 border-line bg-white/75 dark:bg-white/10">
+                    {blender.length > 0 && (
+                      <div
+                        className="absolute inset-x-0 bottom-0 transition-[height,background-color] duration-300"
+                        style={{ height: `${18 + (blender.length / BLENDER_MAX) * 72}%`, backgroundColor: mixed(blender), opacity: 0.55 }}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <div className="relative grid h-full place-items-center">
+                      {blender.length ? (
+                        <span className="grid grid-cols-2 gap-[0.6cqw] text-[6.6cqw] leading-none">
+                          {blender.map((f, i) => (
+                            <span key={i} className="animate-pop-in">
+                              <Emoji e={show(f)} />
+                            </span>
+                          ))}
+                        </span>
+                      ) : (
+                        <span className="px-[2cqw] text-center text-[3cqw] font-bold leading-tight text-ink-3">
+                          과일을
+                          <br />
+                          눌러 넣어요
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={emptyBlender}
-                  disabled={!blender.length || gameState !== 'PLAYING'}
-                  className="btn btn-sm h-[10cqw] gap-[1cqw] px-[3cqw] text-[3.4cqw]"
-                  aria-label="믹서 비우기"
-                >
-                  <Trash2 className="h-[4cqw] w-[4cqw]" strokeWidth={2.5} /> 비우기
-                </button>
+                {blender.length > 0 && gameState === 'PLAYING' && (
+                  <button
+                    type="button"
+                    onClick={emptyBlender}
+                    aria-label="믹서 비우기"
+                    className={`btn btn-icon absolute left-[67%] top-[30%] h-[10cqw] w-[10cqw] ${unwanted ? 'btn-primary animate-wiggle' : ''}`}
+                  >
+                    <Trash2 className="h-[4.4cqw] w-[4.4cqw]" strokeWidth={2.5} />
+                  </button>
+                )}
               </div>
+              <p className="absolute inset-x-0 top-[73.2%] text-center text-[3.1cqw] font-bold leading-none" aria-live="polite">
+                {unwanted ? (
+                  <span className="text-berry-ink">이 주스를 원하는 손님이 없어요 · 비워요</span>
+                ) : blender.length ? (
+                  <span className="text-ink-3">
+                    믹서 {blender.length} / {BLENDER_MAX}
+                  </span>
+                ) : null}
+              </p>
 
-              {/* Fruit bins */}
-              <div className="absolute inset-x-[3%] bottom-[3%] grid h-[25%] grid-cols-4 gap-[2cqw]">
+              {/* Fruit bins: number keys in the corner; closed ones say when they open */}
+              <div className="absolute inset-x-[3%] bottom-[2.5%] grid h-[20.5%] grid-cols-4 gap-[2cqw]">
                 {FRUITS.map((f, i) => {
                   const open = i < rules.fruits;
                   return (
@@ -553,15 +692,16 @@ export const FruitJuiceGame: React.FC<Props> = ({
                       type="button"
                       onClick={() => addFruit(f)}
                       disabled={!open || gameState !== 'PLAYING'}
-                      aria-label={open ? `${NAMES[f]} 넣기 (${i + 1})` : `${NAMES[f]}: 다음 레벨에 열려요`}
-                      className={`relative flex flex-col items-center justify-center rounded-[3cqw] border-2 border-line transition-transform active:scale-95 ${
-                        open ? 'bg-surface shadow-hard-sm hover:-translate-y-0.5' : 'bg-surface-3 opacity-60'
+                      aria-label={open ? `${NAMES[f]} 넣기 (${i + 1})` : `${NAMES[f]}: LV.${i - 2}에 열려요`}
+                      className={`relative flex flex-col items-center justify-center rounded-[3cqw] border-2 transition-transform active:scale-95 ${
+                        open ? 'border-line bg-surface shadow-hard-sm hover:-translate-y-0.5' : 'border-dashed border-ink-3/40 bg-transparent'
                       }`}
                     >
-                      <span className={`text-[9cqw] leading-none ${open ? '' : 'grayscale'}`}>
+                      {open && <span className="absolute left-[1.4cqw] top-[0.8cqw] text-[2.6cqw] font-bold text-ink-3">{i + 1}</span>}
+                      <span className={`text-[8.4cqw] leading-none ${open ? '' : 'opacity-35 grayscale'}`}>
                         <Emoji e={show(f)} />
                       </span>
-                      <span className="mt-[0.5cqw] text-[2.8cqw] font-bold text-ink-3">{open ? `${NAMES[f]} ${i + 1}` : '🔒'}</span>
+                      <span className={`mt-[0.6cqw] text-[2.8cqw] font-bold ${open ? 'text-ink-2' : 'text-ink-3'}`}>{open ? NAMES[f] : `🔒 LV.${i - 2}`}</span>
                     </button>
                   );
                 })}
@@ -570,7 +710,7 @@ export const FruitJuiceGame: React.FC<Props> = ({
               {news && gameState === 'PLAYING' && (
                 <span
                   key={news.key}
-                  className="pointer-events-none absolute left-1/2 top-[44%] z-10 whitespace-nowrap rounded-full border-2 border-line bg-mango px-[3cqw] py-[1cqw] font-display text-[4cqw] text-on-bright animate-notice"
+                  className="pointer-events-none absolute left-1/2 top-[49.5%] z-20 whitespace-nowrap rounded-full border-2 border-line bg-mango px-[3cqw] py-[1cqw] font-display text-[4cqw] text-on-bright animate-notice"
                   onAnimationEnd={() => setNews(null)}
                 >
                   {news.text}

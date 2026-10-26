@@ -9,6 +9,11 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.32.2',
+    title: '크레딧 정렬',
+    items: [['🎬 크레딧', '아이디어 · 테스트를 도와준 친구들이 가운데에 가지런히 놓여요. 엔딩 크레딧은 건너뛰기 버튼 없이 끝까지 올라간 뒤 저절로 돌아와요.']],
+  },
+  {
     version: '3.32.1',
     title: '크레딧 정리',
     items: [['🎬 크레딧', '숫자 칸과 피아노 곡 목록을 빼고, 은율이 맡은 일을 기획 · 디자인부터 테스트 · 운영까지 6가지로 깔끔하게 정리했어요.']],

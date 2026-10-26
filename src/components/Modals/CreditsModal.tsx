@@ -11,7 +11,7 @@ interface Props {
 // What 은율 did, in six roles (no technology names: the stack is private); friends chipped in with ideas and testing
 const MAKER = { emoji: '🍓', name: '은율' };
 const ROLES: { icon: string; title: string; detail: string; tone: Tone }[] = [
-  { icon: '🎨', title: '기획 · 디자인', detail: '게임 기획 · 화면 디자인', tone: 'berry' },
+  { icon: '🎨', title: '기획 · 디자인', detail: '게임 · 화면 디자인', tone: 'berry' },
   { icon: '🎮', title: '게임 개발', detail: `게임 ${GAME_ORDER.length}종 · 밸런스`, tone: 'mango' },
   { icon: '💻', title: '앱 개발', detail: '화면 · 서버 · 데이터', tone: 'soda' },
   { icon: '🔒', title: '보안', detail: '계정 · 기록 보호', tone: 'grape' },
@@ -31,17 +31,24 @@ const TESTERS = [
   { emoji: '🍓', name: '하윤' },
 ];
 
-const Person: React.FC<{ emoji: string; name: string; role: string }> = ({ emoji, name, role }) => (
-  <li className="flex flex-col items-center gap-1 text-center">
-    <span className="sticker h-12 w-12 bg-surface text-2xl" aria-hidden="true">
-      <Emoji e={emoji} />
-    </span>
-    <span className="font-display leading-tight">{name}</span>
-    <span className="text-[10px] font-bold text-ink-3">{role}</span>
-  </li>
+/** One group of friends: a centred heading over a centred row, so 3 and 4 people line up alike */
+const Group: React.FC<{ label: string; people: { emoji: string; name: string }[] }> = ({ label, people }) => (
+  <div>
+    <p className="mb-2.5 text-center text-xs font-bold text-ink-3">{label}</p>
+    <ul className="flex flex-wrap justify-center gap-x-4 gap-y-3" aria-label={label}>
+      {people.map((m) => (
+        <li key={m.name} className="flex w-14 flex-col items-center gap-1 text-center">
+          <span className="sticker h-12 w-12 bg-surface text-2xl" aria-hidden="true">
+            <Emoji e={m.emoji} />
+          </span>
+          <span className="font-display leading-tight">{m.name}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
 );
 
-/** Movie-style credits rolling up the window */
+/** Movie-style credits rolling up the window; back to the credits when they end (or close the window) */
 const Rolling: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   useEffect(() => {
     const t = setTimeout(onDone, 32000);
@@ -68,9 +75,6 @@ const Rolling: React.FC<{ onDone: () => void }> = ({ onDone }) => {
         {block('🎮 게임', GAME_ORDER.map((g) => GAMES[g].name))}
         <p className="font-display text-2xl">플레이해 주셔서 고마워요! 💖</p>
       </div>
-      <button type="button" className="btn btn-sm absolute bottom-3 right-3" onClick={onDone}>
-        건너뛰기
-      </button>
     </div>
   );
 };
@@ -126,21 +130,9 @@ export const CreditsModal: React.FC<Props> = ({ isOpen, onClose }) => {
           <section>
             <h3 className="mb-2 font-display text-lg">🤝 함께 만든 사람들</h3>
             <div className="space-y-3 rounded-2xl border-2 border-line bg-surface-2 p-3">
-              <div>
-                <p className="mb-2 text-xs font-bold text-ink-3">💡 아이디어</p>
-                <ul className="grid grid-cols-4 gap-2">
-                  {IDEAS.map((m) => (
-                    <Person key={m.name} emoji={m.emoji} name={m.name} role="아이디어" />
-                  ))}
-                </ul>
-              </div>
+              <Group label="💡 아이디어" people={IDEAS} />
               <div className="border-t-2 border-dashed border-line pt-3">
-                <p className="mb-2 text-xs font-bold text-ink-3">🧪 테스트 · QA</p>
-                <ul className="grid grid-cols-4 gap-2">
-                  {TESTERS.map((m) => (
-                    <Person key={m.name} emoji={m.emoji} name={m.name} role="테스트 · QA" />
-                  ))}
-                </ul>
+                <Group label="🧪 테스트 · QA" people={TESTERS} />
               </div>
             </div>
           </section>

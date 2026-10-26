@@ -12,7 +12,7 @@ import {
   ScreenType,
   UserStatistics,
 } from './types';
-import { DEFAULT_SETTINGS, GAMES, GAME_ORDER, PLAY_SCREENS, SCREEN_GAME } from './constants';
+import { DEFAULT_SETTINGS, GAMES, GAME_ORDER, PLAY_SCREENS, RANKED_GAMES, SCREEN_GAME } from './constants';
 import { Navbar, NavTarget } from './components/Navbar';
 import { MobileTabBar } from './components/MobileTabBar';
 import { Lobby, LobbyTarget } from './components/lobby/Lobby';
@@ -118,6 +118,8 @@ const FruitDashGame = lazy(() =>
 );
 const PianoGame = lazy(() => import('./components/PianoGame/PianoGame').then((m) => ({ default: m.PianoGame })));
 const FruitJumpGame = lazy(() => import('./components/FruitJumpGame/FruitJumpGame').then((m) => ({ default: m.FruitJumpGame })));
+const FruitJuiceGame = lazy(() => import('./components/FruitJuiceGame/FruitJuiceGame').then((m) => ({ default: m.FruitJuiceGame })));
+const FruitDrawGame = lazy(() => import('./components/FruitDrawGame/FruitDrawGame').then((m) => ({ default: m.FruitDrawGame })));
 const FruitSliceGame = lazy(() =>
   import('./components/FruitSliceGame/FruitSliceGame').then((m) => ({ default: m.FruitSliceGame }))
 );
@@ -344,9 +346,15 @@ export default function App() {
   }, [settings.bgmEnabled, settings.bgmVolume]);
 
   useEffect(() => {
-    // 과일 피아노 plays its own notes, so no music under it
+    // 과일 피아노 plays its own notes, so no music under it; drawing gets the calm music box
     const track: TrackName | null =
-      screen === 'piano' ? null : screen === 'memory-play' ? 'memory' : screen === 'lobby' || screen === 'memory-setup' ? 'lobby' : screen;
+      screen === 'piano'
+        ? null
+        : screen === 'memory-play' || screen === 'draw'
+          ? 'memory'
+          : screen === 'lobby' || screen === 'memory-setup'
+            ? 'lobby'
+            : screen;
     music.play(track);
   }, [screen]);
 
@@ -384,7 +392,7 @@ export default function App() {
     verified: !!rankWhoRef.current.verified,
     level: level.level,
     achievements: achievementCount,
-    best: Object.fromEntries(GAME_ORDER.map((g) => [g, stats[bestKey(g)]])) as Partial<Record<GameType, number>>,
+    best: Object.fromEntries(RANKED_GAMES.map((g) => [g, stats[bestKey(g)]])) as Partial<Record<GameType, number>>,
   };
 
   const refreshFriendBadge = useCallback(() => {
@@ -933,7 +941,7 @@ export default function App() {
       // Signed in: the score server notes when the round began, and checks it when the score comes in
       const u = userRef.current;
       const game = SCREEN_GAME[screenRef.current];
-      if (u && game) startScoredRound(game, () => u.getIdToken());
+      if (u && game && GAMES[game].ranked !== false) startScoredRound(game, () => u.getIdToken());
     } else endScoredRound();
     setRoundActive(active);
   }, []);
@@ -1030,7 +1038,7 @@ export default function App() {
       // Leaderboards: post the round, then look up today's and the all-time place
       const request = ++rankRequest.current;
       const rankScore = Math.max(0, Math.round(result.score));
-      if (u && rankScore > 0 && !result.stage) {
+      if (u && rankScore > 0 && !result.stage && GAMES[result.game].ranked !== false) {
         const game = result.game;
         const who = rankWhoRef.current;
         setRank({ game, status: 'pending' });
@@ -1180,7 +1188,7 @@ export default function App() {
   };
 
   const openModal = (id: ModalId) => {
-    if (id === 'leaderboard') setRankGame(history[0]?.game ?? 'suika');
+    if (id === 'leaderboard') setRankGame(RANKED_GAMES.find((g) => g === history[0]?.game) ?? 'suika');
     if (id === 'credits') {
       try {
         const count = parseInt(localStorage.getItem('credit_view_count') || '0') + 1;
@@ -1419,6 +1427,28 @@ export default function App() {
                     onHelp={() => setTutorialGame('jump')}
                     seed={activeChallenge?.g === 'jump' ? activeChallenge.s : undefined}
                     onRoundSeed={(seed: string) => (roundSeeds.current.jump = seed)}
+                  />
+                )}
+                {screen === 'juice' && (
+                  <FruitJuiceGame
+                    key={gameKey}
+                    {...gameCommon}
+                    autoStart={autoStart}
+                    dark={resolvedTheme === 'dark'}
+                    best={stats.juiceHighScore}
+                    onHelp={() => setTutorialGame('juice')}
+                    seed={activeChallenge?.g === 'juice' ? activeChallenge.s : undefined}
+                    onRoundSeed={(seed: string) => (roundSeeds.current.juice = seed)}
+                  />
+                )}
+                {screen === 'draw' && (
+                  <FruitDrawGame
+                    key={gameKey}
+                    {...gameCommon}
+                    autoStart={autoStart}
+                    dark={resolvedTheme === 'dark'}
+                    best={stats.drawHighScore}
+                    onHelp={() => setTutorialGame('draw')}
                   />
                 )}
               </Suspense>

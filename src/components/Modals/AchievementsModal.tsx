@@ -25,6 +25,8 @@ const CATEGORIES: { id: Category; emoji: string; label: string }[] = [
   { id: 'slice', emoji: '🔪', label: '자르기' },
   { id: 'piano', emoji: '🎹', label: '피아노' },
   { id: 'jump', emoji: '🦘', label: '점프' },
+  { id: 'juice', emoji: '🧃', label: '주스' },
+  { id: 'draw', emoji: '🎨', label: '그리기' },
   { id: 'all', emoji: '🏅', label: '기타' },
 ];
 
@@ -92,7 +94,7 @@ export const AchievementsModal: React.FC<Props> = ({ isOpen, onClose }) => {
       </section>
 
       {/* Categories with their counts */}
-      <div role="tablist" aria-label="업적 분류" className="mb-2 grid grid-cols-5 gap-1.5 sm:grid-cols-9">
+      <div role="tablist" aria-label="업적 분류" className="mb-2 grid grid-cols-4 gap-1.5 sm:grid-cols-6">
         {CATEGORIES.map((c) => {
           const all = inCategory(c.id);
           const done = all.filter((a) => unlocked[a.id]).length;

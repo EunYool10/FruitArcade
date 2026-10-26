@@ -28,12 +28,17 @@ const cases = [
   ['level 101', 'DENY', card({ level: 101 })],
   ['a player claims Lv.999', 'DENY', card({ level: 999 })],
   ['60 achievements', 'ALLOW', card({ achievements: 60 })],
-  ['70 achievements', 'DENY', card({ achievements: 70 })],
+  ['100 achievements', 'ALLOW', card({ achievements: 100 })],
+  ['101 achievements', 'DENY', card({ achievements: 101 })],
   ['piano best under the board score', 'ALLOW', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, piano: 300 } })],
   ['piano best above the board score', 'DENY', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, piano: 7000 } })],
   ['jump best under the board score', 'ALLOW', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, piano: 0, jump: 800 } })],
   ['jump best above the board score', 'DENY', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, piano: 0, jump: 9000 } })],
   ['a best in all seven games', 'ALLOW', card({ best: { memory: 100, suika: 5000, dash: 300, puzzle: 2000, slice: 500, piano: 200, jump: 800 } })],
+  ['juice best under the board score', 'ALLOW', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, piano: 0, jump: 0, juice: 1200 } })],
+  ['juice best above the board score', 'DENY', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, piano: 0, jump: 0, juice: 9000 } })],
+  ['a best in all eight ranked games', 'ALLOW', card({ best: { memory: 100, suika: 5000, dash: 300, puzzle: 2000, slice: 500, piano: 200, jump: 800, juice: 1200 } })],
+  ['a drawing game best (no board) on the card', 'DENY', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, piano: 0, jump: 0, draw: 80 } })],
   ['unknown game', 'DENY', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, drums: 1 } })],
 ];
 

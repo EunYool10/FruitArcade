@@ -1,7 +1,7 @@
 import { GameResult, GameType, HistoryEntry, UserStatistics } from '../types';
 import { COIN_MAX } from './coins';
 
-export const GAME_TYPES: GameType[] = ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump'];
+export const GAME_TYPES: GameType[] = ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump', 'juice', 'draw'];
 
 const STATS_KEY = 'fruit_arcade_stats';
 const HISTORY_KEY = 'fruit_arcade_history';
@@ -19,6 +19,8 @@ export const EMPTY_STATS: UserStatistics = {
   slicePlayCount: 0,
   pianoPlayCount: 0,
   jumpPlayCount: 0,
+  juicePlayCount: 0,
+  drawPlayCount: 0,
   memoryHighScore: 0,
   suikaHighScore: 0,
   dashHighScore: 0,
@@ -26,6 +28,8 @@ export const EMPTY_STATS: UserStatistics = {
   sliceHighScore: 0,
   pianoHighScore: 0,
   jumpHighScore: 0,
+  juiceHighScore: 0,
+  drawHighScore: 0,
   missionStamps: 0,
   bestStreak: 0,
   lastChampionWeek: 0,

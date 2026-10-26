@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Ban, Flag, Loader2, LogIn, RotateCcw, Shield, Trash2 } from 'lucide-react';
 import { GameType } from '../../types';
-import { GAMES, GAME_ORDER } from '../../constants';
+import { GAMES, RANKED_GAMES } from '../../constants';
 import { formatNumber } from '../../utils/format';
 import { PERIOD_LABEL, RANK_PERIODS, RankEntry, RankPeriod, boardId, kstWeek, rankErrorKind, weekRangeLabel } from '../../utils/ranking';
 import { titleDef } from '../../utils/titles';
@@ -358,8 +358,8 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
         )
       }
     >
-      <div role="tablist" aria-label="게임" className="mb-2 grid grid-cols-7 gap-1">
-        {GAME_ORDER.map((g) => (
+      <div role="tablist" aria-label="게임" className="mb-2 grid grid-cols-4 gap-1 sm:grid-cols-8">
+        {RANKED_GAMES.map((g) => (
           <button
             key={g}
             type="button"

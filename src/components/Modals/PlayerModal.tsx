@@ -4,7 +4,7 @@ import { Modal } from '../ui/Modal';
 import { AvatarFace, Framed } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
-import { GAMES, GAME_ORDER, TONE } from '../../constants';
+import { GAMES, RANKED_GAMES, TONE } from '../../constants';
 import { titleDef } from '../../utils/titles';
 import { formatNumber } from '../../utils/format';
 import type { PublicPlayer } from '../../utils/friendsService';
@@ -116,7 +116,7 @@ export const PlayerModal: React.FC<Props> = ({ isOpen, onClose, viewerUid, targe
           </div>
 
           <div className="grid grid-cols-4 gap-1.5">
-            {GAME_ORDER.map((g) => (
+            {RANKED_GAMES.map((g) => (
               <div key={g} className={`min-w-0 rounded-xl border-2 border-line px-1 py-2 text-center ${TONE[GAMES[g].tone].soft}`}>
                 <p className="text-lg" aria-hidden="true">
                   <Emoji e={GAMES[g].emoji} />

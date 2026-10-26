@@ -42,7 +42,7 @@ export const StartCard: React.FC<StartCardProps> = ({ meta, best, onStart, child
         🥊 {challenge.n}님의 <span className="font-display">{formatNumber(challenge.sc)}점</span>을 넘어 보세요!
       </p>
     )}
-    <p className="mt-3 text-xs font-bold text-ink-3 board-short:mt-2">🏆 최고 기록 {best > 0 ? `${formatNumber(best)}점` : '없음'}</p>
+    <p className="mt-3 text-xs font-bold text-ink-3 board-short:mt-2">🏆 최고 기록 {best > 0 ? `${formatNumber(best)}${meta.unit ?? '점'}` : '없음'}</p>
     {children && <div className="mt-3 board-short:mt-2">{children}</div>}
     <button type="button" className={`btn btn-lg mt-4 w-full board-short:mt-3 ${TONE[meta.tone].btn}`} onClick={onStart}>
       <Play className="h-5 w-5 fill-current" /> 시작하기

@@ -54,6 +54,16 @@ export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
   { id: 'jump_1500', title: '밤새 달리는 과일', desc: '과일 점프에서 1,500점 이상 기록', icon: '🌙', game: 'jump' },
   { id: 'jump_cherry_15', title: '체리 수집가', desc: '과일 점프 한 판에서 체리 15개 먹기', icon: '🍒', game: 'jump' },
 
+  // Fruit Juice
+  { id: 'juice_20', title: '단골 많은 가게', desc: '과일 주스 가게 한 판에서 주스 20잔 팔기', icon: '🧃', game: 'juice' },
+  { id: 'juice_1000', title: '주스 장인', desc: '과일 주스 가게에서 1,000점 이상 기록', icon: '🥤', game: 'juice' },
+  { id: 'juice_combo_10', title: '쉴 틈 없는 믹서', desc: '과일 주스 가게에서 10잔 연속 맞게 주기', icon: '🔥', game: 'juice' },
+
+  // Fruit Drawing
+  { id: 'draw_70', title: '그림 좀 그리는데?', desc: '과일 그리기에서 싱크율 70% 이상', icon: '🎨', game: 'draw' },
+  { id: 'draw_90', title: '사진 같은 그림', desc: '과일 그리기에서 싱크율 90% 이상', icon: '🖼️', game: 'draw' },
+  { id: 'draw_party', title: '그림 대회', desc: '과일 그리기를 3명 이상이 함께 끝까지 하기', icon: '🎉', game: 'draw' },
+
   // Progress
   { id: 'challenge_win', title: '도전 성공', desc: '친구의 도전장에서 이기기', icon: '🥊', game: 'all' },
   { id: 'level_5', title: '어엿한 딸기', desc: '레벨 5 달성', icon: '🍓', game: 'all' },

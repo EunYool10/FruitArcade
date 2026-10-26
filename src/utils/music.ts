@@ -7,7 +7,7 @@
  */
 import { getAudioContext, whenAudioUnlocked } from './audio';
 
-export type TrackName = 'lobby' | 'memory' | 'suika' | 'dash' | 'puzzle' | 'slice' | 'jump' | 'credits';
+export type TrackName = 'lobby' | 'memory' | 'suika' | 'dash' | 'puzzle' | 'slice' | 'jump' | 'juice' | 'credits';
 
 type Voice = 'pluck' | 'bell' | 'flute' | 'saw';
 type Comp = 'pad' | 'offbeat' | 'arp';
@@ -131,6 +131,21 @@ const SONGS: Record<TrackName, Song> = {
     chords: ['D4 F#4 A4', 'G3 B3 D4', 'A3 C#4 E4', 'D4 F#4 A4', 'B3 D4 F#4', 'G3 B3 D4', 'A3 C#4 E4', 'D4 F#4 A4'],
     comp: 'offbeat',
     drums: { k: 'x-----x-x-------', s: '----x-------x---', h: 'x-x-x-x-x-x-x-x-' },
+  },
+  // A busy little shop: F major, bells over swung stabs
+  juice: {
+    bpm: 118,
+    voice: 'bell',
+    leadGain: 0.42,
+    lead: `A5:2 C6:2 F6:4 E6:2 C6:2 A5:4 | A#5:2 D6:2 F6:4 D6:2 A#5:2 G5:4 |
+           G5:2 A#5:2 E6:4 D6:2 C6:2 A#5:4 | A5:2 G5:2 F5:4 A5:4 C6:4 |
+           D6:2 F6:2 A6:4 G6:2 F6:2 D6:4 | C6:2 E6:2 G6:4 F6:2 E6:2 C6:4 |
+           A#5:2 D6:2 F6:2 D6:2 C6:2 A5:2 F5:4 | G5:2 A#5:2 E6:2 C6:2 F6:4 -:4`,
+    bass: `F2:4 C3:4 F2:4 C3:4 | A#2:4 F2:4 A#2:4 F2:4 | C3:4 G2:4 C3:4 G2:4 | F2:4 C3:4 F2:4 A2:4 |
+           D3:4 A2:4 D3:4 A2:4 | C3:4 G2:4 C3:4 G2:4 | A#2:4 F2:4 A#2:4 F2:4 | C3:4 G2:4 F2:8`,
+    chords: ['F3 A3 C4', 'F3 A#3 D4', 'E3 G3 C4', 'F3 A3 C4', 'F3 A3 D4', 'E3 G3 C4', 'F3 A#3 D4', 'E3 G3 C4'],
+    comp: 'offbeat',
+    drums: { k: 'x-------x-------', s: '----x-------x---', h: '--x---x---x---x-' },
   },
   // The ending credits: a slow music box over soft pads, C major, ends each loop on G
   credits: {

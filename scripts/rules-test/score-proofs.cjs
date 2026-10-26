@@ -31,6 +31,8 @@ const cases = [
   ['piano board: over the cap', 'DENY', true, 'create', entry(100001, { proof: proof(100001, DAY, 'piano') }), null, 'piano'],
   ['jump board: valid proof', 'ALLOW', true, 'create', entry(840, { proof: proof(840, DAY, 'jump') }), null, 'jump'],
   ['jump board: proof for another game', 'DENY', true, 'create', entry(840, { proof: proof(840, DAY, 'slice') }), null, 'jump'],
+  ['juice board: valid proof', 'ALLOW', true, 'create', entry(1200, { proof: proof(1200, DAY, 'juice') }), null, 'juice'],
+  ['draw board: party game, no board', 'DENY', true, 'create', entry(80, { proof: proof(80, DAY, 'draw') }), null, 'draw'],
 ];
 
 (async () => {

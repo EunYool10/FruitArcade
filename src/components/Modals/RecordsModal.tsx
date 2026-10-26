@@ -42,7 +42,7 @@ export const RecordsModal: React.FC<Props> = ({ isOpen, onClose, stats, history,
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-4">
+      <div className="grid gap-2 sm:grid-cols-3">
         {GAME_ORDER.map((g) => {
           const meta = GAMES[g];
           return (
@@ -56,7 +56,7 @@ export const RecordsModal: React.FC<Props> = ({ isOpen, onClose, stats, history,
               <div className="min-w-0">
                 <p className="text-sm font-bold sm:text-xs">{meta.name}</p>
                 <p className="font-display text-xl tabular-nums sm:text-base">
-                  {stats[bestKey(g)] > 0 ? `${formatNumber(stats[bestKey(g)])}점` : '기록 없음'}
+                  {stats[bestKey(g)] > 0 ? `${formatNumber(stats[bestKey(g)])}${meta.unit ?? '점'}` : '기록 없음'}
                 </p>
                 <p className="text-[11px] font-bold text-ink-3">{stats[playsKey(g)]}판 플레이</p>
               </div>

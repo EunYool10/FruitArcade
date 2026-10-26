@@ -378,7 +378,7 @@ export const runnerStyle = (id: string) => RUNNERS[id] ?? RUNNERS[''];
 
 /** How much a finished round pays: 10 for playing, up to 40 for the score, plus bonuses */
 export function coinsFor(r: GameResult, bonus: { newBest: boolean; stamp: boolean; firstToday: boolean }): number {
-  const perScore = { memory: 10, suika: 150, dash: 15, puzzle: 60, slice: 25, piano: 6, jump: 20 }[r.game] ?? 100;
+  const perScore = { memory: 10, suika: 150, dash: 15, puzzle: 60, slice: 25, piano: 6, jump: 20, juice: 40, draw: 3 }[r.game] ?? 100;
   let coins = 10 + Math.min(40, Math.floor(Math.max(0, r.score) / perScore));
   if (r.won) coins += 5;
   if (bonus.newBest) coins += 20;

@@ -29,8 +29,11 @@ interface ResultCardProps {
   extraAction?: { label: string; onClick: () => void };
   /** Replaces the plain app link in shared text (e.g. a challenge link) */
   shareUrl?: string;
-  /** false for rounds that never reach the leaderboard (puzzle stages) */
+  /** false for rounds that never reach the leaderboard (puzzle stages, party games) */
   ranked?: boolean;
+  /** What the big number is ("최종 점수") and its unit ("점") */
+  scoreLabel?: string;
+  unit?: string;
 }
 
 export const ResultCard: React.FC<ResultCardProps> = ({
@@ -48,6 +51,8 @@ export const ResultCard: React.FC<ResultCardProps> = ({
   extraAction,
   shareUrl,
   ranked = true,
+  scoreLabel = '최종 점수',
+  unit = '점',
 }) => {
   const titleId = useId();
   const player = usePlayer();
@@ -78,7 +83,8 @@ export const ResultCard: React.FC<ResultCardProps> = ({
 
   // Phones: share sheet with the score image; elsewhere: copy the text
   const share = async () => {
-    const text = `${shareText}\n같은 판으로 내 점수를 넘어 봐! 🥊\n${shareUrl ?? linkFor(game, score)}`;
+    const dare = ranked ? '\n같은 판으로 내 점수를 넘어 봐! 🥊' : '';
+    const text = `${shareText}${dare}\n${shareUrl ?? linkFor(game, score)}`;
     if (navigator.share) {
       setBusy('share');
       const blob = await makeImage();
@@ -120,13 +126,16 @@ export const ResultCard: React.FC<ResultCardProps> = ({
       )}
 
       <div className="well relative mt-4 px-4 py-3">
-        <p className="text-xs font-bold text-ink-3">최종 점수</p>
-        <p className="mt-0.5 font-display text-5xl leading-none tabular-nums">{formatNumber(score)}</p>
+        <p className="text-xs font-bold text-ink-3">{scoreLabel}</p>
+        <p className="mt-0.5 font-display text-5xl leading-none tabular-nums">
+          {formatNumber(score)}
+          {unit !== '점' && <span className="text-3xl">{unit}</span>}
+        </p>
         {reward?.newBest ? (
           <span className="chip absolute -right-2 -top-3 rotate-12 bg-berry-deep text-white">NEW BEST!</span>
         ) : (
           reward &&
-          reward.prevBest > 0 && <p className="mt-1 text-xs text-ink-3">최고 기록 {formatNumber(reward.prevBest)}점</p>
+          reward.prevBest > 0 && <p className="mt-1 text-xs text-ink-3">최고 기록 {formatNumber(reward.prevBest)}{unit}</p>
         )}
       </div>
 

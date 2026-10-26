@@ -78,7 +78,7 @@ rules_version = '2';
 // Fields: uid, code (friend code, 8 of [A-HJ-NP-Z2-9], fixed once claimed), name (1-40, not
 //         staff-looking unless admin), avatar (1-16), title?, frame? (ids; staff_ only admins), photo? (as above),
 //         verified? (true, admins only),
-//         level (1-200), achievements (0-60), best (map game -> best score, never above the player's
+//         level (1-100, 999 for admins), achievements (0-100), best (map game -> best score, never above the player's
 //         all-time board entry for that game), at (== request.time)
 //
 // Collection: friendCodes  (code -> { uid }, claimed once together with the player's card)
@@ -279,7 +279,7 @@ service cloud.firestore {
     }
 
     function isValidBoardFormat(boardId) {
-      return boardId is string && boardId.matches('^(memory|suika|dash|puzzle|slice|piano|jump)_(all|d[0-9]{1,6}|w[0-9]{1,6})$');
+      return boardId is string && boardId.matches('^(memory|suika|dash|puzzle|slice|piano|jump|juice)_(all|d[0-9]{1,6}|w[0-9]{1,6})$');
     }
 
     function isValidBoardId(boardId) {
@@ -297,7 +297,7 @@ service cloud.firestore {
 
     // Caps well above anything reachable in normal play
     function maxScore(game) {
-      return {'memory': 2000, 'suika': 500000, 'dash': 100000, 'puzzle': 100000, 'slice': 100000, 'piano': 100000, 'jump': 100000}[game];
+      return {'memory': 2000, 'suika': 500000, 'dash': 100000, 'puzzle': 100000, 'slice': 100000, 'piano': 100000, 'jump': 100000, 'juice': 100000}[game];
     }
 
     // ===============================================================
@@ -496,9 +496,9 @@ service cloud.firestore {
         && isOwnerFrameOk(uid, data)
         && isOptionalVerified(data)
         && data.level is int && data.level >= 1 && (data.level <= 100 || (data.level == 999 && isAdmin()))
-        && data.achievements is int && data.achievements >= 0 && data.achievements <= 60
+        && data.achievements is int && data.achievements >= 0 && data.achievements <= 100
         && data.best is map
-        && data.best.keys().hasOnly(['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump'])
+        && data.best.keys().hasOnly(['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump', 'juice'])
         && isBest(data.best, 'memory', 2000)
         && isBest(data.best, 'suika', 500000)
         && isBest(data.best, 'dash', 100000)
@@ -506,6 +506,7 @@ service cloud.firestore {
         && isBest(data.best, 'slice', 100000)
         && isBest(data.best, 'piano', 100000)
         && isBest(data.best, 'jump', 100000)
+        && isBest(data.best, 'juice', 100000)
         && isBestBacked(uid, data.best, 'memory')
         && isBestBacked(uid, data.best, 'suika')
         && isBestBacked(uid, data.best, 'dash')
@@ -513,6 +514,7 @@ service cloud.firestore {
         && isBestBacked(uid, data.best, 'slice')
         && isBestBacked(uid, data.best, 'piano')
         && isBestBacked(uid, data.best, 'jump')
+        && isBestBacked(uid, data.best, 'juice')
         && data.at == request.time;
     }
 

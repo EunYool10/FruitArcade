@@ -62,6 +62,17 @@ const POOLS: Record<GameType | 'any', Mission[]> = {
     { id: 'jump-score-800', game: 'jump', kind: 'score', target: 800, icon: '🌙', text: '과일 점프 800점 이상' },
     { id: 'jump-survive-45', game: 'jump', kind: 'survive', target: 45, icon: '⏱️', text: '과일 점프 45초 달리기' },
   ],
+  juice: [
+    { id: 'juice-play-2', game: 'juice', kind: 'play', target: 2, icon: '🧃', text: '과일 주스 가게 2판 하기' },
+    { id: 'juice-score-400', game: 'juice', kind: 'score', target: 400, icon: '🥤', text: '과일 주스 가게 400점 이상' },
+    { id: 'juice-score-1000', game: 'juice', kind: 'score', target: 1000, icon: '🍹', text: '과일 주스 가게 1,000점 이상' },
+    { id: 'juice-survive-60', game: 'juice', kind: 'survive', target: 60, icon: '⏱️', text: '과일 주스 가게 1분 넘게 영업하기' },
+  ],
+  draw: [
+    { id: 'draw-play-1', game: 'draw', kind: 'play', target: 1, icon: '🎨', text: '과일 그리기 1판 하기' },
+    { id: 'draw-score-60', game: 'draw', kind: 'score', target: 60, icon: '🖼️', text: '과일 그리기 싱크율 60% 넘기' },
+    { id: 'draw-score-80', game: 'draw', kind: 'score', target: 80, icon: '🔍', text: '과일 그리기 싱크율 80% 넘기' },
+  ],
   any: [
     { id: 'any-play-5', kind: 'play', target: 5, icon: '🎮', text: '아무 게임이나 5판 하기' },
     { id: 'any-time-300', kind: 'time', target: 300, icon: '⌛', text: '오늘 5분 이상 플레이' },
@@ -78,7 +89,9 @@ export function missionsFor(date: string): Mission[] {
   const pick = <T,>(list: T[]) => list[Math.floor(rand() * list.length)];
   // New games join the draw from the day after their release, so nobody's missions change mid-day
   const games: GameType[] =
-    date >= '2026-10-28'
+    date >= '2026-10-29'
+      ? ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump', 'juice', 'draw']
+      : date >= '2026-10-28'
       ? ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump']
       : date >= '2026-10-26'
       ? ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano']

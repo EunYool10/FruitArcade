@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BarChart3, Crown, Play } from 'lucide-react';
 import { PlayerView } from '../ui/Avatar';
 import { GameType, HistoryEntry, UserStatistics } from '../../types';
-import { APP_VERSION, GAMES, GAME_ORDER } from '../../constants';
+import { APP_VERSION, GAMES, GAME_ORDER, GameMeta } from '../../constants';
 import { LevelInfo, bestKey, playsKey } from '../../utils/progress';
 import { DailyState } from '../../utils/missions';
 import { PlayerCard } from './PlayerCard';
@@ -30,6 +30,14 @@ interface LobbyProps {
   onOpen: (target: LobbyTarget) => void;
 }
 
+type Kind = 'all' | GameMeta['kind'];
+const KINDS: [Kind, string, string][] = [
+  ['all', '🎮', '전체'],
+  ['reflex', '⚡', '순발력'],
+  ['brain', '🧠', '두뇌'],
+  ['party', '🎉', '여럿이'],
+];
+
 /** Plain text links along the bottom of the lobby */
 const FOOTER_LINK = 'underline-offset-4 hover:text-ink hover:underline';
 
@@ -39,6 +47,8 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
   const lastGame = history[0]?.game;
   const quick: GameType = lastGame ?? 'suika';
   const pwa = usePwa();
+  const [kind, setKind] = useState<Kind>('all');
+  const shown = GAME_ORDER.filter((g) => kind === 'all' || GAMES[g].kind === kind);
 
   return (
     <div className="mx-auto w-full max-w-[1080px] space-y-7 py-2 sm:space-y-9">
@@ -75,7 +85,7 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
             ARCADE
           </h1>
           <p className="relative mt-3 max-w-xs text-sm text-ink-2 sm:max-w-sm sm:text-base">
-            과일 게임 일곱 가지에 매일 바뀌는 미션, 업적, 친구 대결까지. 오늘도 상큼하게 한 판!
+            과일 게임 {GAME_ORDER.length}가지에 매일 바뀌는 미션, 업적, 친구 대결까지. 오늘도 상큼하게 한 판!
           </p>
           <div className="relative mt-5 flex flex-wrap gap-3">
             <button type="button" className="btn btn-lg btn-primary" onClick={() => onPlay(quick, true)}>
@@ -108,15 +118,33 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
       </section>
 
       <section aria-labelledby="games-title">
-        <h2 id="games-title" className="mb-3 font-display text-2xl">
-          게임 고르기
-        </h2>
-        {/* Tablets and desktops: rows of three, a last card on its own sits in the middle */}
-        <div className="grid gap-5 sm:grid-cols-6 lg:gap-4">
-          {GAME_ORDER.map((g, i) => (
-            <div key={g} className={`grid sm:col-span-2 ${i === GAME_ORDER.length - 1 && i % 3 === 0 ? 'sm:col-start-3' : ''}`}>
-              <GameCard meta={GAMES[g]} best={stats[bestKey(g)]} plays={stats[playsKey(g)]} onPlay={() => onPlay(g)} />
-            </div>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <h2 id="games-title" className="font-display text-2xl">
+            게임 고르기
+          </h2>
+          {/* Filter by kind, so a long list stays easy to scan */}
+          <div role="tablist" aria-label="게임 종류" className="grid w-full grid-cols-4 gap-1.5 sm:flex sm:w-auto">
+            {KINDS.map(([k, icon, label]) => {
+              const count = GAME_ORDER.filter((g) => k === 'all' || GAMES[g].kind === k).length;
+              const on = kind === k;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setKind(k)}
+                  className={`chip h-9 shrink-0 justify-center gap-1 px-1 text-[13px] sm:px-3 sm:text-sm ${on ? 'bg-ink text-surface shadow-hard-sm' : 'bg-surface hover:bg-surface-2'}`}
+                >
+                  {icon} {label} <span className={`tabular-nums ${on ? 'opacity-70' : 'text-ink-3'}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+          {shown.map((g) => (
+            <GameCard key={g} meta={GAMES[g]} best={stats[bestKey(g)]} plays={stats[playsKey(g)]} onPlay={() => onPlay(g)} />
           ))}
         </div>
       </section>

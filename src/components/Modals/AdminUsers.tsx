@@ -10,7 +10,7 @@ import { ConfirmButton } from '../ui/ConfirmButton';
 import { Emoji } from '../ui/Emoji';
 import { titleDef } from '../../utils/titles';
 import { isOnline } from '../../utils/presence';
-import { GAMES, GAME_ORDER, TONE } from '../../constants';
+import { GAMES, RANKED_GAMES, TONE } from '../../constants';
 import { formatNumber, formatTime, relativeTime } from '../../utils/format';
 
 type Filter = 'all' | 'online' | 'today' | 'banned';
@@ -202,7 +202,7 @@ export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onB
                       ))}
                     </dl>
                     <div className="grid grid-cols-4 gap-1.5">
-                      {GAME_ORDER.map((g) => (
+                      {RANKED_GAMES.map((g) => (
                         <div key={g} className={`min-w-0 rounded-xl border-2 border-line px-1 py-1.5 text-center ${TONE[GAMES[g].tone].soft}`}>
                           <p className="text-base leading-none" aria-hidden="true">
                             <Emoji e={GAMES[g].emoji} />

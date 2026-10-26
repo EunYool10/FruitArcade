@@ -18,7 +18,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firestore';
 import { GameType } from '../types';
-import { GAME_ORDER } from '../constants';
+import { RANKED_GAMES } from '../constants';
 import { cleanPhoto, kstDay } from './ranking';
 import { COIN_MAX, GIFT_LIMITS } from './coins';
 import { maskBadWords } from './badWords';
@@ -83,7 +83,7 @@ function newCode(): string {
 
 function toPlayer(uid: string, d: DocumentData): PublicPlayer {
   const best: Partial<Record<GameType, number>> = {};
-  for (const g of GAME_ORDER) if (typeof d.best?.[g] === 'number') best[g] = d.best[g];
+  for (const g of RANKED_GAMES) if (typeof d.best?.[g] === 'number') best[g] = d.best[g];
   return {
     uid,
     code: typeof d.code === 'string' ? d.code : '',
@@ -108,21 +108,21 @@ const sameCard = (a: PlayerCard, b: PlayerCard) =>
   !!a.verified === !!b.verified &&
   a.level === b.level &&
   a.achievements === b.achievements &&
-  GAME_ORDER.every((g) => (a.best[g] ?? 0) === (b.best[g] ?? 0));
+  RANKED_GAMES.every((g) => (a.best[g] ?? 0) === (b.best[g] ?? 0));
 
 /** Same caps as the rules (and the leaderboards): a card over them would be refused */
-const BEST_CAP: Record<GameType, number> = { memory: 2000, suika: 500000, dash: 100000, puzzle: 100000, slice: 100000, piano: 100000, jump: 100000 };
+const BEST_CAP: Record<GameType, number> = { memory: 2000, suika: 500000, dash: 100000, puzzle: 100000, slice: 100000, piano: 100000, jump: 100000, juice: 100000, draw: 100 };
 /** Same as isValidPlayerCard in firestore.rules */
 /** Players stop at Lv.100; admins show Lv.999 (firestore.rules: same) */
 const LEVEL_CAP = 999;
-const ACHIEVEMENT_CAP = 60;
+const ACHIEVEMENT_CAP = 100;
 
 const cardFields = (card: PlayerCard) => ({
   name: card.name,
   avatar: card.avatar,
   level: Math.max(1, Math.min(LEVEL_CAP, Math.round(card.level))),
   achievements: Math.max(0, Math.min(ACHIEVEMENT_CAP, Math.round(card.achievements))),
-  best: Object.fromEntries(GAME_ORDER.map((g) => [g, Math.max(0, Math.min(BEST_CAP[g], Math.round(card.best[g] ?? 0)))])),
+  best: Object.fromEntries(RANKED_GAMES.map((g) => [g, Math.max(0, Math.min(BEST_CAP[g], Math.round(card.best[g] ?? 0)))])),
 });
 
 /**
@@ -130,9 +130,9 @@ const cardFields = (card: PlayerCard) => ({
  * card may not go above them (firestore.rules checks the same); games without one show 0.
  */
 async function boardBests(uid: string): Promise<Partial<Record<GameType, number>>> {
-  const snaps = await Promise.all(GAME_ORDER.map((g) => getDoc(doc(db, 'leaderboards', `${g}_all`, 'scores', uid)).catch(() => null)));
+  const snaps = await Promise.all(RANKED_GAMES.map((g) => getDoc(doc(db, 'leaderboards', `${g}_all`, 'scores', uid)).catch(() => null)));
   const out: Partial<Record<GameType, number>> = {};
-  GAME_ORDER.forEach((g, i) => {
+  RANKED_GAMES.forEach((g, i) => {
     const score = snaps[i]?.exists() ? snaps[i]!.data().score : 0;
     out[g] = typeof score === 'number' && score > 0 ? score : 0;
   });
@@ -142,7 +142,7 @@ async function boardBests(uid: string): Promise<Partial<Record<GameType, number>
 /** Make sure the player has a public card (claiming a friend code the first time); returns the code */
 export async function ensurePlayer(uid: string, card: PlayerCard): Promise<string> {
   const onBoards = await boardBests(uid);
-  card = { ...card, best: Object.fromEntries(GAME_ORDER.map((g) => [g, Math.min(card.best[g] ?? 0, onBoards[g] ?? 0)])) };
+  card = { ...card, best: Object.fromEntries(RANKED_GAMES.map((g) => [g, Math.min(card.best[g] ?? 0, onBoards[g] ?? 0)])) };
   const snap = await getDoc(playerRef(uid));
   if (snap.exists()) {
     const current = toPlayer(uid, snap.data());

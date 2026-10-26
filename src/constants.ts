@@ -1,6 +1,6 @@
 import { GameSettings, GameType, ScreenType } from './types';
 
-export const APP_VERSION = '3.34.0';
+export const APP_VERSION = '3.35.0';
 
 export const DEFAULT_SETTINGS: GameSettings = {
   theme: 'light',
@@ -46,6 +46,12 @@ export interface GameMeta {
   /** Screen opened from the lobby */
   screen: ScreenType;
   tag: string;
+  /** Lobby filter: quick hands, thinking, or playing together on one device */
+  kind: 'reflex' | 'brain' | 'party';
+  /** What a score counts ("점" unless set) */
+  unit?: string;
+  /** false: no leaderboard, challenge links or player-card best (party games) */
+  ranked?: false;
   desc: string;
   how: string[];
   startHint: string;
@@ -61,6 +67,7 @@ export const GAMES: Record<GameType, GameMeta> = {
     emoji: '🍓',
     tone: 'berry',
     screen: 'memory-setup',
+    kind: 'brain',
     tag: 'CLASSIC',
     desc: '뒤집힌 카드 속 같은 과일 짝을 모두 찾아내세요.',
     how: ['처음 몇 초 동안 카드를 외워요', '같은 과일 두 장을 연달아 뒤집으면 성공', '연속으로 맞히면 콤보!'],
@@ -78,6 +85,7 @@ export const GAMES: Record<GameType, GameMeta> = {
     emoji: '🍉',
     tone: 'melon',
     screen: 'suika',
+    kind: 'brain',
     tag: 'POPULAR',
     desc: '같은 과일끼리 합쳐 더 큰 과일로! 수박까지 키워 보세요.',
     how: ['과일을 떨어뜨려 같은 과일끼리 붙여요', '🔨 망치로 부수고 🫨 흔들기로 섞어요', '넘침 선 위에 5초 넘게 쌓이면 끝!'],
@@ -97,6 +105,7 @@ export const GAMES: Record<GameType, GameMeta> = {
     emoji: '🏃',
     tone: 'mango',
     screen: 'dash',
+    kind: 'reflex',
     tag: 'ACTION',
     desc: '쏟아지는 과일을 피하고 황금 별을 모아 최고 기록에 도전!',
     how: ['좌우로 움직여 떨어지는 과일을 피해요', '⭐ 황금 별을 먹으면 +50점', '🛡️ 🧲 🐢 ✨ 아이템으로 위기를 넘겨요'],
@@ -115,6 +124,7 @@ export const GAMES: Record<GameType, GameMeta> = {
     emoji: '🧩',
     tone: 'grape',
     screen: 'puzzle',
+    kind: 'brain',
     tag: 'PUZZLE',
     desc: '같은 과일 3개를 한 줄로 맞춰 터뜨리세요. 30번 안에 최고 점수!',
     how: ['옆 과일과 자리를 바꿔 3개를 맞춰요', '4개는 줄 폭탄, 5개는 큰 폭탄이 돼요', '연쇄로 터지면 점수가 껑충!'],
@@ -132,6 +142,7 @@ export const GAMES: Record<GameType, GameMeta> = {
     emoji: '🔪',
     tone: 'soda',
     screen: 'slice',
+    kind: 'reflex',
     tag: 'SWIPE',
     desc: '날아오르는 과일을 그어서 싹둑! 폭탄은 조심하세요.',
     how: ['화면을 그어 과일을 잘라요', '한 번에 3개 이상 자르면 콤보! ❤️ 하트는 회복', '💣 폭탄 · 놓친 과일이 쌓이면 끝 (난이도마다 달라요)'],
@@ -155,6 +166,7 @@ export const GAMES: Record<GameType, GameMeta> = {
     emoji: '🎹',
     tone: 'peach',
     screen: 'piano',
+    kind: 'reflex',
     tag: 'MUSIC',
     desc: '내려오는 과일 타일을 눌러 노래를 연주해요. 하나라도 놓치면 끝!',
     how: ['곡을 고르고 맨 아래 과일 타일부터 눌러요', '누를 때마다 노래가 한 음씩 연주돼요', '빈 칸을 누르거나 타일을 놓치면 끝!'],
@@ -172,7 +184,8 @@ export const GAMES: Record<GameType, GameMeta> = {
     emoji: '🦘',
     tone: 'melon',
     screen: 'jump',
-    tag: 'NEW',
+    kind: 'reflex',
+    tag: 'RUN',
     desc: '달리는 과일을 폴짝! 선인장과 벌을 넘으며 멀리멀리 달려요.',
     how: ['탭하거나 스페이스로 점프해요', '길게 누르면 더 높이 뛰어요', '🌵 장애물에 부딪히면 끝! 🍒 체리는 보너스'],
     startHint: 'Space · ↑ 점프 · ↓ 빨리 내려오기',
@@ -183,9 +196,52 @@ export const GAMES: Record<GameType, GameMeta> = {
       { emoji: '🍒', title: '체리 모으기', text: '체리를 먹으면 +20점! 멀리 달릴수록 점수가 오르고, 날이 저물면 밤이 와요.' },
     ],
   },
+  juice: {
+    id: 'juice',
+    name: '과일 주스 가게',
+    short: '주스',
+    emoji: '🧃',
+    tone: 'mango',
+    screen: 'juice',
+    kind: 'reflex',
+    tag: 'NEW',
+    desc: '손님이 주문한 과일로 주스를 만들어 줘요. 늦으면 손님이 화나요!',
+    how: ['주문한 과일을 눌러 믹서에 넣어요', '초록으로 빛나는 손님을 눌러 주스를 줘요', '손님이 3번 화나서 가 버리면 가게 마감!'],
+    startHint: '숫자 1–8 과일 · Enter 주기 · ⌫ 비우기',
+    tutorial: [
+      { emoji: '🐻🍓', title: '주문 보기', text: '손님 말풍선에 먹고 싶은 과일이 나와요. 같은 과일이 두 번 나오면 두 번 넣어야 해요.' },
+      { emoji: '🥤', title: '믹서에 넣기', text: '아래 과일을 눌러 믹서에 넣어요. 순서는 상관없어요. 잘못 넣었으면 비우기!' },
+      { emoji: '😋', title: '손님에게 주기', text: '믹서 속 과일이 주문과 맞으면 손님이 초록으로 빛나요. 손님을 누르면 주스를 줘요. 빨리 줄수록, 연속으로 성공할수록 점수가 커져요.' },
+      { emoji: '😠', title: '늦으면 안 돼요', text: '손님 아래 막대가 다 줄면 화나서 가 버려요. 3번이면 가게 마감! 레벨이 오르면 과일과 손님이 늘어나요.' },
+    ],
+  },
+  draw: {
+    id: 'draw',
+    name: '과일 그리기',
+    short: '그리기',
+    emoji: '🎨',
+    tone: 'grape',
+    screen: 'draw',
+    kind: 'party',
+    unit: '%',
+    ranked: false,
+    tag: 'PARTY',
+    desc: '제시어 과일을 그리고, 누가 더 닮게 그렸는지 싱크율로 겨뤄요.',
+    how: ['함께 할 사람 수 · 시간 · 라운드를 정해요', '차례대로 제시어 과일을 그려요', '싱크율 1등이 라운드 점수를 가져가요'],
+    startHint: '한 화면을 돌려 가며 함께 해요 · 혼자서도 OK',
+    tutorial: [
+      { emoji: '👥', title: '사람 수 정하기', text: '1명부터 6명까지. 한 휴대폰(또는 컴퓨터)을 돌려 가며 차례로 그려요. 그리기 시간과 라운드 수도 골라요.' },
+      { emoji: '🍓', title: '제시어 그리기', text: '라운드마다 과일 하나가 나와요. 시간 안에 펜 · 채우기 · 지우개로 그 과일을 그려요. 다른 사람이 그릴 땐 보지 않기!' },
+      { emoji: '🔍', title: '싱크율', text: '그림이 진짜 과일 그림과 모양 · 색 · 위치가 얼마나 닮았는지 0~100%로 재요. 색칠까지 하면 더 높아져요.' },
+      { emoji: '👑', title: '라운드 우승', text: '싱크율이 가장 높은 사람이 그 라운드의 1점을 가져가요. 점수가 가장 많은 사람이 최종 우승!' },
+    ],
+  },
 };
 
-export const GAME_ORDER: GameType[] = ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump'];
+export const GAME_ORDER: GameType[] = ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump', 'juice', 'draw'];
+
+/** Games with leaderboards, challenge links and a best on the player card */
+export const RANKED_GAMES: GameType[] = GAME_ORDER.filter((g) => GAMES[g].ranked !== false);
 
 export const SCREEN_GAME: Partial<Record<ScreenType, GameType>> = {
   'memory-setup': 'memory',
@@ -196,6 +252,8 @@ export const SCREEN_GAME: Partial<Record<ScreenType, GameType>> = {
   slice: 'slice',
   piano: 'piano',
   jump: 'jump',
+  juice: 'juice',
+  draw: 'draw',
 };
 
-export const PLAY_SCREENS: ScreenType[] = ['memory-play', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump'];
+export const PLAY_SCREENS: ScreenType[] = ['memory-play', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump', 'juice', 'draw'];

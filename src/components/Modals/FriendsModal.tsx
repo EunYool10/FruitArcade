@@ -237,7 +237,12 @@ const PlayerBadge: React.FC<{ p: PublicPlayer | null; fallback?: string; seen?: 
           {p && <span className="chip h-5 shrink-0 bg-surface px-1.5 text-[10px]">Lv.{p.level}</span>}
         </span>
         {t && <TitleTag title={t} variant="line" />}
-        {seen !== undefined && <PresenceTag at={seen} className="mt-0.5" />}
+        {/* Its own line: next to a 운영진 title badge the two ran into each other */}
+        {seen !== undefined && (
+          <span className="mt-0.5 block">
+            <PresenceTag at={seen} />
+          </span>
+        )}
       </span>
     </span>
   );

@@ -9,6 +9,11 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.37.1',
+    title: '친구 목록 겹침 수정',
+    items: [['👥 친구', '운영진 칭호가 있는 친구는 칭호와 접속 상태가 한 줄에 붙어 겹쳐 보였어요. 이제 접속 상태가 항상 아래 줄에 따로 보여요.']],
+  },
+  {
     version: '3.37.0',
     title: 'RGB 러너 · 운영진 아이템',
     items: [

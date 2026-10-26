@@ -36,7 +36,7 @@ const SONG_KEY = 'fruit_arcade_piano_song';
 /** D F J K play the four lanes */
 const KEYS: Record<string, number> = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3 };
 /** Left-hand notes play softer than the tune */
-const LEFT_GAIN = 0.42;
+const LEFT_GAIN = 0.3;
 
 /** A tile's fruit by note: C 딸기, D 귤, E 레몬, F 풋사과, G 블루베리, A 포도, B 복숭아, sharps 체리 */
 const FRUIT_BY_PITCH = ['🍓', '🍒', '🍊', '🍒', '🍋', '🍏', '🍒', '🫐', '🍒', '🍇', '🍒', '🍑'];
@@ -150,7 +150,7 @@ const SongList: React.FC<{ current: string; onPick: (id: string) => void; onClos
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-bold">{s.name}</span>
                         <span className="block truncate text-[11px] text-ink-3">
-                          {s.by} · 타일 {info.tiles}개 · 한 바퀴 {info.seconds}초
+                          {s.by} · {s.tempo} · 타일 {info.tiles}개 · 한 바퀴 {info.seconds}초
                         </span>
                       </span>
                       {on && <Check className="h-5 w-5 shrink-0 text-peach-ink" strokeWidth={3} />}
@@ -232,6 +232,7 @@ export const PianoGame: React.FC<Props> = ({
   const challengeSong = songOfSeed(seed);
   const [songId, setSongId] = useState(() => challengeSong?.id ?? loadSongId());
   const song: Song = songById(songId) ?? SONGS[0];
+  const songIdRef = useRef(songId);
 
   const [gameState, setGameState] = useState<'IDLE' | 'PLAYING' | 'OVER'>('IDLE');
   const [score, setScore] = useState(0);
@@ -348,7 +349,7 @@ export const PianoGame: React.FC<Props> = ({
   }, [gameState, isPaused]);
 
   const handleStartGame = () => {
-    const chosen = challengeSong ?? song;
+    const chosen = challengeSong ?? songById(songIdRef.current) ?? SONGS[0];
     const roundSeed = seed ?? `${chosen.id}.${randomSeed()}`;
     rngRef.current = seededRandom(roundSeed);
     onRoundSeed?.(roundSeed);
@@ -389,12 +390,25 @@ export const PianoGame: React.FC<Props> = ({
   }, []);
 
   const pickSong = (id: string) => {
+    songIdRef.current = id;
     setSongId(id);
     try {
       localStorage.setItem(SONG_KEY, id);
     } catch {
       // ignore
     }
+  };
+
+  /** Stop the round and open the song list (a pick starts the next round) */
+  const chooseAgain = () => {
+    isPlayingRef.current = false;
+    holdRef.current?.note.release();
+    holdRef.current = null;
+    pendingRef.current = [];
+    endRef.current = null;
+    setEnding(null);
+    setPicking(!challengeSong);
+    setGameState('IDLE');
   };
 
   const finishRound = useCallback((cause: EndCause) => {
@@ -672,24 +686,73 @@ export const PianoGame: React.FC<Props> = ({
         ctx.fill();
 
         if (t.len > 1) {
-          // Long tile: a track up the middle that fills while it's held
-          const trackTop = r.y + 22;
-          const trackBottom = r.y + r.h - RH / 2 - 26;
-          const fill = held ? Math.min(1, (pos - hold!.from) / (t.len - 1)) : 0;
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-          roundRect(r.x + r.w / 2 - 7, trackTop, 14, Math.max(0, trackBottom - trackTop), 7);
-          ctx.fill();
-          if (fill > 0) {
-            const top = trackBottom - (trackBottom - trackTop) * fill;
-            ctx.fillStyle = '#ffffff';
-            roundRect(r.x + r.w / 2 - 7, top, 14, trackBottom - top, 7);
-            ctx.fill();
-            // The pressed part glows
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
-            roundRect(r.x, Math.max(r.y, top - 10), r.w, r.y + r.h - Math.max(r.y, top - 10), 18);
-            ctx.fill();
+          // Long tile: diagonal stripes, an arrowed track up the middle and a "꾹" label, so it
+          // never passes for a tap tile; the track fills and the tile glows while it's held
+          const cx = r.x + r.w / 2;
+          ctx.save();
+          roundRect(r.x, r.y, r.w, r.h, 18);
+          ctx.clip();
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.24)';
+          ctx.lineWidth = 10;
+          for (let k = 0; k < r.w + r.h; k += 28) {
+            ctx.beginPath();
+            ctx.moveTo(r.x + k, r.y);
+            ctx.lineTo(r.x + k - r.h, r.y + r.h);
+            ctx.stroke();
           }
-          drawEmoji(ctx, '🎵', r.x + r.w / 2, trackTop + 4, 22);
+          ctx.restore();
+
+          const trackTop = r.y + 18;
+          const trackBottom = r.y + r.h - RH / 2 - 40;
+          const tw = 24;
+          const fill = held ? Math.min(1, (pos - hold!.from) / (t.len - 1)) : 0;
+          if (held) {
+            ctx.save();
+            ctx.shadowColor = '#ffffff';
+            ctx.shadowBlur = 24;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            roundRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4, 16);
+            ctx.stroke();
+            ctx.restore();
+          }
+          if (trackBottom > trackTop) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.strokeStyle = P.outline;
+            ctx.lineWidth = 2.5;
+            roundRect(cx - tw / 2, trackTop, tw, trackBottom - trackTop, tw / 2);
+            ctx.fill();
+            ctx.stroke();
+            if (fill > 0) {
+              const top = trackBottom - (trackBottom - trackTop) * fill;
+              ctx.fillStyle = '#ffffff';
+              roundRect(cx - tw / 2 + 2, top, tw - 4, trackBottom - top, tw / 2 - 2);
+              ctx.fill();
+            }
+            // Arrows: keep pressing upwards
+            ctx.fillStyle = color.deep;
+            for (let ay = trackBottom - 16; ay > trackTop + 10; ay -= 30) {
+              ctx.beginPath();
+              ctx.moveTo(cx - 7, ay + 5);
+              ctx.lineTo(cx, ay - 5);
+              ctx.lineTo(cx + 7, ay + 5);
+              ctx.closePath();
+              ctx.fill();
+            }
+          }
+          if (!held) {
+            const label = i === 0 && !startedRef.current ? '꾹 눌러 시작' : '꾹 누르기';
+            ctx.font = '700 15px Fredoka, Jua, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const lw = ctx.measureText(label).width + 18;
+            const ly = r.y + r.h - 28;
+            ctx.fillStyle = P.outline;
+            roundRect(cx - lw / 2, ly - 11, lw, 22, 11);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(label, cx, ly + 1);
+          }
         }
         // The fruit sits on a white plate, so any skin stands out from any tile colour
         const cy = r.y + r.h - RH / 2 - 1;
@@ -702,7 +765,7 @@ export const PianoGame: React.FC<Props> = ({
         ctx.stroke();
         drawEmoji(ctx, emoji, r.x + r.w / 2, cy, 50);
 
-        if (i === 0 && !startedRef.current) {
+        if (i === 0 && !startedRef.current && t.len === 1) {
           ctx.font = '700 20px Fredoka, Jua, sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -805,6 +868,7 @@ export const PianoGame: React.FC<Props> = ({
                       onPick={(id) => {
                         pickSong(id);
                         setPicking(false);
+                        handleStartGame();
                       }}
                       onClose={() => setPicking(false)}
                     />
@@ -868,11 +932,11 @@ export const PianoGame: React.FC<Props> = ({
                 className="btn btn-sm ml-auto"
                 onClick={(e) => {
                   e.currentTarget.blur();
-                  handleStartGame();
+                  chooseAgain();
                 }}
                 disabled={gameState === 'IDLE'}
               >
-                <RotateCcw className="h-4 w-4" strokeWidth={2.5} /> 다시 시작
+                <RotateCcw className="h-4 w-4" strokeWidth={2.5} /> 곡 고르고 다시 시작
               </button>
             </div>
           </div>
@@ -903,11 +967,7 @@ export const PianoGame: React.FC<Props> = ({
                 ? undefined
                 : {
                     label: '🎵 다른 곡 고르기',
-                    onClick: () => {
-                      setPicking(true);
-                      setEnding(null);
-                      setGameState('IDLE');
-                    },
+                    onClick: chooseAgain,
                   }
             }
           />

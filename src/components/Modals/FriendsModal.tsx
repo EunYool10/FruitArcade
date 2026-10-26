@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Check, Copy, Gift, Loader2, Search, UserPlus, X } from 'lucide-react';
+import { Check, Copy, Gift, Loader2, MoreHorizontal, Search, Share2, UserPlus, UserRound, X } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import { AvatarFace, Framed } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
 import { PresenceTag } from '../ui/Presence';
+import { Emoji } from '../ui/Emoji';
 import { titleDef } from '../../utils/titles';
 import { formatCompact, formatNumber, josa, relativeTime } from '../../utils/format';
+import { GAMES, GAME_ORDER } from '../../constants';
+import { isOnline } from '../../utils/presence';
 import { COIN_MAX, GIFT_LIMITS } from '../../utils/coins';
 import type { FriendLink, Gift as GiftDoc, PublicPlayer } from '../../utils/friendsService';
 
@@ -221,9 +224,12 @@ const PlayerBadge: React.FC<{ p: PublicPlayer | null; fallback?: string; seen?: 
   const t = titleDef(p?.title);
   return (
     <span className="flex min-w-0 flex-1 items-center gap-2.5">
-      <Framed frame={p?.frame}>
-        <AvatarFace emoji={p?.avatar ?? '❔'} photo={p?.photo} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft text-xl" />
-      </Framed>
+      <span className="relative shrink-0">
+        <Framed frame={p?.frame}>
+          <AvatarFace emoji={p?.avatar ?? '❔'} photo={p?.photo} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft text-xl" />
+        </Framed>
+        {isOnline(seen) && <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-surface bg-melon" aria-hidden="true" />}
+      </span>
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-center gap-1.5">
           <span className="truncate font-bold">{p?.name ?? fallback}</span>
@@ -262,6 +268,11 @@ export const FriendsModal: React.FC<Props> = ({
   const [sendTo, setSendTo] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [copied, setCopied] = useState(false);
+  /** The add-a-friend box is open (always, while there are no friends) */
+  const [adding, setAdding] = useState(false);
+  const [friendQuery, setFriendQuery] = useState('');
+  /** Whose ⋯ menu is open */
+  const [manage, setManage] = useState<string | null>(null);
 
   const limits = isAdmin ? GIFT_LIMITS.admin : GIFT_LIMITS.player;
 
@@ -291,6 +302,8 @@ export const FriendsModal: React.FC<Props> = ({
     setFound(null);
     setCodeInput('');
     setSendTo(null);
+    setManage(null);
+    setFriendQuery('');
     load();
   }, [isOpen, load]);
 
@@ -396,6 +409,11 @@ export const FriendsModal: React.FC<Props> = ({
     }
   };
 
+  const shownCode = myCode ? `${myCode.slice(0, 4)}-${myCode.slice(4)}` : '';
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  const shareCode = () =>
+    navigator.share?.({ title: 'FRUIT ARCADE 친구 코드', text: `FRUIT ARCADE에서 친구해요! 내 친구 코드: ${shownCode}`, url: window.location.origin + window.location.pathname }).catch(() => {});
+
   const copyCode = async () => {
     try {
       await navigator.clipboard.writeText(myCode);
@@ -417,11 +435,16 @@ export const FriendsModal: React.FC<Props> = ({
       <div className="well mb-3 flex items-center gap-3 p-3">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-bold text-ink-3">내 친구 코드 · 친구에게 알려 주세요</p>
-          <p className="font-display text-2xl tracking-wider tabular-nums">{myCode ? `${myCode.slice(0, 4)}-${myCode.slice(4)}` : '만드는 중…'}</p>
+          <p className="font-display text-2xl tracking-wider tabular-nums">{shownCode || '만드는 중…'}</p>
         </div>
         <button type="button" className="btn btn-sm shrink-0" onClick={copyCode} disabled={!myCode}>
           {copied ? <Check className="h-4 w-4" strokeWidth={3} /> : <Copy className="h-4 w-4" strokeWidth={2.5} />} {copied ? '복사됨' : '복사'}
         </button>
+        {canShare && (
+          <button type="button" className="btn btn-icon btn-sm shrink-0" onClick={shareCode} disabled={!myCode} aria-label="친구 코드 공유">
+            <Share2 className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+        )}
       </div>
 
       <div role="tablist" aria-label="친구 메뉴" className="mb-3 grid grid-cols-3 gap-1.5">
@@ -453,99 +476,164 @@ export const FriendsModal: React.FC<Props> = ({
 
       {links && tab === 'friends' && (
         <div className="space-y-3">
-          <form
-            className="flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              find();
-            }}
-          >
-            <input
-              value={codeInput}
-              onChange={(e) => {
-                setCodeInput(e.target.value);
-                setFound(null);
-              }}
-              placeholder="친구 코드 8자리 (예: ABCD-2345)"
-              aria-label="친구 코드"
-              maxLength={12}
-              className="min-w-0 flex-1 rounded-2xl border-2 border-line bg-surface px-3 py-2 font-display uppercase tracking-wider outline-none focus:border-soda"
-            />
-            <button type="submit" className="btn btn-sm btn-soda shrink-0" disabled={busy === 'find' || !codeInput.trim()}>
-              {busy === 'find' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" strokeWidth={2.5} />} 찾기
-            </button>
-          </form>
-          {found === 'none' && <p className="text-xs font-bold text-berry-ink">그 코드의 플레이어가 없어요. 8자리를 다시 확인해 주세요.</p>}
-          {found && found !== 'none' && (
-            <div className="flex items-center gap-2 rounded-2xl border-2 border-line bg-soda-soft p-2.5">
-              <PlayerBadge p={found} />
-              {found.uid === uid ? (
-                <span className="chip h-8 shrink-0 bg-surface text-xs">나예요</span>
-              ) : (
-                <button type="button" className="btn btn-sm btn-soda shrink-0" disabled={busy === 'request'} onClick={() => request(found)}>
-                  <UserPlus className="h-4 w-4" strokeWidth={2.5} /> 친구 요청
+          {/* Add a friend by code: open while there are no friends, folded away after that */}
+          {adding || friends.length === 0 ? (
+            <section className="space-y-2 rounded-2xl border-2 border-line bg-soda-soft p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-bold">➕ 친구 추가</p>
+                {friends.length > 0 && (
+                  <button type="button" className="btn btn-icon btn-sm" onClick={() => setAdding(false)} aria-label="친구 추가 닫기">
+                    <X className="h-4 w-4" strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
+              <form
+                className="flex gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  find();
+                }}
+              >
+                <input
+                  value={codeInput}
+                  onChange={(e) => {
+                    setCodeInput(e.target.value);
+                    setFound(null);
+                  }}
+                  placeholder="친구 코드 8자리 (예: ABCD-2345)"
+                  aria-label="친구 코드"
+                  maxLength={12}
+                  className="min-w-0 flex-1 rounded-2xl border-2 border-line bg-surface px-3 py-2 font-display uppercase tracking-wider outline-none focus:border-soda"
+                />
+                <button type="submit" className="btn btn-sm btn-soda shrink-0" disabled={busy === 'find' || !codeInput.trim()}>
+                  {busy === 'find' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" strokeWidth={2.5} />} 찾기
                 </button>
+              </form>
+              {found === 'none' && <p className="text-xs font-bold text-berry-ink">그 코드의 플레이어가 없어요. 8자리를 다시 확인해 주세요.</p>}
+              {found && found !== 'none' && (
+                <div className="flex items-center gap-2 rounded-2xl border-2 border-line bg-soda-soft p-2.5">
+                  <PlayerBadge p={found} />
+                  {found.uid === uid ? (
+                    <span className="chip h-8 shrink-0 bg-surface text-xs">나예요</span>
+                  ) : (
+                    <button type="button" className="btn btn-sm btn-soda shrink-0" disabled={busy === 'request'} onClick={() => request(found)}>
+                      <UserPlus className="h-4 w-4" strokeWidth={2.5} /> 친구 요청
+                    </button>
+                  )}
+                </div>
               )}
-            </div>
+
+              <p className="text-[11px] text-ink-3">랭킹에서 이름을 눌러도 친구 요청을 보낼 수 있어요.</p>
+            </section>
+          ) : (
+            <button type="button" className="btn btn-sm w-full" onClick={() => setAdding(true)}>
+              <UserPlus className="h-4 w-4" strokeWidth={2.5} /> 코드로 친구 추가
+            </button>
           )}
 
           {friends.length === 0 ? (
             <p className="rounded-2xl bg-surface-2 p-4 text-center text-sm text-ink-3">아직 친구가 없어요. 친구 코드를 주고받거나 랭킹에서 이름을 눌러 친구를 추가해 보세요.</p>
           ) : (
             <>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="chip h-7 bg-melon-soft px-2.5 text-xs">🟢 지금 접속 {friends.filter((l) => isOnline(l.lastSeen)).length}명</span>
+                <span className="chip h-7 bg-surface-2 px-2.5 text-xs">👥 친구 {friends.length}명</span>
+              </div>
+              {friends.length > 5 && (
+                <label className="relative block">
+                  <span className="sr-only">친구 찾기</span>
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3" strokeWidth={2.5} />
+                  <input
+                    value={friendQuery}
+                    onChange={(e) => setFriendQuery(e.target.value)}
+                    placeholder="친구 이름으로 찾기"
+                    className="h-10 w-full select-text rounded-xl border-2 border-line bg-surface pl-9 pr-3 text-sm outline-none focus:border-soda"
+                  />
+                </label>
+              )}
               <p className="text-xs text-ink-3">
                 {isAdmin
                   ? '🛡️ 운영진은 횟수 · 금액 제한 없이 코인을 선물할 수 있어요'
                   : `🪙 오늘 보낸 선물 ${sentToday}/${limits.perDay}번 · 한 번에 1~${limits.max}코인 · 내 코인 ${formatCompact(balance)}`}
               </p>
               <ul className="space-y-2">
-                {friends.map((l) => (
-                  <li key={l.pair} className="rounded-2xl border-2 border-line bg-surface-2 p-2.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button type="button" className="flex min-w-0 flex-1 text-left" onClick={() => onViewPlayer(l.otherUid)} aria-label={`${l.other?.name ?? '친구'} 프로필`}>
-                        <PlayerBadge p={l.other} seen={l.lastSeen ?? null} />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-mango shrink-0"
-                        onClick={() => {
-                          setSendTo(sendTo === l.otherUid ? null : l.otherUid);
-                          setAmount('');
-                        }}
-                        aria-expanded={sendTo === l.otherUid}
-                      >
-                        🪙 선물
-                      </button>
-                      <ConfirmButton
-                        className="btn btn-icon btn-sm shrink-0"
-                        question={`${l.other?.name ?? '이 친구'}${josa(l.other?.name ?? '친구', '과', '와')} 친구를 끊을까요?`}
-                        confirmLabel="끊기"
-                        onConfirm={() =>
-                          run('remove', async () => {
-                            const api = await friendsApi();
-                            await api.removeFriend(l.pair);
-                          })
-                        }
-                        ariaLabel="친구 끊기"
-                        panelClassName="basis-full"
-                      >
-                        <X className="h-4 w-4" strokeWidth={2.5} />
-                      </ConfirmButton>
-                    </div>
-                    {sendTo === l.otherUid && (
-                      <GiftForm
-                        name={l.other?.name ?? '친구'}
-                        isAdmin={isAdmin}
-                        balance={balance}
-                        sentToday={sentToday}
-                        busy={busy === 'send'}
-                        amount={amount}
-                        onAmount={setAmount}
-                        onSend={() => send(l.otherUid)}
-                      />
-                    )}
-                  </li>
-                ))}
+                {friends
+                  .filter((l) => !friendQuery.trim() || (l.other?.name ?? '').toLowerCase().includes(friendQuery.trim().toLowerCase()))
+                  .map((l) => {
+                    const online = isOnline(l.lastSeen);
+                    const bests = GAME_ORDER.filter((g) => (l.other?.best[g] ?? 0) > 0).slice(0, 3);
+                    return (
+                      <li key={l.pair} className={`rounded-2xl border-2 border-line p-2.5 ${online ? 'bg-melon-soft' : 'bg-surface-2'}`}>
+                        <div className="flex items-center gap-2">
+                          <button type="button" className="flex min-w-0 flex-1 text-left" onClick={() => onViewPlayer(l.otherUid)} aria-label={`${l.other?.name ?? '친구'} 프로필`}>
+                            <PlayerBadge p={l.other} seen={l.lastSeen ?? null} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-mango shrink-0"
+                            onClick={() => {
+                              setSendTo(sendTo === l.otherUid ? null : l.otherUid);
+                              setAmount('');
+                            }}
+                            aria-expanded={sendTo === l.otherUid}
+                          >
+                            🪙 선물
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-icon btn-sm shrink-0"
+                            onClick={() => setManage(manage === l.pair ? null : l.pair)}
+                            aria-expanded={manage === l.pair}
+                            aria-label={`${l.other?.name ?? '친구'} 더 보기`}
+                          >
+                            <MoreHorizontal className="h-4 w-4" strokeWidth={2.5} />
+                          </button>
+                        </div>
+                        {bests.length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1 pl-[3.25rem]" aria-label="최고 기록">
+                            {bests.map((g) => (
+                              <span key={g} className="chip h-6 bg-surface px-2 text-[11px] tabular-nums">
+                                <Emoji e={GAMES[g].emoji} /> {formatCompact(l.other!.best[g]!)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {manage === l.pair && (
+                          <div className="mt-2 grid grid-cols-2 gap-2 border-t-2 border-dashed border-line pt-2">
+                            <button type="button" className="btn btn-sm w-full" onClick={() => onViewPlayer(l.otherUid)}>
+                              <UserRound className="h-4 w-4" strokeWidth={2.5} /> 프로필 보기
+                            </button>
+                            <ConfirmButton
+                              className="btn btn-sm w-full"
+                              question={`${l.other?.name ?? '이 친구'}${josa(l.other?.name ?? '친구', '과', '와')} 친구를 끊을까요?`}
+                              confirmLabel="끊기"
+                              onConfirm={() =>
+                                run('remove', async () => {
+                                  const api = await friendsApi();
+                                  await api.removeFriend(l.pair);
+                                })
+                              }
+                              panelClassName="col-span-2"
+                            >
+                              <X className="h-4 w-4" strokeWidth={2.5} /> 친구 끊기
+                            </ConfirmButton>
+                          </div>
+                        )}
+                        {sendTo === l.otherUid && (
+                          <GiftForm
+                            name={l.other?.name ?? '친구'}
+                            isAdmin={isAdmin}
+                            balance={balance}
+                            sentToday={sentToday}
+                            busy={busy === 'send'}
+                            amount={amount}
+                            onAmount={setAmount}
+                            onSend={() => send(l.otherUid)}
+                          />
+                        )}
+                      </li>
+                    );
+                  })}
               </ul>
             </>
           )}

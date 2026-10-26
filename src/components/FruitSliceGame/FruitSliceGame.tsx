@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { RotateCcw } from 'lucide-react';
-import { GameResult, GameReward, GameSettings } from '../../types';
+import { Difficulty, GameResult, GameReward, GameSettings } from '../../types';
 import { GAMES } from '../../constants';
 import { playSound } from '../../utils/audio';
 import { HAPTIC, vibrate } from '../../utils/haptics';
@@ -13,15 +13,11 @@ import { ResultCard } from '../game/ResultCard';
 import { bladeStyle } from '../../utils/shop';
 import { drawEmoji, preloadEmoji } from '../../utils/emoji';
 import { skinPiece } from '../../utils/skins';
+import { Segmented } from '../ui/Segmented';
 
 const CW = 440;
 const CH = 600;
-/** px per frame², 60 frames a second */
-const GRAVITY = 0.25;
-const LIVES = 3;
-/** The second bomb cut ends the round */
-const BOMBS = 2;
-/** A heart with every life and no bomb hit to undo is worth this */
+/** A heart with every life and no bomb hit to undo is worth this. Points here are 중간's; see `score` below */
 const HEART_POINTS = 30;
 const FRUIT_POINTS = 10;
 const STAR_POINTS = 50;
@@ -37,6 +33,99 @@ const ICE_FRAMES = 300;
 const ICE_PACE = 0.45;
 /** Frames before the first wave */
 const START_DELAY = 50;
+
+interface Level {
+  label: string;
+  /** What changes, under the picker */
+  note: string;
+  /** Fruit you can miss, and the bomb cut that ends the round */
+  lives: number;
+  bombs: number;
+  /** px per frame², 60 frames a second: lower floats slower */
+  gravity: number;
+  /** Frames between waves: `gap` at first, one less each wave, never under `gapMin` */
+  gap: number;
+  gapMin: number;
+  /** A wave throws up to 1 + `crowd` more fruit, one more every `ramp` waves */
+  crowd: number;
+  ramp: number;
+  /** Bombs from wave `bombFrom`: chance `bomb`, `bombGrow` more each wave, at most `bombMax` */
+  bombFrom: number;
+  bomb: number;
+  bombGrow: number;
+  bombMax: number;
+  /** Hearts from wave `heartFrom` with chance `heart`; ice from wave `iceFrom` */
+  heartFrom: number;
+  heart: number;
+  iceFrom: number;
+  /** Points ×: easy rounds last longer and hard ones end sooner, so one ranking stays fair */
+  score: number;
+}
+
+// 중간 is the game as it was before there were difficulties, so old records and challenges still compare
+const SLICE_DIFFICULTY: Record<Difficulty, Level> = {
+  easy: {
+    label: '쉬움',
+    note: '천천히 날고 폭탄이 적어요 · 점수 ×0.5',
+    lives: 5,
+    bombs: 3,
+    gravity: 0.19,
+    gap: 115,
+    gapMin: 70,
+    crowd: 2.5,
+    ramp: 14,
+    bombFrom: 6,
+    bomb: 0.05,
+    bombGrow: 0.002,
+    bombMax: 0.12,
+    heartFrom: 3,
+    heart: 0.05,
+    iceFrom: 5,
+    score: 0.5,
+  },
+  normal: {
+    label: '중간',
+    note: '기본 속도와 폭탄 · 점수 ×1',
+    lives: 3,
+    bombs: 2,
+    gravity: 0.25,
+    gap: 95,
+    gapMin: 50,
+    crowd: 3.5,
+    ramp: 12,
+    bombFrom: 4,
+    bomb: 0.08,
+    bombGrow: 0.003,
+    bombMax: 0.2,
+    heartFrom: 5,
+    heart: 0.025,
+    iceFrom: 8,
+    score: 1,
+  },
+  hard: {
+    label: '어려움',
+    note: '빠르고 폭탄이 많아요 · 점수 ×1.5',
+    lives: 2,
+    bombs: 1,
+    gravity: 0.32,
+    gap: 80,
+    gapMin: 40,
+    crowd: 3.5,
+    ramp: 9,
+    bombFrom: 2,
+    bomb: 0.1,
+    bombGrow: 0.004,
+    bombMax: 0.25,
+    heartFrom: 8,
+    heart: 0.02,
+    iceFrom: 10,
+    score: 1.5,
+  },
+};
+const LEVELS = Object.keys(SLICE_DIFFICULTY) as Difficulty[];
+
+/** Points on this difficulty */
+const pts = (base: number, d: Level) => Math.round(base * d.score);
 
 type Kind = 'fruit' | 'bomb' | 'star' | 'ice' | 'heart';
 
@@ -178,37 +267,45 @@ function paintBoard(c: CanvasRenderingContext2D, P: (typeof BOARD)['light']) {
 }
 
 /** Thrown from below the board in an arc that peaks inside it. Always draws 5 numbers so challenge seeds replay the same. */
-function launch(rand: Rng, kind: Kind): Flyer {
+function launch(rand: Rng, kind: Kind, gravity: number): Flyer {
   const pick = rand();
   const def = kind === 'fruit' ? FRUITS[Math.floor(pick * FRUITS.length)] : SPECIAL[kind];
   const x0 = 50 + rand() * (CW - 100);
   const x1 = Math.max(40, Math.min(CW - 40, x0 + (rand() - 0.5) * 260));
   const apex = 60 + rand() * 180;
   const y0 = CH + def.r + 4;
-  const vy = -Math.sqrt(2 * GRAVITY * (y0 - apex));
-  const air = (-2 * vy) / GRAVITY;
+  const vy = -Math.sqrt(2 * gravity * (y0 - apex));
+  const air = (-2 * vy) / gravity;
   return { kind, emoji: def.emoji, juice: def.juice, r: def.r, x: x0, y: y0, vx: (x1 - x0) / air, vy, rot: 0, spin: (rand() - 0.5) * 0.12 };
 }
 
 /** Wave n: more fruit, more bombs, sometimes all thrown at once */
-function makeWave(rand: Rng, n: number): Launch[] {
-  const count = 1 + Math.floor(rand() * (1.5 + Math.min(3.5, n / 12)));
+function makeWave(rand: Rng, n: number, d: Level): Launch[] {
+  const count = 1 + Math.floor(rand() * (1.5 + Math.min(d.crowd, n / d.ramp)));
   const together = rand() < 0.35;
-  const bombChance = n < 4 ? 0 : Math.min(0.2, 0.08 + n * 0.003);
+  const bombChance = n < d.bombFrom ? 0 : Math.min(d.bombMax, d.bomb + n * d.bombGrow);
   const out: Launch[] = [];
   let delay = 0;
   for (let i = 0; i < count; i++) {
     const roll = rand();
     const kind: Kind =
-      roll < bombChance ? 'bomb' : roll > 0.965 ? 'star' : n >= 8 && roll > 0.94 ? 'ice' : n >= 5 && roll > 0.915 ? 'heart' : 'fruit';
-    out.push({ delay, flyer: launch(rand, kind) });
+      roll < bombChance
+        ? 'bomb'
+        : roll > 0.965
+          ? 'star'
+          : n >= d.iceFrom && roll > 0.94
+            ? 'ice'
+            : n >= d.heartFrom && roll > 0.94 - d.heart
+              ? 'heart'
+              : 'fruit';
+    out.push({ delay, flyer: launch(rand, kind, d.gravity) });
     delay += together ? 0 : 8 + rand() * 10;
   }
   return out;
 }
 
-/** Frames until the next wave: from ~1.6 s down to ~0.8 s */
-const waveGap = (n: number) => Math.max(50, 95 - n);
+/** Frames until the next wave: on 중간 from ~1.6 s down to ~0.8 s */
+const waveGap = (n: number, d: Level) => Math.max(d.gapMin, d.gap - n);
 
 function segmentHitsCircle(ax: number, ay: number, bx: number, by: number, cx: number, cy: number, r: number) {
   const dx = bx - ax;
@@ -220,8 +317,8 @@ function segmentHitsCircle(ax: number, ay: number, bx: number, by: number, cx: n
   return px * px + py * py <= r * r;
 }
 
-const hearts = (n: number) => '❤️'.repeat(Math.max(0, n)) + '🤍'.repeat(Math.max(0, LIVES - n));
-const bombMarks = (n: number) => '💥'.repeat(Math.max(0, n)) + '💣'.repeat(Math.max(0, BOMBS - n));
+const hearts = (n: number, max: number) => '❤️'.repeat(Math.max(0, n)) + '🤍'.repeat(Math.max(0, max - n));
+const bombMarks = (n: number, max: number) => '💥'.repeat(Math.max(0, n)) + '💣'.repeat(Math.max(0, max - n));
 
 interface Props {
   settings: GameSettings;
@@ -234,10 +331,13 @@ interface Props {
   onGameComplete: (result: GameResult) => GameReward;
   onRoundChange: (active: boolean) => void;
   onExit: () => void;
+  onChangeDifficulty: (d: Difficulty) => void;
   onHelp?: () => void;
   /** Same seed → same fruit thrown in the same order (friend challenges) */
   seed?: string;
   onRoundSeed?: (seed: string) => void;
+  /** A challenge fixes the difficulty */
+  lockedDifficulty?: Difficulty;
 }
 
 export const FruitSliceGame: React.FC<Props> = ({
@@ -250,17 +350,22 @@ export const FruitSliceGame: React.FC<Props> = ({
   onGameComplete,
   onRoundChange,
   onExit,
+  onChangeDifficulty,
   onHelp,
   seed,
   onRoundSeed,
+  lockedDifficulty,
 }) => {
   const rngRef = useRef<Rng>(Math.random);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const difficulty: Difficulty = lockedDifficulty ?? (LEVELS.includes(settings.sliceDifficulty) ? settings.sliceDifficulty : 'normal');
+  /** The round's difficulty (the picker only changes the next one) */
+  const diffRef = useRef<Difficulty>(difficulty);
 
   const [gameState, setGameState] = useState<'IDLE' | 'PLAYING' | 'OVER'>('IDLE');
   const [score, setScore] = useState(0);
-  const [lives, setLives] = useState(LIVES);
-  /** Bombs cut this round (BOMBS ends it) */
+  const [lives, setLives] = useState(SLICE_DIFFICULTY[difficulty].lives);
+  /** Bombs cut this round (the difficulty's `bombs` ends it) */
   const [bombHits, setBombHits] = useState(0);
   const [cutCount, setCutCount] = useState(0);
   const [maxCombo, setMaxCombo] = useState(0);
@@ -286,7 +391,7 @@ export const FruitSliceGame: React.FC<Props> = ({
   const endRef = useRef<{ cause: 'bomb' | 'lives'; frames: number } | null>(null);
   const isPlayingRef = useRef(false);
   const scoreRef = useRef(0);
-  const livesRef = useRef(LIVES);
+  const livesRef = useRef(SLICE_DIFFICULTY[difficulty].lives);
   const bombHitsRef = useRef(0);
   const cutRef = useRef(0);
   const missedRef = useRef(0);
@@ -310,11 +415,13 @@ export const FruitSliceGame: React.FC<Props> = ({
     (window as unknown as Record<string, unknown>).__sliceTest = {
       flyers: () => flyersRef.current.map((f) => ({ kind: f.kind, x: f.x / CW, y: f.y / CH, r: f.r / CW, vx: f.vx / CW, vy: f.vy / CH })),
       lives: () => livesRef.current,
+      bombs: () => bombHitsRef.current,
+      level: () => diffRef.current,
       ice: () => iceRef.current,
       // A row of fruit (or one kind) at mid height, so a test can cut them in one stroke
       lineup: (n: number, kind: Kind = 'fruit') => {
         for (let i = 0; i < n; i++) {
-          const f = launch(Math.random, kind);
+          const f = launch(Math.random, kind, SLICE_DIFFICULTY[diffRef.current].gravity);
           flyersRef.current.push({ ...f, x: 70 + (i * (CW - 140)) / Math.max(1, n - 1), y: CH * 0.45, vx: 0, vy: -1 });
         }
       },
@@ -350,6 +457,8 @@ export const FruitSliceGame: React.FC<Props> = ({
   }, [gameState, isPaused]);
 
   const handleStartGame = () => {
+    diffRef.current = difficulty;
+    const { lives: startLives } = SLICE_DIFFICULTY[difficulty];
     const roundSeed = seed ?? randomSeed();
     rngRef.current = seededRandom(roundSeed);
     onRoundSeed?.(roundSeed);
@@ -369,7 +478,7 @@ export const FruitSliceGame: React.FC<Props> = ({
     shakeRef.current = 0;
     endRef.current = null;
     scoreRef.current = 0;
-    livesRef.current = LIVES;
+    livesRef.current = startLives;
     bombHitsRef.current = 0;
     setBombHits(0);
     cutRef.current = 0;
@@ -378,7 +487,7 @@ export const FruitSliceGame: React.FC<Props> = ({
     timeRef.current = 0;
 
     setScore(0);
-    setLives(LIVES);
+    setLives(startLives);
     setCutCount(0);
     setMaxCombo(0);
     setElapsed(0);
@@ -424,7 +533,7 @@ export const FruitSliceGame: React.FC<Props> = ({
   const settleCombo = useCallback(() => {
     const c = comboRef.current;
     if (c.count >= 3) {
-      const bonus = c.count * COMBO_BONUS;
+      const bonus = c.count * pts(COMBO_BONUS, SLICE_DIFFICULTY[diffRef.current]);
       scoreRef.current += bonus;
       setScore(scoreRef.current);
       floatsRef.current.push({ x: Math.max(70, Math.min(CW - 70, c.x)), y: Math.max(60, c.y - 30), text: `${c.count}콤보! +${bonus}`, big: true, life: 0 });
@@ -481,6 +590,7 @@ export const FruitSliceGame: React.FC<Props> = ({
   /** A flyer was cut along `angle` (radians, board space) */
   const cutFlyer = (f: Flyer, angle: number, now: number) => {
     const s = live.current.settings;
+    const D = SLICE_DIFFICULTY[diffRef.current];
     // Two halves fly apart across the cut line
     const nx = -Math.sin(angle);
     const ny = Math.cos(angle);
@@ -512,16 +622,24 @@ export const FruitSliceGame: React.FC<Props> = ({
       vibrate(HAPTIC.crash, s);
       bombHitsRef.current += 1;
       setBombHits(bombHitsRef.current);
-      if (bombHitsRef.current >= BOMBS) endRound('bomb');
-      else floatsRef.current.push({ x: Math.max(90, Math.min(CW - 90, f.x)), y: f.y + 14, text: '한 번 더 자르면 끝!', big: false, life: 0 });
+      const left = D.bombs - bombHitsRef.current;
+      if (left <= 0) endRound('bomb');
+      else
+        floatsRef.current.push({
+          x: Math.max(90, Math.min(CW - 90, f.x)),
+          y: f.y + 14,
+          text: left === 1 ? '한 번 더 자르면 끝!' : `${left}번 더 자르면 끝!`,
+          big: false,
+          life: 0,
+        });
       return;
     }
 
     if (f.kind === 'heart') {
       burst(f.x, f.y, f.juice, 14, 5);
       // A life back; with every life, a bomb hit undone; otherwise points
-      let text = `+${HEART_POINTS}`;
-      if (livesRef.current < LIVES) {
+      let text = `+${pts(HEART_POINTS, D)}`;
+      if (livesRef.current < D.lives) {
         livesRef.current += 1;
         setLives(livesRef.current);
         text = '목숨 +1';
@@ -529,7 +647,7 @@ export const FruitSliceGame: React.FC<Props> = ({
         bombHitsRef.current -= 1;
         setBombHits(bombHitsRef.current);
         text = '폭탄 1개 지움';
-      } else addScore(HEART_POINTS);
+      } else addScore(pts(HEART_POINTS, D));
       floatsRef.current.push({ x: f.x, y: f.y - 16, text, big: false, life: 0 });
       playSound('levelup', s);
       vibrate(HAPTIC.match, s);
@@ -558,18 +676,18 @@ export const FruitSliceGame: React.FC<Props> = ({
     setCutCount(cutRef.current);
 
     if (f.kind === 'star') {
-      addScore(STAR_POINTS);
-      floatsRef.current.push({ x: f.x, y: f.y - 16, text: `+${STAR_POINTS}`, big: false, life: 0 });
+      addScore(pts(STAR_POINTS, D));
+      floatsRef.current.push({ x: f.x, y: f.y - 16, text: `+${pts(STAR_POINTS, D)}`, big: false, life: 0 });
       playSound('star', s);
       vibrate(HAPTIC.match, s);
     } else if (f.kind === 'ice') {
-      addScore(FRUIT_POINTS);
+      addScore(pts(FRUIT_POINTS, D));
       iceRef.current = ICE_FRAMES;
       floatsRef.current.push({ x: f.x, y: f.y - 16, text: '느려져라!', big: false, life: 0 });
       playSound('freeze', s);
       vibrate(HAPTIC.match, s);
     } else {
-      addScore(FRUIT_POINTS);
+      addScore(pts(FRUIT_POINTS, D));
       playSound('slice', s, { level: Math.min(6, comboRef.current.count) });
       vibrate(HAPTIC.tap, s);
     }
@@ -636,14 +754,15 @@ export const FruitSliceGame: React.FC<Props> = ({
       if (!isPaused) {
         const pace = iceRef.current > 0 ? ICE_PACE : 1;
         const step = dt * pace;
+        const D = SLICE_DIFFICULTY[diffRef.current];
 
         if (isPlayingRef.current) {
           // Waves on a timer (slow motion slows it too)
           const w = waveRef.current;
           w.timer -= step;
           if (w.timer <= 0) {
-            queueRef.current.push(...makeWave(rngRef.current, w.n));
-            w.timer += waveGap(w.n);
+            queueRef.current.push(...makeWave(rngRef.current, w.n, D));
+            w.timer += waveGap(w.n, D);
             w.n += 1;
           }
           const queue = queueRef.current;
@@ -658,7 +777,7 @@ export const FruitSliceGame: React.FC<Props> = ({
           const flyers = flyersRef.current;
           for (let i = flyers.length - 1; i >= 0; i--) {
             const f = flyers[i];
-            f.vy += GRAVITY * step;
+            f.vy += D.gravity * step;
             f.x += f.vx * step;
             f.y += f.vy * step;
             f.rot += f.spin * step;
@@ -680,7 +799,7 @@ export const FruitSliceGame: React.FC<Props> = ({
         const halves = halvesRef.current;
         for (let i = halves.length - 1; i >= 0; i--) {
           const h = halves[i];
-          h.vy += GRAVITY * step;
+          h.vy += D.gravity * step;
           h.x += h.vx * step;
           h.y += h.vy * step;
           h.rot += h.spin * step;
@@ -942,6 +1061,11 @@ export const FruitSliceGame: React.FC<Props> = ({
     if (isPlayingRef.current) settleCombo();
   };
 
+  // Before a round: the picked difficulty; after it starts: the one being played
+  const D = SLICE_DIFFICULTY[gameState === 'IDLE' ? difficulty : diffRef.current];
+  const shownLives = gameState === 'IDLE' ? D.lives : lives;
+  const playing = gameState === 'PLAYING';
+
   return (
     <>
       <GameFrame
@@ -951,13 +1075,30 @@ export const FruitSliceGame: React.FC<Props> = ({
             <HudStat label="최고" value={formatNumber(Math.max(best, score))} tone={best > 0 && score > best ? 'hot' : 'default'} />
             <HudStat
               label="목숨"
-              value={<span className="text-[0.7em] tracking-[-0.12em]" aria-label={`${lives}개 남음`}>{hearts(lives)}</span>}
-              tone={lives === 1 && gameState === 'PLAYING' ? 'warn' : 'default'}
+              value={
+                // Five hearts would not fit a phone's HUD, so 쉬움 counts them
+                D.lives > 3 ? (
+                  <span aria-label={`${shownLives}개 남음`}>
+                    ❤️{shownLives}
+                    <span className="text-[0.6em] text-ink-3">/{D.lives}</span>
+                  </span>
+                ) : (
+                  <span className="text-[0.7em] tracking-[-0.12em]" aria-label={`${shownLives}개 남음`}>
+                    {hearts(shownLives, D.lives)}
+                  </span>
+                )
+              }
+              tone={shownLives === 1 && playing ? 'warn' : 'default'}
             />
             <HudStat
               label="폭탄"
-              value={<span className="text-[0.7em] tracking-[-0.12em]" aria-label={`폭탄 ${bombHits}번 맞음, ${BOMBS}번이면 끝`}>{bombMarks(bombHits)}</span>}
-              tone={bombHits === BOMBS - 1 && gameState === 'PLAYING' ? 'warn' : 'default'}
+              value={
+                <span className="text-[0.7em] tracking-[-0.12em]" aria-label={`폭탄 ${bombHits}번 맞음, ${D.bombs}번이면 끝`}>
+                  {bombMarks(gameState === 'IDLE' ? 0 : bombHits, D.bombs)}
+                </span>
+              }
+              // On 어려움 every bomb is the last one, so it would pulse the whole round
+              tone={D.bombs > 1 && bombHits === D.bombs - 1 && playing ? 'warn' : 'default'}
             />
           </Hud>
         }
@@ -973,9 +1114,25 @@ export const FruitSliceGame: React.FC<Props> = ({
                 onPointerCancel={handlePointerUp}
                 className="block h-full w-full cursor-crosshair touch-none select-none"
               />
+              {playing && (
+                <span className="chip pointer-events-none absolute left-3 top-3 z-10 h-7 bg-surface px-2.5 font-display text-xs opacity-90">{D.label}</span>
+              )}
               {gameState === 'IDLE' && (
                 <BoardOverlay>
-                  <StartCard meta={GAMES.slice} best={best} onStart={handleStartGame} onHelp={onHelp} />
+                  <StartCard meta={GAMES.slice} best={best} onStart={handleStartGame} onHelp={onHelp}>
+                    <Segmented<Difficulty>
+                      ariaLabel="난이도"
+                      columns={3}
+                      value={difficulty}
+                      onChange={(d) => !lockedDifficulty && onChangeDifficulty(d)}
+                      options={LEVELS.map((d) => ({
+                        value: d,
+                        label: SLICE_DIFFICULTY[d].label,
+                        sub: `❤️${SLICE_DIFFICULTY[d].lives} 💣${SLICE_DIFFICULTY[d].bombs}`,
+                      }))}
+                    />
+                    <p className="mt-2 text-[11px] font-bold leading-snug text-ink-3">{lockedDifficulty ? '🥊 도전장과 같은 난이도로 겨뤄요' : D.note}</p>
+                  </StartCard>
                 </BoardOverlay>
               )}
             </div>
@@ -983,14 +1140,16 @@ export const FruitSliceGame: React.FC<Props> = ({
         }
         panel={
           <div className="panel space-y-3 p-4">
-            <h3 className="font-display text-lg">플레이 방법</h3>
+            <h3 className="flex items-center gap-2 font-display text-lg">
+              플레이 방법 <span className="chip h-6 bg-soda-soft px-2 text-[11px]">{D.label}</span>
+            </h3>
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2.5">
                 <span className="sticker h-8 w-8 shrink-0 bg-melon-soft text-base shadow-none" aria-hidden="true">
                   🍉
                 </span>
                 <span>
-                  그어서 자르면 한 개에 <b>+{FRUIT_POINTS}점</b>
+                  그어서 자르면 한 개에 <b>+{pts(FRUIT_POINTS, D)}점</b>
                 </span>
               </li>
               <li className="flex items-center gap-2.5">
@@ -1006,7 +1165,7 @@ export const FruitSliceGame: React.FC<Props> = ({
                   ⭐
                 </span>
                 <span>
-                  황금 별 <b>+{STAR_POINTS}점</b> · ❄️ 얼음은 잠깐 <b>느리게</b>
+                  황금 별 <b>+{pts(STAR_POINTS, D)}점</b> · ❄️ 얼음은 잠깐 <b>느리게</b>
                 </span>
               </li>
               <li className="flex items-center gap-2.5">
@@ -1014,7 +1173,7 @@ export const FruitSliceGame: React.FC<Props> = ({
                   💣
                 </span>
                 <span>
-                  폭탄을 <b>{BOMBS}번</b> 자르거나 과일을 <b>{LIVES}개</b> 놓치면 끝 · ❤️ 하트는 <b>회복</b>
+                  폭탄을 <b>{D.bombs}번</b> 자르거나 과일을 <b>{D.lives}개</b> 놓치면 끝 · ❤️ 하트는 <b>회복</b>
                 </span>
               </li>
             </ul>
@@ -1042,7 +1201,7 @@ export const FruitSliceGame: React.FC<Props> = ({
             game="slice"
             emoji={ending.cause === 'bomb' ? '💥' : '🍉'}
             title={ending.cause === 'bomb' ? 'BOOM!' : 'GAME OVER'}
-            subtitle={ending.cause === 'bomb' ? `폭탄을 ${BOMBS}번 잘랐어요` : `과일을 ${LIVES}개 놓쳤어요`}
+            subtitle={`${D.label} · ${ending.cause === 'bomb' ? `폭탄을 ${D.bombs}번 잘랐어요` : `과일을 ${D.lives}개 놓쳤어요`}`}
             tone={ending.cause === 'bomb' ? 'berry' : 'soda'}
             score={score}
             stats={[
@@ -1052,7 +1211,7 @@ export const FruitSliceGame: React.FC<Props> = ({
               { label: '플레이 시간', value: formatTime(elapsed) },
             ]}
             reward={reward}
-            shareText={`🔪 과일 자르기 ${formatNumber(score)}점! 과일 ${cutCount}개를 썰었어요`}
+            shareText={`🔪 과일 자르기(${D.label}) ${formatNumber(score)}점! 과일 ${cutCount}개를 썰었어요`}
             onRetry={handleStartGame}
             onExit={onExit}
           />

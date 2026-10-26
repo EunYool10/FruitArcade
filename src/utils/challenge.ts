@@ -1,5 +1,5 @@
 // Friend challenges: "beat my score on the same board", carried in the link's #hash (no server)
-import { DashDifficulty, GameType, MemoryConfig } from '../types';
+import { Difficulty, GameType, MemoryConfig } from '../types';
 import { isReservedNickname } from './profile';
 import { maskBadWords } from './badWords';
 
@@ -14,8 +14,8 @@ export interface Challenge {
   n: string;
   /** memory settings, so both play the same mode */
   m?: MemoryConfig;
-  /** FRUIT DASH difficulty */
-  d?: DashDifficulty;
+  /** FRUIT DASH / 과일 자르기 difficulty */
+  d?: Difficulty;
 }
 
 const GAMES: GameType[] = ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano'];
@@ -53,7 +53,7 @@ export function decodeChallenge(code: string): Challenge | null {
         lifeLimit: ['infinite', '10', '5'].includes(c.m.lifeLimit) ? c.m.lifeLimit : 'infinite',
       };
     }
-    if (c.g === 'dash' && ['easy', 'normal', 'hard'].includes(c.d)) out.d = c.d;
+    if ((c.g === 'dash' || c.g === 'slice') && ['easy', 'normal', 'hard'].includes(c.d)) out.d = c.d;
     return out;
   } catch {
     return null;

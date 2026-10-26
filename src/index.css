@@ -455,6 +455,15 @@
     50% { box-shadow: 0 0 0 5px var(--mango); }
   }
 
+  /* 크레딧 → 엔딩 크레딧: the names roll up the window */
+  .credits-roll {
+    animation: credits-roll 30s linear forwards;
+  }
+  @keyframes credits-roll {
+    from { transform: translateY(0); }
+    to { transform: translateY(calc(-100% - 60dvh)); }
+  }
+
   /* RGB series: colours that keep running red → violet (the avatar, the title's letters) */
   .rgb-hue {
     animation: rgb-hue 4s linear infinite;
@@ -540,6 +549,14 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  /* Credits stay put and scroll by hand */
+  .credits-roll {
+    animation: none !important;
+    top: 0 !important;
+  }
+  .credits-roll-box {
+    overflow-y: auto !important;
   }
   /* Still all the colors, just not moving */
   .frame-prism,

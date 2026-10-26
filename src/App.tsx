@@ -1148,6 +1148,10 @@ export default function App() {
     if (!tutorialSeen(c.g)) setTutorialGame(c.g);
   };
 
+  // A challenge is played on its sender's difficulty (old 과일 자르기 links had none: they were 중간)
+  const dashLock = activeChallenge?.g === 'dash' ? activeChallenge.d : undefined;
+  const sliceLock = activeChallenge?.g === 'slice' ? (activeChallenge.d ?? 'normal') : undefined;
+
   const challengeApi = {
     active: activeChallenge,
     linkFor: (game: GameType, score: number) =>
@@ -1157,7 +1161,7 @@ export default function App() {
         sc: Math.round(score),
         n: player.shareName ?? player.name,
         m: game === 'memory' ? memoryCfg : undefined,
-        d: game === 'dash' ? (activeChallenge?.d ?? settings.dashDifficulty) : undefined,
+        d: game === 'dash' ? (dashLock ?? settings.dashDifficulty) : game === 'slice' ? (sliceLock ?? settings.sliceDifficulty) : undefined,
       }),
   };
 
@@ -1362,7 +1366,7 @@ export default function App() {
                     onHelp={() => setTutorialGame('dash')}
                     seed={activeChallenge?.g === 'dash' ? activeChallenge.s : undefined}
                     onRoundSeed={(seed: string) => (roundSeeds.current.dash = seed)}
-                    lockedDifficulty={activeChallenge?.g === 'dash' ? activeChallenge.d : undefined}
+                    lockedDifficulty={dashLock}
                   />
                 )}
                 {screen === 'puzzle' && (
@@ -1385,9 +1389,11 @@ export default function App() {
                     autoStart={autoStart}
                     dark={resolvedTheme === 'dark'}
                     best={stats.sliceHighScore}
+                    onChangeDifficulty={(d) => updateSettings({ ...settings, sliceDifficulty: d })}
                     onHelp={() => setTutorialGame('slice')}
                     seed={activeChallenge?.g === 'slice' ? activeChallenge.s : undefined}
                     onRoundSeed={(seed: string) => (roundSeeds.current.slice = seed)}
+                    lockedDifficulty={sliceLock}
                   />
                 )}
                 {screen === 'piano' && (

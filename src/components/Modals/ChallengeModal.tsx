@@ -3,7 +3,7 @@ import { Swords } from 'lucide-react';
 import { GAMES, TONE } from '../../constants';
 import { Challenge } from '../../utils/challenge';
 import { formatNumber } from '../../utils/format';
-import { DASH_LABEL, MEMORY_LABEL } from '../challengeLabels';
+import { DASH_LABEL, MEMORY_LABEL, SLICE_LABEL } from '../challengeLabels';
 import { Modal } from '../ui/Modal';
 import { Emoji } from '../ui/Emoji';
 
@@ -18,7 +18,8 @@ export const ChallengeModal: React.FC<Props> = ({ challenge, onAccept, onDismiss
   const meta = GAMES[challenge.g];
   const details = [
     challenge.m && `${MEMORY_LABEL[challenge.m.mode]} · 기억 ${challenge.m.previewTime / 1000}초`,
-    challenge.d && `난이도 ${DASH_LABEL[challenge.d]}`,
+    // Old 과일 자르기 links carry no difficulty: they were played on 중간
+    challenge.g === 'slice' ? `난이도 ${SLICE_LABEL[challenge.d ?? 'normal']}` : challenge.d && `난이도 ${DASH_LABEL[challenge.d]}`,
   ].filter(Boolean);
 
   return (

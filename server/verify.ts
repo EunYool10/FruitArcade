@@ -32,7 +32,8 @@ const RATE: Record<Exclude<Game, 'puzzle'>, { perSecond: number; burst: number }
   // Points grow ×0.1 every 30 s up to ×2, so the late-game rate doubles
   suika: { perSecond: 1000, burst: 2000 },
   dash: { perSecond: 140, burst: 300 },
-  slice: { perSecond: 160, burst: 300 },
+  // 어려움 throws faster and pays ×1.5
+  slice: { perSecond: 240, burst: 450 },
   // One point a tile, and the board never scrolls faster than 10 rows a second
   piano: { perSecond: 11, burst: 30 },
 };

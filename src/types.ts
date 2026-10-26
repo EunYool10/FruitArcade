@@ -4,7 +4,9 @@ export type GameType = 'memory' | 'suika' | 'dash' | 'puzzle' | 'slice' | 'piano
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
-export type DashDifficulty = 'easy' | 'normal' | 'hard';
+export type Difficulty = 'easy' | 'normal' | 'hard';
+/** FRUIT DASH's difficulty (과일 자르기 has the same three) */
+export type DashDifficulty = Difficulty;
 
 export type MemoryMode = '4' | '6' | '8' | '8-joker';
 export type LifeLimit = 'infinite' | '10' | '5';
@@ -29,6 +31,8 @@ export interface GameSettings {
   bgmEnabled: boolean;
   bgmVolume: number; // 0 - 100
   dashDifficulty: DashDifficulty;
+  /** 과일 자르기: 쉬움 · 중간 · 어려움 */
+  sliceDifficulty: Difficulty;
   /** Memory card back from the shop ('' = the classic one) */
   cardBack: string;
   /** 과일 자르기 blade trail from the shop ('' = the default) */

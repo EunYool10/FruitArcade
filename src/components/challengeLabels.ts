@@ -1,4 +1,4 @@
-import { DashDifficulty, MemoryMode } from '../types';
+import { DashDifficulty, Difficulty, MemoryMode } from '../types';
 
 export const MEMORY_LABEL: Record<MemoryMode, string> = {
   '4': '4×4',
@@ -8,3 +8,5 @@ export const MEMORY_LABEL: Record<MemoryMode, string> = {
 };
 
 export const DASH_LABEL: Record<DashDifficulty, string> = { easy: '쉬움', normal: '보통', hard: '어려움' };
+
+export const SLICE_LABEL: Record<Difficulty, string> = { easy: '쉬움', normal: '중간', hard: '어려움' };

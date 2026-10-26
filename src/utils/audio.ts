@@ -45,6 +45,7 @@ if (typeof window !== 'undefined') {
 }
 
 export type SoundType =
+  | 'jump'
   | 'click'
   | 'flip'
   | 'match'
@@ -120,6 +121,10 @@ export function playSound(type: SoundType, settings: { sfxEnabled: boolean; volu
 
   try {
     switch (type) {
+      case 'jump':
+        // A springy "boing", higher for a long jump
+        tone(ctx, out, { type: 'sine', gain: v * 0.45, dur: 0.14, freq: 360 * (opts.level ?? 1), to: 820 * (opts.level ?? 1) });
+        break;
       case 'click':
         tone(ctx, out, { type: 'sine', gain: v * 0.35, dur: 0.06, freq: 880, to: 620 });
         break;

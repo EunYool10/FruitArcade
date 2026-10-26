@@ -358,7 +358,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
         )
       }
     >
-      <div role="tablist" aria-label="게임" className="mb-2 grid grid-cols-6 gap-1">
+      <div role="tablist" aria-label="게임" className="mb-2 grid grid-cols-7 gap-1">
         {GAME_ORDER.map((g) => (
           <button
             key={g}
@@ -373,7 +373,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
             <span className="text-xl" aria-hidden="true">
               <Emoji e={GAMES[g].emoji} />
             </span>
-            <span className="font-display text-sm leading-tight">{GAMES[g].short}</span>
+            <span className="font-display text-xs leading-tight sm:text-sm">{GAMES[g].short}</span>
           </button>
         ))}
       </div>

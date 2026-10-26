@@ -17,11 +17,11 @@ import {
 } from '../src/components/PuzzleGame/engine';
 import { seededRandom } from '../src/utils/rng';
 
-export type Game = 'memory' | 'suika' | 'dash' | 'puzzle' | 'slice' | 'piano';
-export const GAMES: Game[] = ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano'];
+export type Game = 'memory' | 'suika' | 'dash' | 'puzzle' | 'slice' | 'piano' | 'jump';
+export const GAMES: Game[] = ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump'];
 
 /** Same caps as maxScore() in firestore.rules */
-const CAP: Record<Game, number> = { memory: 2000, suika: 500000, dash: 100000, puzzle: 100000, slice: 100000, piano: 100000 };
+const CAP: Record<Game, number> = { memory: 2000, suika: 500000, dash: 100000, puzzle: 100000, slice: 100000, piano: 100000, jump: 100000 };
 
 /**
  * Points per second (plus a head start) that no real round goes past. These sit near each
@@ -36,13 +36,15 @@ const RATE: Record<Exclude<Game, 'puzzle'>, { perSecond: number; burst: number }
   slice: { perSecond: 240, burst: 450 },
   // One point a tile, and the board never scrolls faster than 10 rows a second
   piano: { perSecond: 11, burst: 30 },
+  // Distance tops out near 18 points a second, plus 20 a cherry
+  jump: { perSecond: 45, burst: 150 },
 };
 
 /** The round ticket can arrive late while a sleeping server wakes up */
 export const TICKET_SLACK_SECONDS = 90;
 
 /** Points per coin, as in coinsFor (src/utils/shop.ts) */
-const COIN_PER_SCORE: Record<Game, number> = { memory: 10, suika: 150, dash: 15, puzzle: 60, slice: 25, piano: 6 };
+const COIN_PER_SCORE: Record<Game, number> = { memory: 10, suika: 150, dash: 15, puzzle: 60, slice: 25, piano: 6, jump: 20 };
 
 /**
  * Coins a checked round earns before its bonuses (new best, stamp, first today, a win): the same

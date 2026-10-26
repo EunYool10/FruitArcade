@@ -56,6 +56,12 @@ const POOLS: Record<GameType | 'any', Mission[]> = {
     { id: 'piano-score-150', game: 'piano', kind: 'score', target: 150, icon: '🎶', text: '과일 피아노 150점 이상' },
     { id: 'piano-win-1', game: 'piano', kind: 'win', target: 1, icon: '🎼', text: '과일 피아노 한 곡 완주하기' },
   ],
+  jump: [
+    { id: 'jump-play-2', game: 'jump', kind: 'play', target: 2, icon: '🦘', text: '과일 점프 2판 하기' },
+    { id: 'jump-score-300', game: 'jump', kind: 'score', target: 300, icon: '🌵', text: '과일 점프 300점 이상' },
+    { id: 'jump-score-800', game: 'jump', kind: 'score', target: 800, icon: '🌙', text: '과일 점프 800점 이상' },
+    { id: 'jump-survive-45', game: 'jump', kind: 'survive', target: 45, icon: '⏱️', text: '과일 점프 45초 달리기' },
+  ],
   any: [
     { id: 'any-play-5', kind: 'play', target: 5, icon: '🎮', text: '아무 게임이나 5판 하기' },
     { id: 'any-time-300', kind: 'time', target: 300, icon: '⌛', text: '오늘 5분 이상 플레이' },
@@ -72,7 +78,9 @@ export function missionsFor(date: string): Mission[] {
   const pick = <T,>(list: T[]) => list[Math.floor(rand() * list.length)];
   // New games join the draw from the day after their release, so nobody's missions change mid-day
   const games: GameType[] =
-    date >= '2026-10-26'
+    date >= '2026-10-28'
+      ? ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump']
+      : date >= '2026-10-26'
       ? ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano']
       : date >= '2026-10-14'
         ? ['memory', 'suika', 'dash', 'puzzle', 'slice']

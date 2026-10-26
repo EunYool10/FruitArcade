@@ -279,7 +279,7 @@ service cloud.firestore {
     }
 
     function isValidBoardFormat(boardId) {
-      return boardId is string && boardId.matches('^(memory|suika|dash|puzzle|slice|piano)_(all|d[0-9]{1,6}|w[0-9]{1,6})$');
+      return boardId is string && boardId.matches('^(memory|suika|dash|puzzle|slice|piano|jump)_(all|d[0-9]{1,6}|w[0-9]{1,6})$');
     }
 
     function isValidBoardId(boardId) {
@@ -297,7 +297,7 @@ service cloud.firestore {
 
     // Caps well above anything reachable in normal play
     function maxScore(game) {
-      return {'memory': 2000, 'suika': 500000, 'dash': 100000, 'puzzle': 100000, 'slice': 100000, 'piano': 100000}[game];
+      return {'memory': 2000, 'suika': 500000, 'dash': 100000, 'puzzle': 100000, 'slice': 100000, 'piano': 100000, 'jump': 100000}[game];
     }
 
     // ===============================================================
@@ -498,19 +498,21 @@ service cloud.firestore {
         && data.level is int && data.level >= 1 && (data.level <= 100 || (data.level == 999 && isAdmin()))
         && data.achievements is int && data.achievements >= 0 && data.achievements <= 60
         && data.best is map
-        && data.best.keys().hasOnly(['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano'])
+        && data.best.keys().hasOnly(['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump'])
         && isBest(data.best, 'memory', 2000)
         && isBest(data.best, 'suika', 500000)
         && isBest(data.best, 'dash', 100000)
         && isBest(data.best, 'puzzle', 100000)
         && isBest(data.best, 'slice', 100000)
         && isBest(data.best, 'piano', 100000)
+        && isBest(data.best, 'jump', 100000)
         && isBestBacked(uid, data.best, 'memory')
         && isBestBacked(uid, data.best, 'suika')
         && isBestBacked(uid, data.best, 'dash')
         && isBestBacked(uid, data.best, 'puzzle')
         && isBestBacked(uid, data.best, 'slice')
         && isBestBacked(uid, data.best, 'piano')
+        && isBestBacked(uid, data.best, 'jump')
         && data.at == request.time;
     }
 

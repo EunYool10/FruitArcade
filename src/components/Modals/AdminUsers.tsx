@@ -201,7 +201,7 @@ export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onB
                         </div>
                       ))}
                     </dl>
-                    <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+                    <div className="grid grid-cols-4 gap-1.5">
                       {GAME_ORDER.map((g) => (
                         <div key={g} className={`min-w-0 rounded-xl border-2 border-line px-1 py-1.5 text-center ${TONE[GAMES[g].tone].soft}`}>
                           <p className="text-base leading-none" aria-hidden="true">

@@ -49,6 +49,11 @@ export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
   { id: 'piano_200', title: '건반 위의 과일', desc: '과일 피아노에서 200점 이상 기록', icon: '🎵', game: 'piano' },
   { id: 'piano_lap_3', title: '앙코르 앙코르', desc: '과일 피아노에서 같은 곡을 3바퀴 완주', icon: '🎶', game: 'piano' },
 
+  // Fruit Jump
+  { id: 'jump_500', title: '폴짝폴짝', desc: '과일 점프에서 500점 이상 기록', icon: '🦘', game: 'jump' },
+  { id: 'jump_1500', title: '밤새 달리는 과일', desc: '과일 점프에서 1,500점 이상 기록', icon: '🌙', game: 'jump' },
+  { id: 'jump_cherry_15', title: '체리 수집가', desc: '과일 점프 한 판에서 체리 15개 먹기', icon: '🍒', game: 'jump' },
+
   // Progress
   { id: 'challenge_win', title: '도전 성공', desc: '친구의 도전장에서 이기기', icon: '🥊', game: 'all' },
   { id: 'level_5', title: '어엿한 딸기', desc: '레벨 5 달성', icon: '🍓', game: 'all' },

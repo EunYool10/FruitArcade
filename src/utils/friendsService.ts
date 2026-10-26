@@ -111,7 +111,7 @@ const sameCard = (a: PlayerCard, b: PlayerCard) =>
   GAME_ORDER.every((g) => (a.best[g] ?? 0) === (b.best[g] ?? 0));
 
 /** Same caps as the rules (and the leaderboards): a card over them would be refused */
-const BEST_CAP: Record<GameType, number> = { memory: 2000, suika: 500000, dash: 100000, puzzle: 100000, slice: 100000, piano: 100000 };
+const BEST_CAP: Record<GameType, number> = { memory: 2000, suika: 500000, dash: 100000, puzzle: 100000, slice: 100000, piano: 100000, jump: 100000 };
 /** Same as isValidPlayerCard in firestore.rules */
 /** Players stop at Lv.100; admins show Lv.999 (firestore.rules: same) */
 const LEVEL_CAP = 999;

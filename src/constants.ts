@@ -1,6 +1,6 @@
 import { GameSettings, GameType, ScreenType } from './types';
 
-export const APP_VERSION = '3.33.0';
+export const APP_VERSION = '3.34.0';
 
 export const DEFAULT_SETTINGS: GameSettings = {
   theme: 'light',
@@ -155,7 +155,7 @@ export const GAMES: Record<GameType, GameMeta> = {
     emoji: '🎹',
     tone: 'peach',
     screen: 'piano',
-    tag: 'NEW',
+    tag: 'MUSIC',
     desc: '내려오는 과일 타일을 눌러 노래를 연주해요. 하나라도 놓치면 끝!',
     how: ['곡을 고르고 맨 아래 과일 타일부터 눌러요', '누를 때마다 노래가 한 음씩 연주돼요', '빈 칸을 누르거나 타일을 놓치면 끝!'],
     startHint: '터치하거나 키보드 D F J K 로 눌러요',
@@ -165,9 +165,27 @@ export const GAMES: Record<GameType, GameMeta> = {
       { emoji: '🔁', title: '완주하면 더 빠르게', text: '한 곡을 끝까지 치면 조금 더 빨라져서 처음부터 다시! 빈 칸을 누르거나 타일을 놓치면 끝나요.' },
     ],
   },
+  jump: {
+    id: 'jump',
+    name: '과일 점프',
+    short: '점프',
+    emoji: '🦘',
+    tone: 'melon',
+    screen: 'jump',
+    tag: 'NEW',
+    desc: '달리는 과일을 폴짝! 선인장과 벌을 넘으며 멀리멀리 달려요.',
+    how: ['탭하거나 스페이스로 점프해요', '길게 누르면 더 높이 뛰어요', '🌵 장애물에 부딪히면 끝! 🍒 체리는 보너스'],
+    startHint: 'Space · ↑ 점프 · ↓ 빨리 내려오기',
+    tutorial: [
+      { emoji: '👆🍊', title: '탭해서 점프', text: '화면을 탭하거나 스페이스 · ↑ 키를 누르면 과일이 폴짝 뛰어요. 길게 누르고 있으면 더 높이 뛰어요.' },
+      { emoji: '🌵', title: '장애물 넘기', text: '선인장 · 돌 · 버섯에 부딪히면 끝나요. 갈수록 빨라지니 타이밍을 잘 맞춰요. 공중에서 ↓ 키를 누르면 빨리 내려와요.' },
+      { emoji: '🐝', title: '벌 조심', text: '낮게 나는 벌은 뛰어넘고, 높이 나는 벌은 그냥 달리면 머리 위로 지나가요. 괜히 뛰면 부딪혀요!' },
+      { emoji: '🍒', title: '체리 모으기', text: '체리를 먹으면 +20점! 멀리 달릴수록 점수가 오르고, 날이 저물면 밤이 와요.' },
+    ],
+  },
 };
 
-export const GAME_ORDER: GameType[] = ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano'];
+export const GAME_ORDER: GameType[] = ['memory', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump'];
 
 export const SCREEN_GAME: Partial<Record<ScreenType, GameType>> = {
   'memory-setup': 'memory',
@@ -177,6 +195,7 @@ export const SCREEN_GAME: Partial<Record<ScreenType, GameType>> = {
   puzzle: 'puzzle',
   slice: 'slice',
   piano: 'piano',
+  jump: 'jump',
 };
 
-export const PLAY_SCREENS: ScreenType[] = ['memory-play', 'suika', 'dash', 'puzzle', 'slice', 'piano'];
+export const PLAY_SCREENS: ScreenType[] = ['memory-play', 'suika', 'dash', 'puzzle', 'slice', 'piano', 'jump'];

@@ -117,6 +117,7 @@ const FruitDashGame = lazy(() =>
   import('./components/FruitDashGame/FruitDashGame').then((m) => ({ default: m.FruitDashGame }))
 );
 const PianoGame = lazy(() => import('./components/PianoGame/PianoGame').then((m) => ({ default: m.PianoGame })));
+const FruitJumpGame = lazy(() => import('./components/FruitJumpGame/FruitJumpGame').then((m) => ({ default: m.FruitJumpGame })));
 const FruitSliceGame = lazy(() =>
   import('./components/FruitSliceGame/FruitSliceGame').then((m) => ({ default: m.FruitSliceGame }))
 );
@@ -1406,6 +1407,18 @@ export default function App() {
                     onHelp={() => setTutorialGame('piano')}
                     seed={activeChallenge?.g === 'piano' ? activeChallenge.s : undefined}
                     onRoundSeed={(seed: string) => (roundSeeds.current.piano = seed)}
+                  />
+                )}
+                {screen === 'jump' && (
+                  <FruitJumpGame
+                    key={gameKey}
+                    {...gameCommon}
+                    autoStart={autoStart}
+                    dark={resolvedTheme === 'dark'}
+                    best={stats.jumpHighScore}
+                    onHelp={() => setTutorialGame('jump')}
+                    seed={activeChallenge?.g === 'jump' ? activeChallenge.s : undefined}
+                    onRoundSeed={(seed: string) => (roundSeeds.current.jump = seed)}
                   />
                 )}
               </Suspense>

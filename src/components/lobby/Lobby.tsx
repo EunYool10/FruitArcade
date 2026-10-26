@@ -75,7 +75,7 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
             ARCADE
           </h1>
           <p className="relative mt-3 max-w-xs text-sm text-ink-2 sm:max-w-sm sm:text-base">
-            과일 게임 여섯 가지에 매일 바뀌는 미션, 업적, 친구 대결까지. 오늘도 상큼하게 한 판!
+            과일 게임 일곱 가지에 매일 바뀌는 미션, 업적, 친구 대결까지. 오늘도 상큼하게 한 판!
           </p>
           <div className="relative mt-5 flex flex-wrap gap-3">
             <button type="button" className="btn btn-lg btn-primary" onClick={() => onPlay(quick, true)}>
@@ -111,16 +111,12 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
         <h2 id="games-title" className="mb-3 font-display text-2xl">
           게임 고르기
         </h2>
-        {/* Tablets and desktops: two rows of three */}
-        <div className="grid gap-5 sm:grid-cols-3 lg:gap-4">
-          {GAME_ORDER.map((g) => (
-            <GameCard
-              key={g}
-              meta={GAMES[g]}
-              best={stats[bestKey(g)]}
-              plays={stats[playsKey(g)]}
-              onPlay={() => onPlay(g)}
-            />
+        {/* Tablets and desktops: rows of three, a last card on its own sits in the middle */}
+        <div className="grid gap-5 sm:grid-cols-6 lg:gap-4">
+          {GAME_ORDER.map((g, i) => (
+            <div key={g} className={`grid sm:col-span-2 ${i === GAME_ORDER.length - 1 && i % 3 === 0 ? 'sm:col-start-3' : ''}`}>
+              <GameCard meta={GAMES[g]} best={stats[bestKey(g)]} plays={stats[playsKey(g)]} onPlay={() => onPlay(g)} />
+            </div>
           ))}
         </div>
       </section>

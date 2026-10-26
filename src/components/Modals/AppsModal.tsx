@@ -15,7 +15,7 @@ const APPS = [
     icon: 'icons/apple-touch-icon.png',
     color: '#f2456f',
     name: 'FRUIT ARCADE',
-    about: '과일 미니게임 여섯 가지에 미션 · 업적 · 랭킹 · 친구 대결까지',
+    about: '과일 미니게임 일곱 가지에 미션 · 업적 · 랭킹 · 친구 대결까지',
     url: 'https://eunyool10.github.io/FruitArcade/',
     here: true,
   },

@@ -31,6 +31,9 @@ const cases = [
   ['70 achievements', 'DENY', card({ achievements: 70 })],
   ['piano best under the board score', 'ALLOW', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, piano: 300 } })],
   ['piano best above the board score', 'DENY', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, piano: 7000 } })],
+  ['jump best under the board score', 'ALLOW', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, piano: 0, jump: 800 } })],
+  ['jump best above the board score', 'DENY', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, piano: 0, jump: 9000 } })],
+  ['a best in all seven games', 'ALLOW', card({ best: { memory: 100, suika: 5000, dash: 300, puzzle: 2000, slice: 500, piano: 200, jump: 800 } })],
   ['unknown game', 'DENY', card({ best: { memory: 0, suika: 0, dash: 0, puzzle: 0, slice: 0, drums: 1 } })],
 ];
 

@@ -59,6 +59,7 @@ const HISTORY: [string, string, string][] = [
   ['v3.23', '2026. 10. 25.', '모든 게임에 과일 스킨'],
   ['v3.26', '2026. 10. 26.', '과일 피아노'],
   ['v3.32', '2026. 10. 26.', '과일 자르기 난이도'],
+  ['v3.34', '2026. 10. 27.', '일곱 번째 게임, 과일 점프'],
 ];
 
 // Fruit and sparkles drifting down behind the names (fixed spots, so it looks the same every time)

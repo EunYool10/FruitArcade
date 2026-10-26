@@ -73,7 +73,10 @@ export const RecentPlays: React.FC<{ history: HistoryEntry[]; onOpenRecords: () 
                       {h.stage ? ` · 스테이지 ${h.stage}${h.won ? ' 클리어' : ''}` : h.game === 'memory' && h.won !== undefined ? (h.won ? ' · 클리어' : ' · 실패') : ''}
                     </p>
                   </div>
-                  <p className="shrink-0 font-display text-lg leading-tight tabular-nums">{formatNumber(h.score)}</p>
+                  <p className="shrink-0 font-display text-lg leading-tight tabular-nums">
+                    {formatNumber(h.score)}
+                    {meta.unit === '%' && <span className="text-sm">%</span>}
+                  </p>
                   <button type="button" className="btn btn-icon btn-sm shrink-0" onClick={() => onPlay(h.game)} aria-label={`${meta.name} 다시 하기`}>
                     <RotateCcw className="h-4 w-4" strokeWidth={2.5} />
                   </button>

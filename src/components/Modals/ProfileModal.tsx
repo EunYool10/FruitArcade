@@ -268,7 +268,7 @@ export const ProfileModal: React.FC<Props> = ({
                     <Emoji e={GAMES[g].emoji} />
                   </p>
                   <p className="truncate text-[11px] font-bold text-ink-2">{GAMES[g].short}</p>
-                  <p className="truncate font-display text-sm tabular-nums">{stats[bestKey(g)] > 0 ? formatNumber(stats[bestKey(g)]) : '–'}</p>
+                  <p className="truncate font-display text-sm tabular-nums">{stats[bestKey(g)] > 0 ? `${formatNumber(stats[bestKey(g)])}${GAMES[g].unit === '%' ? '%' : ''}` : '–'}</p>
                 </div>
               ))}
             </div>

@@ -36,8 +36,8 @@ const RATE: Record<Exclude<Game, 'puzzle'>, { perSecond: number; burst: number }
   slice: { perSecond: 240, burst: 450 },
   // One point a tile, and the board never scrolls faster than 10 rows a second
   piano: { perSecond: 11, burst: 30 },
-  // Distance tops out near 18 points a second, plus 20 a cherry
-  jump: { perSecond: 45, burst: 150 },
+  // Distance tops out near 18 points a second; at top speed a player who takes every cherry adds ~30 more
+  jump: { perSecond: 70, burst: 200 },
   // A guest at most every 2.6 s once busy, up to 100 points a juice with a long streak, and the first three at once
   juice: { perSecond: 45, burst: 300 },
 };

@@ -243,12 +243,32 @@ export const SHOP_ITEMS: ShopItem[] = [
   staff({ id: 'staff_av_sun', kind: 'avatar', name: '운영진 태양', icon: '☀️' }),
   staff({ id: 'staff_frame_royal', kind: 'frame', name: '운영진 로열 테두리' }),
   staff({ id: 'staff_frame_flame', kind: 'frame', name: '운영진 불꽃 테두리' }),
+  // 운영진, 2026-10-27
+  staff({ id: 'staff_moderator', kind: 'title', name: '질서 지킴이', icon: '🚨' }),
+  staff({ id: 'staff_architect', kind: 'title', name: '아케이드 설계자', icon: '🏛️' }),
+  staff({ id: 'staff_music', kind: 'title', name: '음악 감독', icon: '🎼' }),
+  staff({ id: 'staff_barista', kind: 'title', name: '주스 바리스타', icon: '🧃' }),
+  staff({ id: 'staff_critic', kind: 'title', name: '그림 심사위원', icon: '🖼️' }),
+  staff({ id: 'staff_coach', kind: 'title', name: '달리기 코치', icon: '🦘' }),
+  staff({ id: 'staff_av_diamond', kind: 'avatar', name: '운영진 다이아', icon: '💎' }),
+  staff({ id: 'staff_av_bolt', kind: 'avatar', name: '운영진 번개', icon: '⚡' }),
+  staff({ id: 'staff_av_planet', kind: 'avatar', name: '운영진 행성', icon: '🪐' }),
+  staff({ id: 'staff_av_comet', kind: 'avatar', name: '운영진 혜성', icon: '☄️' }),
+  staff({ id: 'staff_frame_neon', kind: 'frame', name: '운영진 네온 테두리' }),
+  staff({ id: 'staff_frame_ice', kind: 'frame', name: '운영진 얼음 테두리' }),
+  staff({ id: 'staff_back_neon', kind: 'cardBack', name: '운영진 네온 카드' }),
+  staff({ id: 'staff_back_crystal', kind: 'cardBack', name: '운영진 크리스탈 카드' }),
+  staff({ id: 'staff_blade_gold', kind: 'blade', name: '운영진 황금 칼날' }),
+  staff({ id: 'staff_runner_crystal', kind: 'runner', name: '운영진 크리스탈 러너' }),
+  staff({ id: 'staff_runner_flame', kind: 'runner', name: '운영진 불꽃 러너' }),
+  staff({ id: 'staff_skin_space', kind: 'suikaSkin', name: '운영진 우주 스킨' }),
 
   // RGB series: the frame is an admins' gift, the rest is sold
   { ...gift({ id: PRISM_FRAME, kind: 'frame', name: 'RGB 테두리' }), rgb: true },
   rgb({ id: 'rgb_avatar', kind: 'avatar', name: 'RGB 수정구슬', icon: RGB_AVATAR }),
   rgb({ id: 'rgb_title', kind: 'title', name: 'RGB', icon: '🌈' }),
   rgb({ id: 'rgb_back', kind: 'cardBack', name: 'RGB 카드' }),
+  rgb({ id: 'rgb_runner', kind: 'runner', name: 'RGB 러너' }),
 
   // Level rewards
   reward(5, { id: 'lv_title_5', kind: 'title', name: '새싹 졸업', icon: '🌱' }),
@@ -299,6 +319,8 @@ export const FRAME_CLASS: Record<string, string> = {
   frame_aurora: 'bg-[conic-gradient(#3ddbb2,#2ea9ff,#7a5cff,#ff4fd8,#3ddbb2)]',
   staff_frame_royal: 'bg-[conic-gradient(#ffd23f,#1e3a8a,#ffffff,#1e3a8a,#ffd23f)]',
   staff_frame_flame: 'bg-[conic-gradient(#1e3a8a,#3b82f6,#ff9100,#ffea00,#3b82f6,#1e3a8a)]',
+  staff_frame_neon: 'bg-[conic-gradient(#ff00e5,#00e5ff,#7a5cff,#00e5ff,#ff00e5)]',
+  staff_frame_ice: 'bg-[conic-gradient(#e0f7ff,#7dd3fc,#ffffff,#38bdf8,#e0f7ff)]',
   // Animated in index.css
   owner_frame_prism: 'frame-prism',
   lv_frame_10: 'bg-[linear-gradient(135deg,#f3c79a,#b8733a_50%,#6e3b17)]',
@@ -332,6 +354,8 @@ export const CARD_BACKS: Record<string, { className: string; mark: string }> = {
   staff_back_gold: { className: 'stripes bg-[#b45309]', mark: '👑' },
   staff_back_galaxy: { className: 'dots bg-[#0b0b2b]', mark: '💫' },
   rgb_back: { className: 'rgb-cycle', mark: '🌈' },
+  staff_back_neon: { className: 'stripes bg-[#0f172a]', mark: '⚡' },
+  staff_back_crystal: { className: 'checker bg-[#7dd3fc]', mark: '💎' },
 };
 
 export const cardBackStyle = (id: string) => CARD_BACKS[id] ?? CARD_BACKS[''];
@@ -352,12 +376,13 @@ export const BLADES: Record<string, { glow: string; core: string; rainbow?: bool
   blade_shadow: { glow: '60, 40, 90', core: '200, 180, 255' },
   staff_blade_aurora: { glow: '0, 255, 163', core: '255, 255, 255', rainbow: true },
   staff_blade_ice: { glow: '59, 130, 246', core: '220, 245, 255' },
+  staff_blade_gold: { glow: '255, 196, 0', core: '255, 255, 255' },
 };
 
 export const bladeStyle = (id: string) => BLADES[id] ?? BLADES[''];
 
-/** FRUIT DASH runner colors (body, feet, leaf, face) */
-export const RUNNERS: Record<string, { body: string; feet: string; leaf: string; face: string }> = {
+/** FRUIT DASH and 과일 점프 runner colors (body, feet, leaf, face); `rgb` runs through the colours */
+export const RUNNERS: Record<string, { body: string; feet: string; leaf: string; face: string; rgb?: boolean }> = {
   '': { body: '#ffb627', feet: '#e07800', leaf: '#2ec27e', face: '#2b2140' },
   runner_berry: { body: '#ff4d6d', feet: '#c9184a', leaf: '#2ec27e', face: '#2b2140' },
   runner_lemon: { body: '#ffe14d', feet: '#d4a600', leaf: '#2ec27e', face: '#2b2140' },
@@ -372,9 +397,18 @@ export const RUNNERS: Record<string, { body: string; feet: string; leaf: string;
   runner_gold: { body: '#ffd23f', feet: '#e27d00', leaf: '#fff1a8', face: '#2b2140' },
   staff_runner_gold: { body: '#ffd23f', feet: '#1e3a8a', leaf: '#3b82f6', face: '#1e3a8a' },
   staff_runner_night: { body: '#0b0b2b', feet: '#7a5cff', leaf: '#ffd23f', face: '#ffd23f' },
+  staff_runner_crystal: { body: '#bde0fe', feet: '#3a86ff', leaf: '#ffffff', face: '#1e3a8a' },
+  staff_runner_flame: { body: '#ff5400', feet: '#1e3a8a', leaf: '#ffd23f', face: '#ffffff' },
+  rgb_runner: { body: '#ff3b30', feet: '#a4161a', leaf: '#30d158', face: '#ffffff', rgb: true },
 };
 
-export const runnerStyle = (id: string) => RUNNERS[id] ?? RUNNERS[''];
+/** A runner's colours at `time` (ms): the RGB runner goes red → violet and round again about every 4 s */
+export function runnerStyle(id: string, time = 0) {
+  const r = RUNNERS[id] ?? RUNNERS[''];
+  if (!r.rgb) return r;
+  const h = Math.round((time * 0.09) % 360);
+  return { ...r, body: `hsl(${h}, 90%, 58%)`, feet: `hsl(${h}, 85%, 34%)`, leaf: `hsl(${(h + 150) % 360}, 85%, 52%)` };
+}
 
 /** How much a finished round pays: 10 for playing, up to 40 for the score, plus bonuses */
 export function coinsFor(r: GameResult, bonus: { newBest: boolean; stamp: boolean; firstToday: boolean }): number {

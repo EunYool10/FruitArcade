@@ -622,7 +622,7 @@ export const FruitJumpGame: React.FC<Props> = ({
       ctx.globalAlpha = 1;
 
       // The runner: a little fruit with feet (the shop's runner colours), squashing on landing
-      const look = runnerStyle(live.current.settings.runner);
+      const look = runnerStyle(live.current.settings.runner, time);
       const ink = look.face;
       const sq = r.squash;
       const sx = 1 + sq * 0.14;

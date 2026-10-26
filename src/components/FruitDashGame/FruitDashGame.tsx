@@ -677,7 +677,7 @@ export const FruitDashGame: React.FC<Props> = ({
       }
 
       // 6. Player: a little running fruit (an orange unless a runner from the shop is on) that looks where it is going
-      const look = runnerStyle(settings.runner);
+      const look = runnerStyle(settings.runner, time);
       const px = playerXRef.current;
       const step = targetXRef.current - px;
       const moving = isPlayingRef.current && Math.abs(step) > 1.5;

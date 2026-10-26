@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Check, Gift } from 'lucide-react';
-import { ItemKind, Inventory, SHOP_ITEMS, ShopItem, bladeStyle, cardBackStyle, forSale, runnerStyle } from '../../utils/shop';
+import { ItemKind, Inventory, RUNNERS, SHOP_ITEMS, ShopItem, bladeStyle, cardBackStyle, forSale, runnerStyle } from '../../utils/shop';
 import { SUIKA_DEFAULT, SUIKA_SKINS } from '../../utils/skins';
 import { titleDef } from '../../utils/titles';
 import { formatCompact, formatNumber, josa } from '../../utils/format';
@@ -60,10 +60,10 @@ const TAB_HINT: Record<Tab, string> = {
   title: '이름 옆에 붙고 랭킹에도 보여요 (업적을 깨면 더 생겨요)',
   cardBack: '과일 메모리 카드의 뒷면이에요',
   blade: '과일 자르기에서 긋는 칼날 자국 색이에요',
-  runner: 'FRUIT DASH에서 달리는 캐릭터예요',
-  suikaSkin: '수박 게임 · 과일 자르기 · FRUIT DASH · 과일 퍼즐의 과일이 다른 모양으로 바뀌어요 (크기와 점수는 그대로)',
+  runner: 'FRUIT DASH와 과일 점프에서 달리는 캐릭터예요',
+  suikaSkin: '메모리와 그리기를 뺀 모든 게임의 과일이 다른 모양으로 바뀌어요 (크기와 점수는 그대로)',
   staff: '운영진만 쓸 수 있는 전용 시리즈예요. 칭호와 테두리는 다른 사람은 랭킹에 달 수 없어요',
-  rgb: '빨강부터 보라까지 색이 계속 바뀌는 시리즈예요. 아바타 · 칭호 · 카드 뒷면은 각 777억 코인, 테두리는 운영진 선물로만 받아요',
+  rgb: '빨강부터 보라까지 색이 계속 바뀌는 시리즈예요. 아바타 · 칭호 · 카드 뒷면 · 러너는 각 777억 코인, 테두리는 운영진 선물로만 받아요',
   level: '레벨이 오르면 저절로 생기는 보상이에요. 레벨이 오를 때마다 코인도 받아요 (일반 플레이어 최고 Lv.100)',
 };
 
@@ -80,11 +80,11 @@ const BladePreview: React.FC<{ id: string }> = ({ id }) => {
   );
 };
 
-/** The FRUIT DASH runner in the shop: a small fruit with a leaf, eyes and feet */
+/** The runner in the shop: a small fruit with a leaf, eyes and feet (the RGB one keeps changing colour) */
 const RunnerPreview: React.FC<{ id: string }> = ({ id }) => {
   const r = runnerStyle(id);
   return (
-    <svg viewBox="0 0 56 56" className="h-14 w-14" aria-hidden="true">
+    <svg viewBox="0 0 56 56" className={`h-14 w-14 ${RUNNERS[id]?.rgb ? 'rgb-hue' : ''}`} aria-hidden="true">
       <ellipse cx="20" cy="47" rx="7" ry="4.5" fill={r.feet} stroke="#2b2140" strokeWidth="2.5" />
       <ellipse cx="36" cy="47" rx="7" ry="4.5" fill={r.feet} stroke="#2b2140" strokeWidth="2.5" />
       <circle cx="28" cy="28" r="18" fill={r.body} stroke="#2b2140" strokeWidth="3" />

@@ -58,6 +58,7 @@ export const ACHIEVEMENT_DEFINITIONS: Achievement[] = [
   { id: 'streak_3', title: '사흘 연속', desc: '3일 연속으로 플레이', icon: '🔥', game: 'all' },
   { id: 'streak_7', title: '일주일 개근', desc: '7일 연속으로 플레이', icon: '📅', game: 'all' },
   { id: 'streak_30', title: '한 달 개근', desc: '30일 연속으로 플레이', icon: '🗓️', game: 'all' },
+  { id: 'credits_end', title: '끝까지 본 사람', desc: '엔딩 크레딧을 끝까지 보기', icon: '🎬', game: 'all', hidden: true },
 
   { id: 'all_achieved', title: '진정한 과일 마스터', desc: '모든 업적을 전부 해금 완료', icon: '🎖️', game: 'all' },
 ];

@@ -455,13 +455,24 @@
     50% { box-shadow: 0 0 0 5px var(--mango); }
   }
 
-  /* 크레딧 → 엔딩 크레딧: the names roll up the window */
-  .credits-roll {
-    animation: credits-roll 30s linear forwards;
+  /* 엔딩 크레딧: fruit and sparkles drift down behind the names (the names themselves move by script).
+     Each faller's box is as tall as the window, so 105% carries it out of the bottom */
+  .credits-fall {
+    animation: credits-fall linear infinite;
   }
-  @keyframes credits-roll {
-    from { transform: translateY(0); }
-    to { transform: translateY(calc(-100% - 60dvh)); }
+  @keyframes credits-fall {
+    from { transform: translateY(-12%); }
+    to { transform: translateY(105%); }
+  }
+  .credits-spin {
+    animation: credits-spin linear infinite;
+  }
+  @keyframes credits-spin {
+    to { transform: rotate(360deg); }
+  }
+  .credits-roll-box.is-paused .credits-fall,
+  .credits-roll-box.is-paused .credits-spin {
+    animation-play-state: paused;
   }
 
   /* RGB series: colours that keep running red → violet (the avatar, the title's letters) */
@@ -550,13 +561,9 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  /* Credits stay put and scroll by hand */
-  .credits-roll {
-    animation: none !important;
-    top: 0 !important;
-  }
-  .credits-roll-box {
-    overflow-y: auto !important;
+  /* The ending credits scroll by hand (CreditsModal checks this too), without falling fruit */
+  .credits-fall {
+    display: none;
   }
   /* Still all the colors, just not moving */
   .frame-prism,

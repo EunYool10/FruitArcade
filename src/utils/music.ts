@@ -7,7 +7,7 @@
  */
 import { getAudioContext, whenAudioUnlocked } from './audio';
 
-export type TrackName = 'lobby' | 'memory' | 'suika' | 'dash' | 'puzzle' | 'slice';
+export type TrackName = 'lobby' | 'memory' | 'suika' | 'dash' | 'puzzle' | 'slice' | 'credits';
 
 type Voice = 'pluck' | 'bell' | 'flute' | 'saw';
 type Comp = 'pad' | 'offbeat' | 'arp';
@@ -117,10 +117,19 @@ const SONGS: Record<TrackName, Song> = {
     comp: 'offbeat',
     drums: { k: 'x---x---x---x---', s: '----x-------x---', h: 'x-x-x-x-x-x-x-x-' },
   },
+  // The ending credits: a slow music box over soft pads, C major, ends each loop on G
+  credits: {
+    bpm: 76,
+    voice: 'bell',
+    leadGain: 0.4,
+    lead: `E5:4 G5:4 C6:6 B5:2 | D6:4 B5:4 G5:8 | A5:4 C6:4 E6:6 D6:2 | B5:4 G5:4 E5:8 |
+           F5:4 A5:4 C6:4 F6:4 | E6:4 D6:2 C6:2 G5:8 | F5:4 A5:4 D6:4 C6:4 | B5:4 D6:4 G5:8`,
+    bass: `C3:8 G2:8 | B2:8 G2:8 | A2:8 E2:8 | G2:8 E2:8 | F2:8 C3:8 | E2:8 C3:8 | D3:8 A2:8 | G2:8 G2:4 B2:4`,
+    chords: ['C4 E4 G4', 'B3 D4 G4', 'A3 C4 E4', 'G3 B3 E4', 'F3 A3 C4', 'E3 G3 C4', 'D4 F4 A4', 'D4 G4 B4'],
+    comp: 'pad',
+    drums: { h: '----x-------x---' },
+  },
 };
-
-/** How many tracks there are (the credits count them) */
-export const TRACK_COUNT = Object.keys(SONGS).length;
 
 const NAMES: Record<string, number> = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
 
@@ -165,7 +174,12 @@ function compile(song: Song) {
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
 class MusicPlayer {
+  /** What is playing: the screen's track, or the override on top of it */
   private track: TrackName | null = null;
+  /** The screen's track (set by play) */
+  private wanted: TrackName | null = null;
+  /** A track that plays over the screen's for a while (the ending credits) */
+  private override: TrackName | null = null;
   private compiled: ReturnType<typeof compile> | null = null;
   private song: Song | null = null;
   /** Volume control → compressor → speakers */
@@ -198,6 +212,18 @@ class MusicPlayer {
   }
 
   play(track: TrackName | null) {
+    this.wanted = track;
+    this.switchTo(this.override ?? track);
+  }
+
+  /** Play `track` over the screen's music (full volume, even in a window); null goes back to the screen's */
+  playOver(track: TrackName | null) {
+    this.override = track;
+    this.applyGain();
+    this.switchTo(track ?? this.wanted);
+  }
+
+  private switchTo(track: TrackName | null) {
     if (track === this.track && this.timer) return;
     this.halt();
     this.track = track;
@@ -213,7 +239,7 @@ class MusicPlayer {
   private applyGain() {
     if (!this.master) return;
     const ctx = this.master.context;
-    const target = this.enabled ? this.volume * 0.09 * (this.ducked ? 0.35 : 1) : 0;
+    const target = this.enabled ? this.volume * 0.09 * (this.ducked && !this.override ? 0.35 : 1) : 0;
     this.master.gain.setTargetAtTime(target, ctx.currentTime, 0.15);
   }
 

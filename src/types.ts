@@ -53,6 +53,8 @@ export interface Achievement {
   desc: string;
   icon: string;
   game?: 'all' | GameType;
+  /** Shown as a question mark until it's found */
+  hidden?: boolean;
 }
 
 export interface UnlockedAchievements {

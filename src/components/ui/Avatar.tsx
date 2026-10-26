@@ -7,6 +7,7 @@ const SIZES = {
   sm: 'h-8 w-8 text-base',
   md: 'h-12 w-12 text-2xl',
   lg: 'h-16 w-16 text-3xl',
+  xl: 'h-20 w-20 text-4xl',
 };
 
 /** How the current player is shown everywhere (nickname, fruit avatar or Google photo). */

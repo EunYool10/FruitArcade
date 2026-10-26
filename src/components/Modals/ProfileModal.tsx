@@ -5,7 +5,7 @@ import { UserStatistics } from '../../types';
 import { GAMES, GAME_ORDER, TONE } from '../../constants';
 import { LevelInfo, bestKey } from '../../utils/progress';
 import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
-import { formatNumber } from '../../utils/format';
+import { formatNumber, formatPlayTime } from '../../utils/format';
 import { Modal } from '../ui/Modal';
 import { Avatar, PlayerView } from '../ui/Avatar';
 import { NICKNAME_MAX, PlayerProfile, cleanNickname, isReservedNickname } from '../../utils/profile';
@@ -23,11 +23,6 @@ import { ProfileEquip } from './ProfileEquip';
 type Tab = 'avatar' | 'frame' | 'title' | 'stats';
 
 /** Total play time: "1시간 48분", "35분" */
-const playTime = (sec: number) => {
-  const m = Math.floor(Math.max(0, sec) / 60);
-  return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`;
-};
-
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -254,7 +249,7 @@ export const ProfileModal: React.FC<Props> = ({
           <dl className="grid grid-cols-2 gap-2">
             {[
               ['🎮 총 플레이', `${formatNumber(stats.totalPlayCount)}판`],
-              ['⏱️ 플레이 시간', playTime(stats.totalPlayTime)],
+              ['⏱️ 플레이 시간', formatPlayTime(stats.totalPlayTime)],
               ['🏆 업적', `${achievementCount}/${ACHIEVEMENT_COUNT}`],
               ['🏅 미션 도장', `${stats.missionStamps}개`],
             ].map(([k, v]) => (

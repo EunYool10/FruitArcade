@@ -143,6 +143,8 @@ export const AchievementsModal: React.FC<Props> = ({ isOpen, onClose }) => {
         {list.map((a) => {
           const date = unlocked[a.id];
           const tone = TONE[toneOf(a)];
+          // A hidden one stays a question mark until it's found
+          const secret = a.hidden && !date;
           return (
             <li key={a.id} className={`relative flex items-start gap-3 rounded-2xl border-2 border-line p-3 ${date ? `${tone.soft} shadow-hard-sm` : 'bg-surface-2'}`}>
               <span
@@ -150,15 +152,15 @@ export const AchievementsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 aria-hidden="true"
               >
                 <span className={date ? '' : 'opacity-30 grayscale'}>
-                  <Emoji e={a.icon} />
+                  <Emoji e={secret ? '❔' : a.icon} />
                 </span>
               </span>
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1.5 text-sm font-bold leading-tight">
-                  {a.title}
+                  {secret ? '숨은 업적' : a.title}
                   {!date && <Lock className="h-3.5 w-3.5 shrink-0 text-ink-3" strokeWidth={2.5} aria-label="잠김" />}
                 </p>
-                <p className="mt-0.5 text-xs leading-snug text-ink-2">{a.desc}</p>
+                <p className="mt-0.5 text-xs leading-snug text-ink-2">{secret ? '어딘가에 숨어 있어요. 찾아보세요!' : a.desc}</p>
                 <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
                   <span className="chip h-5 bg-surface px-1.5">+{XP.achievement} XP</span>
                   <span className="chip h-5 bg-surface px-1.5">🏷️ 칭호</span>

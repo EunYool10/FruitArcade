@@ -13,6 +13,12 @@ export const formatTime = (sec: number, showTenths = false): string => {
 
 export const formatNumber = (n: number): string => Math.round(n).toLocaleString('ko-KR');
 
+/** Total play time: "45분", "3시간 20분" */
+export const formatPlayTime = (sec: number): string => {
+  const m = Math.floor(Math.max(0, sec) / 60);
+  return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`;
+};
+
 /**
  * Short form for big amounts so coin chips stay one line: 99,999 · 12.3만 · 4,567만 · 999.9억 · ∞.
  * Rounds down, so it never shows more than there is.

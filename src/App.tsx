@@ -1526,7 +1526,12 @@ export default function App() {
       />
       <PatchNotesModal isOpen={modal === 'patch'} onClose={() => setModal(null)} />
       <TermsModal isOpen={modal === 'terms'} onClose={() => setModal(null)} />
-      <CreditsModal isOpen={modal === 'credits'} onClose={() => setModal(null)} />
+      <CreditsModal
+        isOpen={modal === 'credits'}
+        onClose={() => setModal(null)}
+        me={{ player, level: level.level, plays: stats.totalPlayCount, seconds: stats.totalPlayTime }}
+        onFinished={() => handleUnlockAchieve('credits_end')}
+      />
       <AppsModal isOpen={modal === 'apps'} onClose={() => setModal(null)} />
       <ChallengeModal challenge={incomingChallenge} onAccept={acceptChallenge} onDismiss={() => setIncomingChallenge(null)} />
       <Tutorial game={tutorialGame} onClose={() => setTutorialGame(null)} />

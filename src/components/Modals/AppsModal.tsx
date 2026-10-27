@@ -42,6 +42,13 @@ const APPS = [
     about: '학교의 불편한 점과 시설 안전 위험을 신고하고 처리 과정을 함께 보는 학교 시설 관리 서비스',
     url: 'https://schoolfix.onrender.com/',
   },
+  {
+    icon: 'apps/aihub.png',
+    color: '#6a5cff',
+    name: 'AI Hub',
+    about: '분야별로 정리한 AI 도구를 검색하고 비교하는 AI 도구 모음',
+    url: 'https://eunyool10.github.io/AI-Hub-By-EunYool/',
+  },
 ] as { icon: string; color: string; name: string; about: string; url: string; here?: boolean; slow?: boolean }[];
 
 // Card in the favicon's color: a thick left stripe and a light tint of it.

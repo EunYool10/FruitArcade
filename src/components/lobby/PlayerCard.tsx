@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserStatistics } from '../../types';
-import { LevelInfo } from '../../utils/progress';
+import { LevelInfo, isAdminLevel } from '../../utils/progress';
 import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
 import { Avatar, PlayerView } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';
@@ -79,7 +79,15 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           </p>
           <p className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm font-bold text-ink-2">
             <span className="shrink-0">
-              <Emoji e={level.emoji} /> Lv.{level.level} <span className="text-ink-3">{level.title}</span>
+              {isAdminLevel(level.level) ? (
+                <>
+                  🛡️ <span className="text-ink-3">{level.title}</span>
+                </>
+              ) : (
+                <>
+                  <Emoji e={level.emoji} /> Lv.{level.level} <span className="text-ink-3">{level.title}</span>
+                </>
+              )}
             </span>
             {player.title && <TitleTag title={player.title} />}
           </p>

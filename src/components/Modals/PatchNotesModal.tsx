@@ -9,6 +9,14 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.37.3',
+    title: '운영진 레벨 표시',
+    items: [
+      ['🛡️ 운영진', '운영진은 레벨 숫자(Lv.999) 대신 🛡️ 방패로 보여요. 로비 · 프로필 · 위쪽 바 · 친구 · 플레이어 카드 · 엔딩 크레딧 모두 같아요.'],
+      ['🎉 레벨 업', '운영진은 올라갈 레벨이 없으니 결과 화면에 "레벨 업" 표시가 나오지 않아요.'],
+    ],
+  },
+  {
     version: '3.37.2',
     title: '버그 수정',
     items: [

@@ -11,6 +11,7 @@ import { titleDef } from '../../utils/titles';
 import { formatCompact, formatNumber, josa, relativeTime } from '../../utils/format';
 import { GAMES, GAME_ORDER } from '../../constants';
 import { isOnline } from '../../utils/presence';
+import { isAdminLevel, levelLabel } from '../../utils/progress';
 import { COIN_MAX, GIFT_LIMITS } from '../../utils/coins';
 import type { FriendLink, Gift as GiftDoc, PublicPlayer } from '../../utils/friendsService';
 
@@ -234,7 +235,11 @@ const PlayerBadge: React.FC<{ p: PublicPlayer | null; fallback?: string; seen?: 
         <span className="flex min-w-0 items-center gap-1.5">
           <span className="truncate font-bold">{p?.name ?? fallback}</span>
           {p?.verified && <VerifiedBadge />}
-          {p && <span className="chip h-5 shrink-0 bg-surface px-1.5 text-[10px]">Lv.{p.level}</span>}
+          {p && (
+            <span className={`chip h-5 shrink-0 bg-surface px-1.5 ${isAdminLevel(p.level) ? 'text-sm' : 'text-[10px]'}`} title={isAdminLevel(p.level) ? '운영진' : undefined}>
+              {levelLabel(p.level)}
+            </span>
+          )}
         </span>
         {t && <TitleTag title={t} variant="line" />}
         {/* Its own line: next to a 운영진 title badge the two ran into each other */}

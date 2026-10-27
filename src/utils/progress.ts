@@ -179,6 +179,11 @@ export function levelInfo(xp: number): LevelInfo {
 /** Admins skip levels: always Lv.999 (the emoji stays the one their XP earned) */
 export const adminLevel = (info: LevelInfo): LevelInfo => ({ ...info, level: ADMIN_LEVEL, title: '운영진', max: true, floor: info.xp, next: info.xp });
 
+/** 운영진 (Lv.999 on their cards): shown as a 🛡️ instead of a number */
+export const isAdminLevel = (level: number) => level >= ADMIN_LEVEL;
+/** How a level is written: "Lv.12", or 🛡️ for 운영진 */
+export const levelLabel = (level: number) => (isAdminLevel(level) ? '🛡️' : `Lv.${level}`);
+
 /**
  * Coins for reaching a level: 100 each time, more at the milestones, where a level reward item
  * (lv_* in the shop) unlocks as well

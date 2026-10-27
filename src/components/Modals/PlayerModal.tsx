@@ -10,6 +10,7 @@ import { formatNumber } from '../../utils/format';
 import type { PublicPlayer } from '../../utils/friendsService';
 import { Emoji } from '../ui/Emoji';
 import { PresenceTag } from '../ui/Presence';
+import { isAdminLevel } from '../../utils/progress';
 
 const friendsApi = () => import('../../utils/friendsService');
 
@@ -107,7 +108,7 @@ export const PlayerModal: React.FC<Props> = ({ isOpen, onClose, viewerUid, targe
                 {p.verified && <VerifiedBadge className="h-5 w-5" />}
               </p>
               <div className="mt-1 flex flex-wrap gap-1">
-                <span className="chip bg-mango-soft">Lv.{p.level}</span>
+                <span className="chip bg-mango-soft">{isAdminLevel(p.level) ? '🛡️ 운영진' : `Lv.${p.level}`}</span>
                 <span className="chip bg-surface">🏆 업적 {p.achievements}개</span>
                 {t && <TitleTag title={t} />}
               </div>

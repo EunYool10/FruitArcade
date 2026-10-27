@@ -5,6 +5,7 @@ import { Avatar, PlayerView } from '../ui/Avatar';
 import { APP_VERSION, GAME_ORDER, GAMES, TONE, Tone } from '../../constants';
 import { music } from '../../utils/music';
 import { formatNumber, formatPlayTime } from '../../utils/format';
+import { isAdminLevel, levelLabel } from '../../utils/progress';
 import { Emoji } from '../ui/Emoji';
 
 /** The player, for the last card of the ending credits */
@@ -230,7 +231,7 @@ const Rolling: React.FC<{ me: CreditsPlayer; onFinished: () => void; onDone: () 
   const stats: [string, string, string][] = [
     ['🎮', `${formatNumber(me.plays)}판`, '플레이'],
     ['⏱️', formatPlayTime(me.seconds), '플레이 시간'],
-    ['⭐', `Lv.${me.level}`, '레벨'],
+    ['⭐', levelLabel(me.level), isAdminLevel(me.level) ? '운영진' : '레벨'],
   ];
 
   return (

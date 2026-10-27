@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowLeft, BarChart3, Crown, Pause, Settings, Shield, ShoppingBag, Trophy, Users, Volume2, VolumeX } from 'lucide-react';
 import { GameSettings, ScreenType } from '../types';
 import { GAMES, SCREEN_GAME } from '../constants';
-import { LevelInfo, isAdminLevel, levelLabel } from '../utils/progress';
+import { LevelInfo, levelLabel } from '../utils/progress';
 import { Avatar, PlayerView } from './ui/Avatar';
 import { Challenge } from '../utils/challenge';
 import { formatNumber } from '../utils/format';
@@ -152,7 +152,7 @@ export const Navbar: React.FC<Props> = ({
               type="button"
               className="btn h-11 gap-2 px-1.5 sm:pr-3"
               onClick={() => onOpen('profile')}
-              aria-label={player.isGuest ? '로그인' : `내 프로필 (${isAdminLevel(level.level) ? '운영진' : `Lv.${level.level}`})`}
+              aria-label={player.isGuest ? '로그인' : `내 프로필 (Lv.${level.level})`}
             >
               <Avatar player={player} size="sm" />
               <span className="hidden text-sm sm:inline">{player.isGuest ? '로그인' : levelLabel(level.level)}</span>

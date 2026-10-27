@@ -176,13 +176,18 @@ export function levelInfo(xp: number): LevelInfo {
   return { level, title: t.title, emoji: t.emoji, xp, floor: xpForLevel(level), next: max ? xpForLevel(level) : xpForLevel(level + 1), max };
 }
 
-/** Admins skip levels: always Lv.999 (the emoji stays the one their XP earned) */
+/** Admins skip levels: always Lv.999 (the emoji stays the one their XP earned: it's also the default avatar) */
 export const adminLevel = (info: LevelInfo): LevelInfo => ({ ...info, level: ADMIN_LEVEL, title: '운영진', max: true, floor: info.xp, next: info.xp });
 
-/** 운영진 (Lv.999 on their cards): shown as a 🛡️ instead of a number */
+/** Where a level is shown, 운영진 get the shield as its icon */
+export const ADMIN_LEVEL_EMOJI = '🛡️';
+
+/** 운영진 (Lv.999 on their cards) */
 export const isAdminLevel = (level: number) => level >= ADMIN_LEVEL;
-/** How a level is written: "Lv.12", or 🛡️ for 운영진 */
-export const levelLabel = (level: number) => (isAdminLevel(level) ? '🛡️' : `Lv.${level}`);
+/** How a level is written: "Lv.12", and "🛡️ Lv.999" for 운영진 */
+export const levelLabel = (level: number) => `${isAdminLevel(level) ? `${ADMIN_LEVEL_EMOJI} ` : ''}Lv.${level}`;
+/** The icon in front of a level: the tier's fruit, or 🛡️ for 운영진 */
+export const levelIcon = (info: LevelInfo) => (isAdminLevel(info.level) ? ADMIN_LEVEL_EMOJI : info.emoji);
 
 /**
  * Coins for reaching a level: 100 each time, more at the milestones, where a level reward item

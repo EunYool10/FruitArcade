@@ -236,7 +236,7 @@ const PlayerBadge: React.FC<{ p: PublicPlayer | null; fallback?: string; seen?: 
           <span className="truncate font-bold">{p?.name ?? fallback}</span>
           {p?.verified && <VerifiedBadge />}
           {p && (
-            <span className={`chip h-5 shrink-0 bg-surface px-1.5 ${isAdminLevel(p.level) ? 'text-sm' : 'text-[10px]'}`} title={isAdminLevel(p.level) ? '운영진' : undefined}>
+            <span className="chip h-5 shrink-0 bg-surface px-1.5 text-[10px]" title={isAdminLevel(p.level) ? '운영진' : undefined}>
               {levelLabel(p.level)}
             </span>
           )}

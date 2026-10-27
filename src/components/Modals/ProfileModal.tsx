@@ -3,7 +3,7 @@ import { AlertCircle, Loader2, LogOut, Pencil } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { UserStatistics } from '../../types';
 import { GAMES, GAME_ORDER, TONE } from '../../constants';
-import { LevelInfo, bestKey, isAdminLevel } from '../../utils/progress';
+import { LevelInfo, bestKey, levelIcon } from '../../utils/progress';
 import { ACHIEVEMENT_COUNT } from '../../utils/achievements';
 import { formatNumber, formatPlayTime } from '../../utils/format';
 import { Modal } from '../ui/Modal';
@@ -185,7 +185,7 @@ export const ProfileModal: React.FC<Props> = ({
             )}
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <span className="chip h-6 bg-mango-soft px-2 text-[11px]">
-                {isAdminLevel(level.level) ? <>🛡️ {level.title}</> : <><Emoji e={level.emoji} /> Lv.{level.level} {level.title}</>}
+                <Emoji e={levelIcon(level)} /> Lv.{level.level} {level.title}
               </span>
               {player.title && <TitleTag title={player.title} />}
               {isAdmin && (

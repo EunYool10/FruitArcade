@@ -9,6 +9,14 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.37.4',
+    title: '운영진 레벨 표시 다듬기',
+    items: [
+      ['🛡️ 운영진', '레벨은 그대로 Lv.999로 두고, 레벨 앞 아이콘만 🛡️ 방패로 보여요 ("🛡️ Lv.999 운영진").'],
+      ['🎉 레벨 업', '운영진도 원래처럼 레벨 업 표시가 나와요.'],
+    ],
+  },
+  {
     version: '3.37.3',
     title: '운영진 레벨 표시',
     items: [

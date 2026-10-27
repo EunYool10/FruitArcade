@@ -1093,7 +1093,7 @@ export default function App() {
         xpGained: after.xp - before.xp,
         newBest,
         prevBest,
-        levelUp: !asAdminRef.current && after.level > before.level ? after.level : null,
+        levelUp: after.level > before.level ? after.level : null,
         missions: completed.map((m) => m.text),
         streak: extended && nextStreak.count > 1 ? nextStreak.count : null,
         achievements: [...roundAchRef.current],

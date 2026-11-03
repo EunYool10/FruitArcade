@@ -64,7 +64,8 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
         </div>
       )}
 
-      <section className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+      {/* grid-cols-1 (minmax(0,1fr)): an implicit auto column grows to its widest content and pushes the panels off the right edge on narrow phones */}
+      <section className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* Hero */}
         <div className="panel relative flex min-h-[250px] flex-col justify-center overflow-hidden bg-mango-soft p-6 sm:p-8">
           <div className="pointer-events-none absolute inset-0" aria-hidden="true">
@@ -149,7 +150,7 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
         </div>
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-2">
+      <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <MissionsCard daily={daily} streak={streak} stamps={stats.missionStamps} onPlay={(g) => onPlay(g)} />
         <RecentPlays history={history} onOpenRecords={() => onOpen('records')} onPlay={(g) => onPlay(g)} />
       </section>

@@ -4,6 +4,7 @@ import { FRAME_CLASS } from '../../utils/shop';
 import { Emoji } from './Emoji';
 
 const SIZES = {
+  xs: 'h-7 w-7 text-sm',
   sm: 'h-8 w-8 text-base',
   md: 'h-12 w-12 text-2xl',
   lg: 'h-16 w-16 text-3xl',

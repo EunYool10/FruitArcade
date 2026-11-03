@@ -71,7 +71,8 @@ export const MissionsCard: React.FC<Props> = ({ daily, streak, stamps, onPlay })
           const done = value >= m.target;
           const meta = m.game ? GAMES[m.game] : null;
           const tone = TONE[meta?.tone ?? 'grape'];
-          const pct = Math.min(100, Math.round((value / m.target) * 100));
+          // floor: 2,999/3,000 isn't done, so it shouldn't read 100%
+          const pct = Math.min(100, Math.floor((value / m.target) * 100));
           return (
             <li key={m.id} className={`relative overflow-hidden rounded-2xl border-2 border-line ${done ? 'bg-melon-soft' : 'bg-surface-2'}`}>
               <div className="flex items-center gap-3 p-3">
@@ -79,25 +80,30 @@ export const MissionsCard: React.FC<Props> = ({ daily, streak, stamps, onPlay })
                   {done ? <Check className="h-6 w-6 text-white" strokeWidth={3.5} /> : <Emoji e={m.icon} />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-x-1.5 text-[11px] font-bold text-ink-3">
-                    {meta ? (
-                      <>
-                        <Emoji e={meta.emoji} /> {meta.name}
-                      </>
-                    ) : (
-                      '🎮 아무 게임'
-                    )}
+                  {/* The count sits on the top line, so the bar below always spans the full column:
+                      every mission's bar starts and ends at the same x, whatever the label length */}
+                  <p className="flex items-center gap-2 text-[11px] font-bold">
+                    <span className="flex min-w-0 flex-1 items-center gap-1.5 text-ink-3">
+                      {meta ? (
+                        <>
+                          <Emoji e={meta.emoji} /> <span className="truncate">{meta.name}</span>
+                        </>
+                      ) : (
+                        '🎮 아무 게임'
+                      )}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-ink-2">{done ? '완료!' : `${missionProgressLabel(m, value)} · ${pct}%`}</span>
                   </p>
                   <p className={`text-sm font-bold ${done ? 'text-ink-2 line-through decoration-2' : ''}`}>{m.text}</p>
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <Meter className="h-2.5 flex-1" value={value} max={m.target} label={m.text} tone={done ? 'melon' : (meta?.tone ?? 'grape')} />
-                    <span className="shrink-0 text-[11px] font-bold tabular-nums text-ink-2">{done ? '완료!' : `${missionProgressLabel(m, value)} · ${pct}%`}</span>
-                  </div>
+                  <Meter className="mt-1.5 h-2.5" value={value} max={m.target} label={m.text} tone={done ? 'melon' : (meta?.tone ?? 'grape')} />
                 </div>
-                {!done && m.game && (
-                  <button type="button" className={`btn btn-sm shrink-0 ${tone.btn}`} onClick={() => onPlay(m.game!)} aria-label={`${meta?.name} 하러 가기`}>
-                    <Play className="h-4 w-4 fill-current" />
+                {/* Same width with or without the ▶, so done rows line up with the rest */}
+                {!done && m.game ? (
+                  <button type="button" className={`btn btn-icon shrink-0 ${tone.btn}`} onClick={() => onPlay(m.game!)} aria-label={`${meta?.name} 하러 가기`}>
+                    <Play className="h-5 w-5 fill-current" />
                   </button>
+                ) : (
+                  <span className="w-11 shrink-0" aria-hidden="true" />
                 )}
               </div>
             </li>
@@ -124,17 +130,26 @@ export const MissionsCard: React.FC<Props> = ({ daily, streak, stamps, onPlay })
               );
             })}
           </div>
-          <p className="min-w-0 flex-1 text-sm">
+          {/* Two fixed lines next to the slots: a reward never splits across lines */}
+          <div className="min-w-0 flex-1 text-sm leading-snug">
             {daily.stamped ? (
               <>
-                <b>오늘의 도장 획득!</b> <span className="text-ink-3">내일 또 만나요.</span>
+                <p className="font-bold">오늘의 도장 획득!</p>
+                <p className="text-xs text-ink-3">내일 또 만나요.</p>
               </>
             ) : (
               <>
-                모두 깨면 <b>도장</b> · <b>+{XP.stamp} XP</b> · <b>🪙 +{STAMP_COINS}</b>
+                <p>
+                  모두 깨면 <b>도장</b>
+                </p>
+                <p className="flex flex-wrap items-center gap-x-1.5 font-bold">
+                  <span className="whitespace-nowrap">+{XP.stamp} XP</span>
+                  <span aria-hidden="true">·</span>
+                  <span className="whitespace-nowrap">🪙 +{STAMP_COINS}</span>
+                </p>
               </>
             )}
-          </p>
+          </div>
         </div>
         <p className="mt-2 text-[11px] font-bold text-ink-3">🏅 지금까지 모은 도장 {formatNumber(stamps)}개</p>
       </div>

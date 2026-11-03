@@ -150,11 +150,12 @@ export const Navbar: React.FC<Props> = ({
           {!roundActive && (
             <button
               type="button"
-              className="btn h-11 gap-2 px-1.5 sm:pr-3"
+              className="btn btn-icon h-11 gap-2 sm:w-auto sm:px-1.5 sm:pr-3"
               onClick={() => onOpen('profile')}
               aria-label={player.isGuest ? '로그인' : `내 프로필 (Lv.${level.level})`}
             >
-              <Avatar player={player} size="sm" />
+              {/* xs keeps a framed avatar inside the same square as the other icon buttons */}
+              <Avatar player={player} size="xs" />
               <span className="hidden text-sm sm:inline">{player.isGuest ? '로그인' : levelLabel(level.level)}</span>
             </button>
           )}

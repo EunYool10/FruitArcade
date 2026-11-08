@@ -8,7 +8,7 @@ export const KINDS = 6;
 export const CLASSIC_MOVES = 30;
 export const FRUIT = ['🍓', '🍊', '🍋', '🍇', '🍏', '🫐'];
 export const FRUIT_NAME = ['딸기', '귤', '레몬', '포도', '사과', '블루베리'];
-export const FRUIT_COLOR = ['#ff4778', '#ff9f1c', '#ffd23f', '#9b5de5', '#7bd389', '#4361ee'];
+export const FRUIT_COLOR = ['#e5483d', '#ff9f1c', '#ffd23f', '#9b5de5', '#7bd389', '#4361ee'];
 
 /** row / col: clears its whole row or column; bomb: clears the 3×3 around it */
 export type Special = 'row' | 'col' | 'bomb';

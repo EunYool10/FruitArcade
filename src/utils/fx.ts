@@ -1,6 +1,6 @@
 import confetti from 'canvas-confetti';
 
-const FRUIT_COLORS = ['#ff4778', '#2ec27e', '#ffb627', '#7a5cff', '#2ea9ff'];
+const FRUIT_COLORS = ['#e5483d', '#4aa364', '#f4b63a', '#8257b8', '#3f8fd0'];
 
 /** Fruit-colored confetti burst (skipped automatically for reduced-motion users). */
 export function celebrate(big = false): void {

@@ -39,10 +39,10 @@ type PowerKind = 'shield' | 'magnet' | 'slow' | 'double';
 
 // Items that fall now and then: frames are 60 per second
 const POWERS: Record<PowerKind, { emoji: string; color: string; label: string; frames: number }> = {
-  shield: { emoji: '🛡️', color: '#2ea9ff', label: '방패', frames: 900 },
-  magnet: { emoji: '🧲', color: '#ff4778', label: '자석', frames: 420 },
-  slow: { emoji: '🐢', color: '#2ec27e', label: '느림', frames: 360 },
-  double: { emoji: '✨', color: '#ffb627', label: '점수 2배', frames: 480 },
+  shield: { emoji: '🛡️', color: '#3f8fd0', label: '방패', frames: 900 },
+  magnet: { emoji: '🧲', color: '#e5483d', label: '자석', frames: 420 },
+  slow: { emoji: '🐢', color: '#4aa364', label: '느림', frames: 360 },
+  double: { emoji: '✨', color: '#f4b63a', label: '점수 2배', frames: 480 },
 };
 const POWER_KINDS = Object.keys(POWERS) as PowerKind[];
 
@@ -55,20 +55,20 @@ const POWER_GAP = [780, 1200];
 const PALETTE = {
   light: {
     skyTop: '#bfe8ff',
-    skyBottom: '#fff5e6',
-    speck: 'rgba(43, 33, 64, 0.1)',
+    skyBottom: '#f3eadb',
+    speck: 'rgba(58, 44, 34, 0.1)',
     ground: '#7fd99f',
-    outline: '#2b2140',
-    lane: 'rgba(43, 33, 64, 0.18)',
-    shadow: 'rgba(43, 33, 64, 0.2)',
+    outline: '#3a2c22',
+    lane: 'rgba(58, 44, 34, 0.18)',
+    shadow: 'rgba(58, 44, 34, 0.2)',
   },
   dark: {
-    skyTop: '#140f30',
-    skyBottom: '#2b2147',
-    speck: 'rgba(255, 244, 228, 0.55)',
+    skyTop: '#11151c',
+    skyBottom: '#2a241d',
+    speck: 'rgba(245, 236, 221, 0.55)',
     ground: '#1f7a55',
-    outline: '#07050c',
-    lane: 'rgba(255, 244, 228, 0.18)',
+    outline: '#0c0907',
+    lane: 'rgba(245, 236, 221, 0.18)',
     shadow: 'rgba(0, 0, 0, 0.35)',
   },
 };
@@ -780,7 +780,7 @@ export const FruitDashGame: React.FC<Props> = ({
         ctx.save();
         ctx.globalAlpha = fxNow.shield < 120 ? 0.35 + 0.35 * Math.abs(Math.sin(time * 0.02)) : 0.55;
         ctx.fillStyle = 'rgba(46, 169, 255, 0.25)';
-        ctx.strokeStyle = '#2ea9ff';
+        ctx.strokeStyle = '#3f8fd0';
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(px, PLAYER_Y, PLAYER_R + 9, 0, Math.PI * 2);

@@ -103,26 +103,36 @@ const RADII = FRUITS.map((f) => f.r);
 preloadEmoji([...FRUITS.map((f) => f.emoji), ...ITEM_KINDS.map((k) => ITEMS[k].emoji), '💥']);
 const newWorld = () => createWorld({ left: LEFT, right: RIGHT, bottom: BOTTOM }, RADII);
 
+// A glass jar standing on the shop's wooden counter
 const PALETTE = {
   light: {
-    jarTop: '#fffdf8',
-    jarBottom: '#ffe9c4',
-    wall: '#2b2140',
-    outline: '#2b2140',
-    deadline: 'rgba(43, 33, 64, 0.45)',
-    danger: '#e3285f',
-    guide: 'rgba(43, 33, 64, 0.3)',
-    textStroke: '#ffffff',
+    jarTop: '#fdf9f1',
+    jarBottom: '#efe3cc',
+    /** The glass: a pale tint for the wall, a brighter line for its inner edge, and the shine */
+    wall: 'rgba(128, 158, 166, 0.6)',
+    wallEdge: 'rgba(255, 255, 255, 0.85)',
+    shine: 'rgba(255, 255, 255, 0.55)',
+    outline: 'rgba(60, 35, 15, 0.22)',
+    deadline: 'rgba(90, 60, 40, 0.55)',
+    danger: '#c93a2f',
+    guide: 'rgba(90, 60, 40, 0.28)',
+    textStroke: '#fffbf3',
+    counter: '#c58f57',
+    counterDeep: '#9c6a38',
   },
   dark: {
-    jarTop: '#2c2443',
-    jarBottom: '#1d1729',
-    wall: '#ffb627',
-    outline: '#07050c',
-    deadline: 'rgba(255, 244, 228, 0.45)',
-    danger: '#ff4778',
-    guide: 'rgba(255, 244, 228, 0.3)',
-    textStroke: '#07050c',
+    jarTop: '#2a231c',
+    jarBottom: '#1e1813',
+    wall: 'rgba(196, 222, 228, 0.32)',
+    wallEdge: 'rgba(255, 255, 255, 0.28)',
+    shine: 'rgba(255, 255, 255, 0.06)',
+    outline: 'rgba(0, 0, 0, 0.4)',
+    deadline: 'rgba(245, 236, 221, 0.5)',
+    danger: '#ff8f84',
+    guide: 'rgba(245, 236, 221, 0.25)',
+    textStroke: '#17130f',
+    counter: '#8f6537',
+    counterDeep: '#6b4a26',
   },
 };
 type Palette = (typeof PALETTE)['light'];
@@ -140,7 +150,7 @@ function drawFruit(ctx: CanvasRenderingContext2D, f: SuikaFruitDef, r: number, a
   ctx.ellipse(-r * 0.36, -r * 0.42, r * 0.3, r * 0.16, -0.65, 0, Math.PI * 2);
   ctx.fill();
 
-  const lw = Math.max(2, r * 0.07);
+  const lw = warn ? Math.max(3, r * 0.08) : Math.max(1.5, r * 0.05);
   ctx.lineWidth = lw;
   ctx.strokeStyle = warn ? P.danger : P.outline;
   ctx.beginPath();
@@ -748,6 +758,15 @@ export const SuikaGame: React.FC<Props> = ({
       ctx.save();
       ctx.translate(shakeX, shakeY);
 
+      // The wooden counter the jar stands on
+      const counter = ctx.createLinearGradient(0, BOTTOM - 4, 0, CH);
+      counter.addColorStop(0, P.counter);
+      counter.addColorStop(1, P.counterDeep);
+      ctx.fillStyle = counter;
+      ctx.fillRect(-12, BOTTOM - 4, CW + 24, CH - BOTTOM + 16);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+      ctx.fillRect(-12, BOTTOM + 9, CW + 24, 1.5);
+
       // Jar interior
       const jarGrad = ctx.createLinearGradient(0, JAR_TOP, 0, BOTTOM);
       jarGrad.addColorStop(0, P.jarTop);
@@ -787,7 +806,7 @@ export const SuikaGame: React.FC<Props> = ({
         ctx.stroke();
       } else {
         ctx.fillStyle = P.deadline;
-        ctx.font = '700 14px Pretendard, Jua, sans-serif';
+        ctx.font = '15px "Do Hyeon", sans-serif';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'bottom';
         ctx.fillText('넘침 선', lineR, DEADLINE - 5);
@@ -895,20 +914,48 @@ export const SuikaGame: React.FC<Props> = ({
         ctx.restore();
       }
 
-      // Jar walls
-      ctx.strokeStyle = P.wall;
-      ctx.lineWidth = 6;
+      // Jar walls: thick tinted glass with a bright inner edge, a rim at the top and a shine
+      const jarPath = () => {
+        ctx.beginPath();
+        ctx.moveTo(LEFT, JAR_TOP);
+        ctx.lineTo(LEFT, BOTTOM - 24);
+        ctx.arcTo(LEFT, BOTTOM, LEFT + 24, BOTTOM, 24);
+        ctx.lineTo(RIGHT - 24, BOTTOM);
+        ctx.arcTo(RIGHT, BOTTOM, RIGHT, BOTTOM - 24, 24);
+        ctx.lineTo(RIGHT, JAR_TOP);
+      };
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.moveTo(LEFT, JAR_TOP);
-      ctx.lineTo(LEFT, BOTTOM - 24);
-      ctx.arcTo(LEFT, BOTTOM, LEFT + 24, BOTTOM, 24);
-      ctx.lineTo(RIGHT - 24, BOTTOM);
-      ctx.arcTo(RIGHT, BOTTOM, RIGHT, BOTTOM - 24, 24);
-      ctx.lineTo(RIGHT, JAR_TOP);
+      ctx.strokeStyle = P.wall;
+      ctx.lineWidth = 8;
+      jarPath();
       ctx.stroke();
+      ctx.strokeStyle = P.wallEdge;
+      ctx.lineWidth = 2;
+      ctx.save();
+      ctx.translate(0, 0);
+      ctx.beginPath();
+      ctx.moveTo(LEFT + 4, JAR_TOP + 6);
+      ctx.lineTo(LEFT + 4, BOTTOM - 26);
+      ctx.moveTo(RIGHT - 4, JAR_TOP + 6);
+      ctx.lineTo(RIGHT - 4, BOTTOM - 26);
+      ctx.stroke();
+      ctx.restore();
+      // The rim
+      ctx.fillStyle = P.wall;
+      ctx.beginPath();
+      ctx.roundRect(LEFT - 9, JAR_TOP - 5, 18, 10, 5);
+      ctx.roundRect(RIGHT - 9, JAR_TOP - 5, 18, 10, 5);
+      ctx.fill();
+      // The shine: a soft streak down the left of the glass
+      const shine = ctx.createLinearGradient(LEFT + 10, 0, LEFT + 28, 0);
+      shine.addColorStop(0, P.shine);
+      shine.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = shine;
+      ctx.beginPath();
+      ctx.roundRect(LEFT + 9, JAR_TOP + 40, 18, BOTTOM - JAR_TOP - 130, 9);
+      ctx.fill();
 
       ctx.restore();
 

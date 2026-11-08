@@ -46,7 +46,7 @@ const COLORS: [string, string][] = [
   ['#ff8fab', '분홍'],
   ['#8e44ad', '보라'],
   ['#3a86ff', '파랑'],
-  ['#2b2140', '검정'],
+  ['#3a2c22', '검정'],
 ];
 const BRUSHES = [6, 14, 26];
 const MAX_PLAYERS = 6;

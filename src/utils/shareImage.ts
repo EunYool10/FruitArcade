@@ -11,7 +11,7 @@ export interface ShareCardData {
   player: string;
 }
 
-const INK = '#2b2140';
+const INK = '#3a2c22';
 const DISPLAY = '"Do Hyeon", "Pretendard Variable", sans-serif';
 const BODY = '"Pretendard Variable", Pretendard, sans-serif';
 const EMOJI = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
@@ -45,9 +45,9 @@ export async function renderResultImage(d: ShareCardData): Promise<Blob | null> 
   if (!ctx) return null;
 
   // Cream background with polka dots
-  ctx.fillStyle = '#fff5e6';
+  ctx.fillStyle = '#f3eadb';
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = 'rgba(43, 33, 64, 0.08)';
+  ctx.fillStyle = 'rgba(58, 44, 34, 0.08)';
   for (let y = 18; y < H; y += 40) {
     for (let x = 18; x < W; x += 40) {
       ctx.beginPath();
@@ -114,7 +114,7 @@ export async function renderResultImage(d: ShareCardData): Promise<Blob | null> 
     ctx.save();
     ctx.translate(cx + cw - 120, cy + 548);
     ctx.rotate(0.21);
-    panel(ctx, -150, -40, 300, 80, 40, '#e3285f', 0);
+    panel(ctx, -150, -40, 300, 80, 40, '#c93a2f', 0);
     ctx.fillStyle = '#ffffff';
     ctx.font = `700 40px ${DISPLAY}`;
     ctx.fillText('NEW BEST!', 0, 2);

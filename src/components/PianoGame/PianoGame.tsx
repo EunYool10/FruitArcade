@@ -55,8 +55,8 @@ const TILE: Record<string, { fill: string; deep: string }> = {
 preloadEmoji(PIANO_FRUITS);
 
 const BOARD = {
-  light: { bg: '#fff8ec', alt: '#fff1db', line: 'rgba(43, 33, 64, 0.12)', outline: '#2b2140', done: 'rgba(43, 33, 64, 0.06)' },
-  dark: { bg: '#211a45', alt: '#1c163d', line: 'rgba(255, 244, 228, 0.1)', outline: '#07050c', done: 'rgba(255, 244, 228, 0.06)' },
+  light: { bg: '#fffbf3', alt: '#f8f0e2', line: 'rgba(58, 44, 34, 0.12)', outline: '#3a2c22', done: 'rgba(58, 44, 34, 0.06)' },
+  dark: { bg: '#231d17', alt: '#1f1a14', line: 'rgba(245, 236, 221, 0.1)', outline: '#0c0907', done: 'rgba(245, 236, 221, 0.06)' },
 };
 
 const fruitOf = (midi: number) => FRUIT_BY_PITCH[((midi % 12) + 12) % 12];

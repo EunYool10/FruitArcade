@@ -46,7 +46,9 @@ export const MemorySetup: React.FC<Props> = ({ initial, settings, onStart, onBac
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-4 py-1">
-      <div className="text-center">
+      {/* The game's stall front, like the other games' start cards */}
+      <div className="panel overflow-hidden pb-3 text-center">
+        <div className="awning mb-6 h-7 [--stripe:1.6rem]" aria-hidden="true" />
         <span className="sticker h-14 w-14 -rotate-6 bg-berry text-3xl" aria-hidden="true">
           🍓
         </span>

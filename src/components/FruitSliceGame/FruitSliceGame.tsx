@@ -214,18 +214,18 @@ const BOARD = {
     seam: 'rgba(122, 72, 24, 0.3)',
     grain: 'rgba(122, 72, 24, 0.1)',
     knot: 'rgba(122, 72, 24, 0.16)',
-    outline: '#2b2140',
+    outline: '#3a2c22',
     blade: '46, 169, 255',
     glow: 0.65,
     ice: 'rgba(143, 216, 255, 0.16)',
   },
   dark: {
-    wood: '#2c2350',
-    plank: '#261e47',
+    wood: '#3a2a1e',
+    plank: '#33251a',
     seam: 'rgba(0, 0, 0, 0.45)',
-    grain: 'rgba(255, 244, 228, 0.05)',
-    knot: 'rgba(255, 244, 228, 0.07)',
-    outline: '#07050c',
+    grain: 'rgba(245, 236, 221, 0.05)',
+    knot: 'rgba(245, 236, 221, 0.07)',
+    outline: '#0c0907',
     blade: '143, 216, 255',
     glow: 0.5,
     ice: 'rgba(143, 216, 255, 0.12)',
@@ -1002,7 +1002,7 @@ export const FruitSliceGame: React.FC<Props> = ({
         ctx.fill();
         ctx.stroke();
         drawEmoji(ctx, '❄️', x + 18, 28, 22);
-        ctx.fillStyle = '#2ea9ff';
+        ctx.fillStyle = '#3f8fd0';
         ctx.fillRect(x + 4, 41, 28 * Math.min(1, iceRef.current / ICE_FRAMES), 4);
         ctx.restore();
       }

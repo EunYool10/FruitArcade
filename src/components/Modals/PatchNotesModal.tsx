@@ -638,10 +638,10 @@ export const PatchNotesModal: React.FC<Props> = ({ isOpen, onClose }) => (
         return (
           <li key={note.version} className="relative">
             <span
-              className={`absolute -left-[29px] top-1 h-4 w-4 rounded-full border-2 border-line ${latest ? 'bg-berry' : 'bg-surface-3'}`}
+              className={`absolute -left-[29px] top-1 h-4 w-4 rounded-full border border-line ${latest ? 'bg-berry' : 'bg-surface-3'}`}
               aria-hidden="true"
             />
-            <div className={`rounded-2xl border-2 border-line p-4 ${latest ? 'bg-mango-soft shadow-hard-sm' : 'bg-surface-2'}`}>
+            <div className={`rounded-2xl border border-line p-4 ${latest ? 'bg-mango-soft shadow-hard-sm' : 'bg-surface-2'}`}>
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span className={`chip font-display ${latest ? 'bg-berry-deep text-white' : 'bg-surface'}`}>v{note.version}</span>
                 <h3 className="font-display text-lg">{note.title}</h3>

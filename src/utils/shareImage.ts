@@ -12,7 +12,7 @@ export interface ShareCardData {
 }
 
 const INK = '#2b2140';
-const DISPLAY = '"Fredoka", "Jua", "Pretendard Variable", sans-serif';
+const DISPLAY = '"Do Hyeon", "Pretendard Variable", sans-serif';
 const BODY = '"Pretendard Variable", Pretendard, sans-serif';
 const EMOJI = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 

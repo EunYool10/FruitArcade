@@ -64,7 +64,7 @@ export const AppsModal: React.FC<Props> = ({ isOpen, onClose }) => (
       {APPS.map((app) => (
         <li key={app.url}>
           {app.here ? (
-            <div className="flex items-center gap-3 rounded-2xl border-2 border-line p-3" style={cardStyle(app.color)}>
+            <div className="flex items-center gap-3 rounded-2xl border border-line p-3" style={cardStyle(app.color)}>
               <AppBody app={app} />
               <span className="chip h-7 shrink-0 bg-surface text-[11px]">지금 여기</span>
             </div>
@@ -73,7 +73,7 @@ export const AppsModal: React.FC<Props> = ({ isOpen, onClose }) => (
               href={app.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-2xl border-2 border-line p-3 transition-transform hover:-translate-y-0.5"
+              className="flex items-center gap-3 rounded-2xl border border-line p-3 transition-transform hover:-translate-y-0.5"
               style={cardStyle(app.color)}
             >
               <AppBody app={app} />
@@ -95,7 +95,7 @@ const AppBody: React.FC<{ app: (typeof APPS)[number] }> = ({ app }) => (
       alt=""
       width={48}
       height={48}
-      className="h-12 w-12 shrink-0 rounded-xl border-2 border-line"
+      className="h-12 w-12 shrink-0 rounded-xl border border-line"
     />
     <span className="min-w-0 flex-1">
       <span className="block font-display text-lg leading-tight">{app.name}</span>

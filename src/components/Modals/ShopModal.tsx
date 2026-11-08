@@ -74,7 +74,7 @@ const BladePreview: React.FC<{ id: string }> = ({ id }) => {
     ? 'linear-gradient(90deg, transparent, #ff4778, #ffb627, #2ec27e, #2ea9ff, #7a5cff)'
     : `linear-gradient(90deg, transparent, rgba(${glow}, 0.85) 45%, rgb(${b.core}))`;
   return (
-    <span className="grid h-14 w-16 place-items-center rounded-xl border-2 border-line bg-[#ffdca6]">
+    <span className="grid h-14 w-16 place-items-center rounded-xl border border-line bg-[#ffdca6]">
       <span className="block h-2 w-14 -rotate-[24deg] rounded-full" style={{ background, boxShadow: `0 0 8px 2px rgba(${glow}, 0.7)` }} />
     </span>
   );
@@ -104,15 +104,15 @@ const Preview: React.FC<{ kind: ItemKind; id: string; player: PlayerView }> = ({
       return (
         <Framed frame={id}>
           {player.photo ? (
-            <img src={player.photo} alt="" referrerPolicy="no-referrer" className="h-14 w-14 rounded-full border-2 border-line object-cover" />
+            <img src={player.photo} alt="" referrerPolicy="no-referrer" className="h-14 w-14 rounded-full border border-line object-cover" />
           ) : (
-            <span className="grid h-14 w-14 place-items-center rounded-full border-2 border-line bg-mango-soft text-3xl"><Emoji e={player.emoji} /></span>
+            <span className="grid h-14 w-14 place-items-center rounded-full border border-line bg-mango-soft text-3xl"><Emoji e={player.emoji} /></span>
           )}
         </Framed>
       );
     case 'avatar': {
       const emoji = id ? SHOP_ITEMS.find((i) => i.id === id)?.icon : '🍓';
-      return <span className="grid h-14 w-14 place-items-center rounded-full border-2 border-line bg-mango-soft text-3xl"><Emoji e={emoji ?? ''} /></span>;
+      return <span className="grid h-14 w-14 place-items-center rounded-full border border-line bg-mango-soft text-3xl"><Emoji e={emoji ?? ''} /></span>;
     }
     case 'title': {
       const t = titleDef(id);
@@ -125,8 +125,8 @@ const Preview: React.FC<{ kind: ItemKind; id: string; player: PlayerView }> = ({
     case 'cardBack': {
       const back = cardBackStyle(id);
       return (
-        <span className={`grid h-16 w-14 place-items-center rounded-xl border-2 border-line shadow-hard-sm ${back.className}`}>
-          <span className="grid h-7 w-7 place-items-center rounded-full border-2 border-line bg-surface font-display text-sm leading-none text-ink">{back.mark}</span>
+        <span className={`grid h-16 w-14 place-items-center rounded-xl border border-line shadow-hard-sm ${back.className}`}>
+          <span className="grid h-7 w-7 place-items-center rounded-full border border-line bg-surface font-display text-sm leading-none text-ink">{back.mark}</span>
         </span>
       );
     }
@@ -189,7 +189,7 @@ export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, 
       size="lg"
     >
       {isAdmin && (
-        <div className="mb-3 flex items-center gap-3 rounded-2xl border-2 border-line bg-[linear-gradient(135deg,#1e3a8a,#3b82f6)] p-3 text-white">
+        <div className="mb-3 flex items-center gap-3 rounded-2xl border border-line bg-[linear-gradient(135deg,#1e3a8a,#3b82f6)] p-3 text-white">
           <span className="text-2xl" aria-hidden="true">
             🛡️
           </span>
@@ -210,7 +210,7 @@ export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, 
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`rounded-2xl border-2 border-line px-3 py-1.5 text-sm font-bold transition-all ${
+            className={`rounded-2xl border border-line px-3 py-1.5 text-sm font-bold transition-all ${
               tab === id
                 ? id === 'staff'
                   ? '-translate-y-0.5 bg-[#1e3a8a] text-white shadow-hard-sm'
@@ -229,7 +229,7 @@ export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, 
       <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
         {/* The free default */}
         {kindTab && (
-          <li className={`flex flex-col items-center gap-2 rounded-2xl border-2 border-line p-3 text-center ${!equipped[tab] ? 'bg-mango-soft' : 'bg-surface-2'}`}>
+          <li className={`flex flex-col items-center gap-2 rounded-2xl border border-line p-3 text-center ${!equipped[tab] ? 'bg-mango-soft' : 'bg-surface-2'}`}>
             <Preview kind={tab} id="" player={player} />
             <p className="text-sm font-bold">{DEFAULT_LABEL[tab]}</p>
             {!equipped[tab] ? (
@@ -247,7 +247,7 @@ export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, 
           return (
             <li
               key={item.id}
-              className={`flex flex-col items-center gap-2 rounded-2xl border-2 border-line p-3 text-center ${isOn ? 'bg-mango-soft' : 'bg-surface-2'}`}
+              className={`flex flex-col items-center gap-2 rounded-2xl border border-line p-3 text-center ${isOn ? 'bg-mango-soft' : 'bg-surface-2'}`}
             >
               <Preview kind={item.kind} id={item.id} player={player} />
               <p className="text-sm font-bold">{item.rgb ? <span className="rgb-text font-black">{item.name}</span> : item.name}</p>

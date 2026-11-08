@@ -33,7 +33,7 @@ export const HudStat: React.FC<{ label: string; value: React.ReactNode; tone?: S
   tone = 'default',
 }) => (
   <div
-    className={`min-w-0 rounded-xl border-2 border-line px-1.5 py-1.5 text-center lg:px-3 lg:py-2 lg:text-left ${
+    className={`min-w-0 rounded-xl border border-line px-1.5 py-1.5 text-center lg:px-3 lg:py-2 lg:text-left ${
       tone === 'warn' ? 'animate-pulse bg-berry-soft' : tone === 'hot' ? 'bg-mango-soft' : 'bg-surface-2'
     }`}
   >
@@ -66,7 +66,7 @@ export const BoardOverlay: React.FC<{ children: React.ReactNode }> = ({ children
 export const ScreenOverlay: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const covered = useAnyModalOpen();
   return (
-    <div className={`fixed inset-0 z-40 overflow-y-auto bg-[rgb(18_12_28/0.5)] p-4 animate-fade-in ${covered ? 'hidden' : 'flex'}`}>
+    <div className={`fixed inset-0 z-40 overflow-y-auto bg-[rgb(38_26_14/0.42)] p-4 animate-fade-in ${covered ? 'hidden' : 'flex'}`}>
       <div className="m-auto flex w-full justify-center">{children}</div>
     </div>
   );

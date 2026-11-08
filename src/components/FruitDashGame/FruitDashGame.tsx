@@ -826,7 +826,7 @@ export const FruitDashGame: React.FC<Props> = ({
       for (const t of floatsRef.current) {
         ctx.save();
         ctx.globalAlpha = Math.max(0, 1 - t.life / 45);
-        ctx.font = '700 22px Fredoka, Jua, sans-serif';
+        ctx.font = '22px "Do Hyeon", sans-serif';
         ctx.textAlign = 'center';
         ctx.lineJoin = 'round';
         ctx.lineWidth = 5;
@@ -869,7 +869,7 @@ export const FruitDashGame: React.FC<Props> = ({
         }
         board={
           <div className="board-fit w-full" style={{ maxWidth: 'calc((100dvh - var(--board-offset)) * 0.7333)' }}>
-            <div className="relative aspect-[440/600] w-full overflow-hidden rounded-[28px] border-2 border-line bg-surface-2 shadow-pop">
+            <div className="relative aspect-[440/600] w-full overflow-hidden rounded-[28px] border border-line bg-surface-2 shadow-pop">
               <canvas
                 ref={canvasRef}
                 aria-label="FRUIT DASH 판"

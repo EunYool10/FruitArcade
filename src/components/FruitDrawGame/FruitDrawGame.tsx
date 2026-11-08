@@ -547,7 +547,7 @@ export const FruitDrawGame: React.FC<Props> = ({ settings, best, autoStart = fal
         }
         board={
           <div className="board-fit w-full" style={{ maxWidth: 'calc((100dvh - var(--board-offset)) * 0.7333)' }}>
-            <div className="@container relative aspect-[440/600] w-full select-none overflow-clip rounded-[28px] border-2 border-line bg-grape-soft shadow-pop">
+            <div className="@container relative aspect-[440/600] w-full select-none overflow-clip rounded-[28px] border border-line bg-grape-soft shadow-pop">
               {/* Prompt and time */}
               <div className="absolute inset-x-[4%] top-[2.5%] flex h-[7%] items-center gap-[2cqw]">
                 <span className="chip h-full min-w-0 flex-1 justify-center gap-[1.5cqw] bg-surface px-[3cqw] font-display text-[4.6cqw]">
@@ -584,7 +584,7 @@ export const FruitDrawGame: React.FC<Props> = ({ settings, best, autoStart = fal
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
                 onContextMenu={(e) => e.preventDefault()}
-                className={`absolute left-[5%] top-[13.5%] aspect-square w-[90%] touch-none rounded-[4cqw] border-2 border-line bg-white ${
+                className={`absolute left-[5%] top-[13.5%] aspect-square w-[90%] touch-none rounded-[4cqw] border border-line bg-white ${
                   tool === 'fill' ? 'cursor-cell' : 'cursor-crosshair'
                 }`}
               />
@@ -601,7 +601,7 @@ export const FruitDrawGame: React.FC<Props> = ({ settings, best, autoStart = fal
                     }}
                     aria-label={name}
                     aria-pressed={color === c}
-                    className={`aspect-square h-[78%] rounded-full border-2 border-line transition-transform ${color === c && tool !== 'eraser' ? 'scale-125 ring-2 ring-ink ring-offset-1' : ''}`}
+                    className={`aspect-square h-[78%] rounded-full border border-line transition-transform ${color === c && tool !== 'eraser' ? 'scale-125 ring-2 ring-ink ring-offset-1' : ''}`}
                     style={{ background: c }}
                   />
                 ))}
@@ -620,12 +620,12 @@ export const FruitDrawGame: React.FC<Props> = ({ settings, best, autoStart = fal
                     onClick={() => setTool(t)}
                     aria-pressed={tool === t}
                     aria-label={label}
-                    className={`grid h-full w-[9.5cqw] shrink-0 place-items-center rounded-[2.5cqw] border-2 border-line ${tool === t ? 'bg-grape text-white' : 'bg-surface'}`}
+                    className={`grid h-full w-[9.5cqw] shrink-0 place-items-center rounded-[2.5cqw] border border-line ${tool === t ? 'bg-grape text-white' : 'bg-surface'}`}
                   >
                     <Icon className="h-[4.6cqw] w-[4.6cqw]" strokeWidth={2.5} />
                   </button>
                 ))}
-                <span className="flex h-full shrink-0 items-center rounded-[2.5cqw] border-2 border-line bg-surface">
+                <span className="flex h-full shrink-0 items-center rounded-[2.5cqw] border border-line bg-surface">
                   <button type="button" className="grid h-full w-[6cqw] place-items-center" onClick={() => setBrush((b) => Math.max(0, b - 1))} aria-label="가늘게">
                     <Minus className="h-[3.6cqw] w-[3.6cqw]" strokeWidth={3} />
                   </button>
@@ -636,10 +636,10 @@ export const FruitDrawGame: React.FC<Props> = ({ settings, best, autoStart = fal
                     <Plus className="h-[3.6cqw] w-[3.6cqw]" strokeWidth={3} />
                   </button>
                 </span>
-                <button type="button" onClick={undo} disabled={!canUndo} aria-label="되돌리기" className="grid h-full w-[9.5cqw] shrink-0 place-items-center rounded-[2.5cqw] border-2 border-line bg-surface disabled:opacity-40">
+                <button type="button" onClick={undo} disabled={!canUndo} aria-label="되돌리기" className="grid h-full w-[9.5cqw] shrink-0 place-items-center rounded-[2.5cqw] border border-line bg-surface disabled:opacity-40">
                   <Undo2 className="h-[4.6cqw] w-[4.6cqw]" strokeWidth={2.5} />
                 </button>
-                <button type="button" onClick={clearAll} disabled={!canUndo} aria-label="전부 지우기" className="grid h-full w-[9.5cqw] shrink-0 place-items-center rounded-[2.5cqw] border-2 border-line bg-surface disabled:opacity-40">
+                <button type="button" onClick={clearAll} disabled={!canUndo} aria-label="전부 지우기" className="grid h-full w-[9.5cqw] shrink-0 place-items-center rounded-[2.5cqw] border border-line bg-surface disabled:opacity-40">
                   <Trash2 className="h-[4.6cqw] w-[4.6cqw]" strokeWidth={2.5} />
                 </button>
                 <button
@@ -701,9 +701,9 @@ export const FruitDrawGame: React.FC<Props> = ({ settings, best, autoStart = fal
                       {roundEntries.map((e) => {
                         const top = !solo && e.sync === roundTop && roundTop > 0;
                         return (
-                          <li key={e.player} className={`relative rounded-2xl border-2 border-line p-1.5 ${top ? 'bg-mango-soft' : 'bg-surface-2'}`}>
+                          <li key={e.player} className={`relative rounded-2xl border border-line p-1.5 ${top ? 'bg-mango-soft' : 'bg-surface-2'}`}>
                             {top && <span className="absolute -right-2 -top-3 text-2xl">👑</span>}
-                            <img src={e.image} alt={`${playerName(e.player)}의 그림`} className={`mx-auto aspect-square w-full rounded-xl border-2 border-line ${solo ? 'max-w-[180px]' : ''}`} />
+                            <img src={e.image} alt={`${playerName(e.player)}의 그림`} className={`mx-auto aspect-square w-full rounded-xl border border-line ${solo ? 'max-w-[180px]' : ''}`} />
                             <p className="mt-1 text-xs font-bold">{playerName(e.player)}</p>
                             <p className="font-display text-xl leading-none tabular-nums">{e.sync}%</p>
                           </li>

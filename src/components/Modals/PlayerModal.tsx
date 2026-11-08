@@ -100,7 +100,7 @@ export const PlayerModal: React.FC<Props> = ({ isOpen, onClose, viewerUid, targe
         <div className="space-y-3">
           <div className="well flex items-center gap-3 p-4">
             <Framed frame={p.frame}>
-              <AvatarFace emoji={p.avatar} photo={p.photo} className="grid h-16 w-16 shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft text-3xl" />
+              <AvatarFace emoji={p.avatar} photo={p.photo} className="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-line bg-mango-soft text-3xl" />
             </Framed>
             <div className="min-w-0 flex-1">
               <p className="flex min-w-0 items-center gap-1.5 font-display text-xl">
@@ -118,7 +118,7 @@ export const PlayerModal: React.FC<Props> = ({ isOpen, onClose, viewerUid, targe
 
           <div className="grid grid-cols-4 gap-1.5">
             {RANKED_GAMES.map((g) => (
-              <div key={g} className={`min-w-0 rounded-xl border-2 border-line px-1 py-2 text-center ${TONE[GAMES[g].tone].soft}`}>
+              <div key={g} className={`min-w-0 rounded-xl border border-line px-1 py-2 text-center ${TONE[GAMES[g].tone].soft}`}>
                 <p className="text-lg" aria-hidden="true">
                   <Emoji e={GAMES[g].emoji} />
                 </p>

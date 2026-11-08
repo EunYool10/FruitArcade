@@ -7,83 +7,99 @@
 @custom-variant board-short (@container board (max-height: 560px));
 @custom-variant board-tiny (@container board (max-height: 430px));
 
-/* ───────────── Design tokens ───────────── */
+/* ───────────── Design tokens ─────────────
+   "동네 과일가게": kraft paper, painted shop signs, price tags and crates. Thin ink lines and soft
+   paper shadows instead of thick outlines and hard offsets. */
 
 :root {
   color-scheme: light;
-  --bg: #fff5e6;
-  --bg-dot: rgb(43 33 64 / 0.08);
-  --surface: #ffffff;
-  --surface-2: #fff0db;
-  --surface-3: #f6dfbf;
-  --ink: #2b2140;
-  --ink-2: #54496b;
-  --ink-3: #7a7090;
-  --line: #2b2140;
-  --shadow: #2b2140;
-  --on-bright: #22183a; /* text on bright fruit fills, same in both themes */
+  --bg: #f3eadb;
+  --surface: #fffbf3;
+  --surface-2: #f8f0e2;
+  --surface-3: #efe3cd;
+  --ink: #2a231e;
+  --ink-2: #5a4e45;
+  --ink-3: #8b7e72;
+  /* Hairlines between things; --line-strong where an edge has to read on a coloured fill */
+  --line: rgb(74 54 38 / 0.2);
+  --line-strong: #3a2c22;
+  --shadow: rgb(74 50 28 / 0.3);
+  --shade-1: rgb(74 50 28 / 0.1);
+  --shade-2: rgb(74 50 28 / 0.26);
+  --on-bright: #2a1d12; /* text on bright fruit fills, same in both themes */
+  /* Paper grain laid over the page */
+  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.07'/></svg>");
+  --crate: #c58f57;
+  --crate-deep: #9c6a38;
 
-  --berry: #ff4778;
-  --berry-deep: #e3285f;
-  --berry-soft: #ffe0e8;
-  --berry-ink: #c01549;
+  --berry: #e5483d;
+  --berry-deep: #c93a2f;
+  --berry-soft: #fbe3dc;
+  --berry-ink: #a8291f;
 
-  --melon: #2ec27e;
-  --melon-deep: #179c60;
-  --melon-soft: #d8f6e6;
-  --melon-ink: #0d7a47;
+  --melon: #4aa364;
+  --melon-deep: #348a4f;
+  --melon-soft: #ddf0de;
+  --melon-ink: #236a3a;
 
-  --mango: #ffb627;
-  --mango-deep: #f09a00;
-  --mango-soft: #fff0c7;
-  --mango-ink: #915700;
+  --mango: #f4b63a;
+  --mango-deep: #e09a1c;
+  --mango-soft: #fcf0cf;
+  --mango-ink: #85560a;
 
-  --grape: #7a5cff;
-  --grape-deep: #5f3ff0;
-  --grape-soft: #ebe5ff;
-  --grape-ink: #4c2cd0;
+  --grape: #8257b8;
+  --grape-deep: #6a429f;
+  --grape-soft: #eee4f7;
+  --grape-ink: #5a3391;
 
-  --soda: #2ea9ff;
-  --soda-deep: #108ae0;
-  --soda-soft: #dbf0ff;
-  --soda-ink: #0a64a8;
+  --soda: #3f8fd0;
+  --soda-deep: #2c74b4;
+  --soda-soft: #deedf8;
+  --soda-ink: #1e5f97;
 
-  --peach: #ff8a5b;
-  --peach-deep: #ef6a3a;
-  --peach-soft: #ffe7dc;
-  --peach-ink: #b3431a;
+  --peach: #f0895a;
+  --peach-deep: #db6c3e;
+  --peach-soft: #fde6da;
+  --peach-ink: #a9471f;
 }
 
+/* "밤 장터": the same shop after dark, lit warm */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #151020;
-  --bg-dot: rgb(255 245 230 / 0.06);
-  --surface: #251d36;
-  --surface-2: #2f2645;
-  --surface-3: #3b3155;
-  --ink: #fff4e4;
-  --ink-2: #d2c7e6;
-  --ink-3: #9d92b8;
-  --line: #07050c;
-  --shadow: #07050c;
+  --bg: #17130f;
+  --surface: #231d17;
+  --surface-2: #2c251d;
+  --surface-3: #382e24;
+  --ink: #f5ecdd;
+  --ink-2: #cdbfa9;
+  --ink-3: #9b8d79;
+  --line: rgb(255 236 205 / 0.13);
+  --line-strong: #0c0907;
+  --shadow: rgb(0 0 0 / 0.55);
+  --shade-1: rgb(0 0 0 / 0.3);
+  --shade-2: rgb(0 0 0 / 0.55);
+  --crate: #8f6537;
+  --crate-deep: #6b4a26;
 
-  --berry-soft: rgb(255 71 120 / 0.18);
-  --berry-ink: #ff8fac;
-  --melon-soft: rgb(46 194 126 / 0.18);
-  --melon-ink: #6ee7ad;
-  --mango-soft: rgb(255 182 39 / 0.18);
+  --berry-soft: rgb(229 72 61 / 0.2);
+  --berry-ink: #ff9a8f;
+  --melon-soft: rgb(74 163 100 / 0.2);
+  --melon-ink: #8ddba3;
+  --mango-soft: rgb(244 182 58 / 0.18);
   --mango-ink: #ffd27a;
-  --grape-soft: rgb(122 92 255 / 0.22);
-  --grape-ink: #bcabff;
-  --soda-soft: rgb(46 169 255 / 0.18);
-  --soda-ink: #8fd0ff;
-  --peach-soft: rgb(255 138 91 / 0.2);
-  --peach-ink: #ffb495;
+  --grape-soft: rgb(130 87 184 / 0.24);
+  --grape-ink: #c9adf0;
+  --soda-soft: rgb(63 143 208 / 0.2);
+  --soda-ink: #9ccdf3;
+  --peach-soft: rgb(240 137 90 / 0.2);
+  --peach-ink: #ffb798;
 }
 
 @theme {
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", sans-serif;
-  --font-display: "Fredoka", "Jua", "Pretendard Variable", Pretendard, system-ui, sans-serif;
+  /* Shop-sign lettering for titles and numbers, handwriting for price-tag notes */
+  --font-display: "Do Hyeon", "Pretendard Variable", Pretendard, system-ui, sans-serif;
+  --font-hand: "Gaegu", "Pretendard Variable", Pretendard, system-ui, sans-serif;
 
   --animate-float: float 3.4s ease-in-out infinite;
   --animate-pop-in: pop-in 0.26s cubic-bezier(0.2, 1.3, 0.4, 1) both;
@@ -95,13 +111,15 @@
   --animate-wiggle: wiggle 0.7s ease-in-out infinite;
   /* A short notice that pops up, stays a moment and fades (과일 주스 가게 level ups) */
   --animate-notice: notice 1.9s ease-out both;
+  /* A rubber stamp landing (results, records) */
+  --animate-stamp: stamp 0.42s cubic-bezier(0.2, 1.5, 0.4, 1) both;
 
   @keyframes float {
     0%, 100% { transform: translateY(0) rotate(var(--tilt, 0deg)); }
     50% { transform: translateY(-10px) rotate(var(--tilt, 0deg)); }
   }
   @keyframes pop-in {
-    from { opacity: 0; transform: scale(0.92) translateY(8px); }
+    from { opacity: 0; transform: scale(0.94) translateY(8px); }
     to { opacity: 1; transform: none; }
   }
   @keyframes fade-in {
@@ -139,6 +157,11 @@
     60% { opacity: 1; transform: scale(1.12) rotate(4deg); }
     100% { transform: none; }
   }
+  @keyframes stamp {
+    0% { opacity: 0; transform: scale(1.8) rotate(var(--tilt, -8deg)); }
+    60% { opacity: 1; transform: scale(0.94) rotate(var(--tilt, -8deg)); }
+    100% { opacity: 1; transform: scale(1) rotate(var(--tilt, -8deg)); }
+  }
 }
 
 @theme inline {
@@ -150,7 +173,10 @@
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-on-bright: var(--on-bright);
+  --color-crate: var(--crate);
+  --color-crate-deep: var(--crate-deep);
 
   --color-berry: var(--berry);
   --color-berry-deep: var(--berry-deep);
@@ -177,10 +203,11 @@
   --color-peach-soft: var(--peach-soft);
   --color-peach-ink: var(--peach-ink);
 
-  --shadow-hard-sm: 0 3px 0 0 var(--shadow);
-  --shadow-hard: 0 4px 0 0 var(--shadow);
-  --shadow-pop: 4px 4px 0 0 var(--shadow);
-  --shadow-pop-lg: 6px 6px 0 0 var(--shadow);
+  /* Paper resting on paper: a contact line and a soft fall-off (the names are kept from the old hard shadows) */
+  --shadow-hard-sm: 0 1px 1px var(--shade-1), 0 2px 5px -2px var(--shade-2);
+  --shadow-hard: 0 1px 2px var(--shade-1), 0 4px 10px -4px var(--shade-2);
+  --shadow-pop: 0 1px 2px var(--shade-1), 0 10px 24px -14px var(--shade-2);
+  --shadow-pop-lg: 0 2px 4px var(--shade-1), 0 22px 40px -18px var(--shade-2);
 }
 
 /* ───────────── Base ───────────── */
@@ -200,13 +227,12 @@
     font-family: var(--font-sans);
     color: var(--ink);
     background-color: var(--bg);
-    background-image: radial-gradient(var(--bg-dot) 1.3px, transparent 1.5px);
-    background-size: 22px 22px;
+    background-image: var(--grain);
     -webkit-font-smoothing: antialiased;
     /* Korean wraps between words, never mid-word; very long strings still break instead of overflowing */
     word-break: keep-all;
     overflow-wrap: break-word;
-    /* Jua has a single weight; never fake-bold it */
+    /* The sign and handwriting faces have a single weight; never fake-bold them */
     font-synthesis: none;
     touch-action: manipulation;
     user-select: none;
@@ -220,7 +246,7 @@
     cursor: not-allowed;
   }
   :focus-visible {
-    outline: 3px solid var(--soda);
+    outline: 2px solid var(--soda-deep);
     outline-offset: 2px;
   }
   ::selection {
@@ -236,52 +262,53 @@
 /* ───────────── Components ───────────── */
 
 @layer components {
-  /* Outlined card with a hard offset shadow */
+  /* A sheet of paper on the counter */
   .panel {
     background: var(--surface);
-    border: 2px solid var(--line);
-    border-radius: 1.5rem;
-    box-shadow: 4px 4px 0 0 var(--shadow);
+    border: 1px solid var(--line);
+    border-radius: 1.1rem;
+    box-shadow: var(--shadow-pop);
   }
 
-  /* Inset area inside a panel */
+  /* A recessed tray inside a panel */
   .well {
     background: var(--surface-2);
-    border: 2px solid var(--line);
-    border-radius: 1rem;
+    border: 1px solid var(--line);
+    border-radius: 0.8rem;
   }
 
-  /* Chunky pressable button */
+  /* A solid, pressable button: a darker lip along the bottom that flattens when pressed */
   .btn {
     --btn-bg: var(--surface);
     --btn-fg: var(--ink);
+    --btn-edge: var(--line);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.45rem;
     height: 2.75rem;
     padding: 0 1.1rem;
-    border: 2px solid var(--line);
-    border-radius: 1rem;
+    border: 1px solid var(--btn-edge);
+    border-radius: 0.8rem;
     background: var(--btn-bg);
     color: var(--btn-fg);
     font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 1rem;
+    font-weight: 400;
+    font-size: 1.06rem;
+    letter-spacing: 0.01em;
     line-height: 1;
     white-space: nowrap;
-    box-shadow: 0 4px 0 0 var(--shadow);
-    transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
+    box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.13), var(--shadow-hard-sm);
+    transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease, background-color 0.15s ease;
     user-select: none;
   }
   .btn:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 5px 0 0 var(--shadow);
     filter: brightness(1.04);
   }
   .btn:active:not(:disabled) {
-    transform: translateY(4px);
-    box-shadow: 0 0 0 0 var(--shadow);
+    transform: translateY(1px);
+    box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.13), 0 0 0 0 transparent;
   }
   .btn:disabled {
     opacity: 0.45;
@@ -289,21 +316,14 @@
   .btn-sm {
     height: 2.25rem;
     padding: 0 0.8rem;
-    font-size: 0.875rem;
-    border-radius: 0.8rem;
-    box-shadow: 0 3px 0 0 var(--shadow);
-  }
-  .btn-sm:hover:not(:disabled) {
-    box-shadow: 0 4px 0 0 var(--shadow);
-  }
-  .btn-sm:active:not(:disabled) {
-    transform: translateY(3px);
+    font-size: 0.93rem;
+    border-radius: 0.65rem;
   }
   .btn-lg {
-    height: 3.5rem;
+    height: 3.4rem;
     padding: 0 1.5rem;
-    font-size: 1.2rem;
-    border-radius: 1.2rem;
+    font-size: 1.25rem;
+    border-radius: 0.95rem;
   }
   .btn-icon {
     width: 2.75rem;
@@ -315,26 +335,32 @@
   .btn-primary {
     --btn-bg: var(--berry-deep);
     --btn-fg: #fff;
+    --btn-edge: transparent;
   }
   .btn-melon {
     --btn-bg: var(--melon);
-    --btn-fg: var(--on-bright);
+    --btn-fg: #fff;
+    --btn-edge: transparent;
   }
   .btn-mango {
     --btn-bg: var(--mango);
     --btn-fg: var(--on-bright);
+    --btn-edge: transparent;
   }
   .btn-grape {
     --btn-bg: var(--grape-deep);
     --btn-fg: #fff;
+    --btn-edge: transparent;
   }
   .btn-soda {
     --btn-bg: var(--soda);
-    --btn-fg: var(--on-bright);
+    --btn-fg: #fff;
+    --btn-edge: transparent;
   }
   .btn-peach {
     --btn-bg: var(--peach);
     --btn-fg: var(--on-bright);
+    --btn-edge: transparent;
   }
   .btn-ghost {
     --btn-bg: transparent;
@@ -351,65 +377,139 @@
     box-shadow: none;
   }
 
+  /* A small paper label */
   .chip {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    padding: 0.2rem 0.65rem;
-    border: 2px solid var(--line);
-    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--line);
+    border-radius: 0.45rem;
     font-size: 0.75rem;
     font-weight: 700;
     line-height: 1.25;
     white-space: nowrap;
   }
 
-  /* Tilted badge-like tile for emoji/icons */
+  /* A raised tile for a picture (game icons, the logo) */
   .sticker {
     display: inline-grid;
     place-items: center;
-    border: 2px solid var(--line);
-    border-radius: 1rem;
-    box-shadow: 3px 3px 0 0 var(--shadow);
+    border: 1px solid rgb(0 0 0 / 0.08);
+    border-radius: 0.95rem;
+    box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.12), var(--shadow-hard);
     line-height: 1;
+  }
+
+  /* A hanging price tag: notched on the left with a string hole */
+  .price-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.6rem 0.18rem 1.05rem;
+    background:
+      radial-gradient(circle at 0.5rem 50%, rgb(0 0 0 / 0.28) 0 0.13rem, transparent 0.15rem),
+      var(--surface);
+    color: var(--ink);
+    clip-path: polygon(0.45rem 0, 100% 0, 100% 100%, 0.45rem 100%, 0 50%);
+    border-radius: 0 0.3rem 0.3rem 0;
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.18));
+  }
+
+  /* An inked rubber stamp */
+  .stamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.5rem;
+    border: 2px solid currentColor;
+    border-radius: 0.4rem;
+    font-family: var(--font-display);
+    line-height: 1.15;
+    transform: rotate(var(--tilt, -6deg));
+    opacity: 0.88;
+  }
+
+  /* Handwritten note */
+  .hand {
+    font-family: var(--font-hand);
+    font-weight: 700;
+  }
+
+  /* The striped shop awning with a scalloped edge (a row of half-circles under the stripes) */
+  .awning {
+    --stripe: 2.25rem;
+    --awning-a: var(--berry);
+    --awning-b: #fff7ea;
+    position: relative;
+    height: 2.4rem;
+    background: repeating-linear-gradient(90deg, var(--awning-a) 0 var(--stripe), var(--awning-b) var(--stripe) calc(var(--stripe) * 2));
+    box-shadow: inset 0 -6px 8px -6px rgb(0 0 0 / 0.25);
+  }
+  .awning::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: calc(var(--stripe) / 2);
+    background: repeating-linear-gradient(90deg, var(--awning-a) 0 var(--stripe), var(--awning-b) var(--stripe) calc(var(--stripe) * 2));
+    -webkit-mask: radial-gradient(circle at 50% 0, #000 calc(var(--stripe) / 2 - 0.5px), transparent calc(var(--stripe) / 2)) 0 0 / var(--stripe) 100% repeat-x;
+    mask: radial-gradient(circle at 50% 0, #000 calc(var(--stripe) / 2 - 0.5px), transparent calc(var(--stripe) / 2)) 0 0 / var(--stripe) 100% repeat-x;
+    filter: drop-shadow(0 2px 1px rgb(0 0 0 / 0.15));
+  }
+  :root[data-theme="dark"] .awning {
+    --awning-b: #e9dcc6;
+  }
+
+  /* A wooden fruit crate front: slats with gaps */
+  .crate {
+    background:
+      repeating-linear-gradient(180deg, transparent 0 calc(33.3% - 2px), rgb(0 0 0 / 0.28) calc(33.3% - 2px) 33.3%),
+      linear-gradient(180deg, var(--crate), var(--crate-deep));
+    border-radius: 0.35rem;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), var(--shadow-hard);
   }
 
   .kbd {
     display: inline-block;
     padding: 0.1rem 0.35rem;
-    border: 1.5px solid currentColor;
-    border-radius: 0.4rem;
+    border: 1px solid currentColor;
+    border-radius: 0.35rem;
     font-family: var(--font-display);
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     line-height: 1;
     opacity: 0.75;
   }
 
-  /* Polka dots for colored areas */
+  /* Textures for coloured areas: halftone dots like a printed crate label, and friends */
   .dots {
-    background-image: radial-gradient(rgb(255 255 255 / 0.3) 1.6px, transparent 1.8px);
-    background-size: 14px 14px;
+    background-image: radial-gradient(rgb(255 255 255 / 0.2) 1.1px, transparent 1.3px);
+    background-size: 9px 9px;
   }
   .stripes {
-    background-image: repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.28) 0 6px, transparent 6px 12px);
+    background-image: repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.2) 0 5px, transparent 5px 11px);
   }
   .checker {
-    background-image: repeating-conic-gradient(rgb(255 255 255 / 0.26) 0 25%, transparent 0 50%);
+    background-image: repeating-conic-gradient(rgb(255 255 255 / 0.18) 0 25%, transparent 0 50%);
     background-size: 16px 16px;
   }
   .waves {
-    background-image: radial-gradient(circle at 50% 110%, transparent 5px, rgb(255 255 255 / 0.3) 6px 8px, transparent 9px);
+    background-image: radial-gradient(circle at 50% 110%, transparent 5px, rgb(255 255 255 / 0.22) 6px 8px, transparent 9px);
     background-size: 16px 10px;
   }
 
   .hero-title {
-    text-shadow: 3px 3px 0 var(--berry);
+    letter-spacing: -0.01em;
   }
 
   .range {
     appearance: none;
     height: 0.8rem;
-    border: 2px solid var(--line);
+    border: 1px solid var(--line);
     border-radius: 999px;
     background: var(--surface-3);
     cursor: pointer;
@@ -418,15 +518,15 @@
     appearance: none;
     width: 1.45rem;
     height: 1.45rem;
-    border: 2px solid var(--line);
+    border: 3px solid var(--surface);
     border-radius: 999px;
-    background: var(--mango);
-    box-shadow: 0 2px 0 0 var(--shadow);
+    background: var(--mango-deep);
+    box-shadow: 0 1px 4px var(--shade-2);
   }
   .range::-moz-range-thumb {
     width: 1.2rem;
     height: 1.2rem;
-    border: 2px solid var(--line);
+    border: 3px solid var(--surface);
     border-radius: 999px;
     background: var(--mango);
   }

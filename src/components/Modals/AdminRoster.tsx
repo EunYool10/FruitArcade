@@ -72,7 +72,7 @@ export const AdminRoster: React.FC<{ isOpen: boolean; myEmail: string }> = ({ is
           onChange={(e) => setDraft(e.target.value)}
           placeholder="name@gmail.com"
           aria-label="운영진으로 등록할 이메일"
-          className="h-10 min-w-0 flex-1 select-text rounded-xl border-2 border-line bg-surface px-3 text-sm outline-none focus:border-grape"
+          className="h-10 min-w-0 flex-1 select-text rounded-xl border border-line bg-surface px-3 text-sm outline-none focus:border-grape"
         />
         <button type="submit" className="btn btn-sm btn-grape h-10 shrink-0" disabled={busy || !draft.trim()}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" strokeWidth={2.5} />} 등록
@@ -87,7 +87,7 @@ export const AdminRoster: React.FC<{ isOpen: boolean; myEmail: string }> = ({ is
         <ul className="space-y-1.5" aria-label={`운영진 ${emails.length}명`}>
           {/* The owner's accounts belong to one person: one card with all of them */}
           {owners.length > 0 && (
-            <li className="rounded-xl border-2 border-line bg-mango-soft px-3 py-2 text-sm">
+            <li className="rounded-xl border border-line bg-mango-soft px-3 py-2 text-sm">
               <p className="mb-1 flex items-center gap-1.5 text-xs font-bold">
                 <span className="chip h-5 bg-mango px-1.5 text-[10px] text-on-bright">👑 소유자</span>
                 {owners.length > 1 && <span className="text-ink-3">한 사람의 계정 {owners.length}개</span>}
@@ -104,7 +104,7 @@ export const AdminRoster: React.FC<{ isOpen: boolean; myEmail: string }> = ({ is
             </li>
           )}
           {emails.filter((e) => !owners.includes(e.toLowerCase())).map((email) => (
-            <li key={email} className="flex items-center gap-2 rounded-xl border-2 border-line bg-surface px-3 py-1.5 text-sm">
+            <li key={email} className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-1.5 text-sm">
               <span className="min-w-0 flex-1 truncate font-bold">{email}</span>
               {email === me && <span className="shrink-0 text-[11px] text-ink-3">(나)</span>}
               {isOwner && (

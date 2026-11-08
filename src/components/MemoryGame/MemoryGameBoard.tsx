@@ -607,7 +607,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
             footer={
               <p
                 role="status"
-                className={`mt-2.5 truncate rounded-xl border-2 border-line px-3 py-1.5 text-center text-sm font-bold ${STATUS_CLASS[statusColor]}`}
+                className={`mt-2.5 truncate rounded-xl border border-line px-3 py-1.5 text-center text-sm font-bold ${STATUS_CLASS[statusColor]}`}
               >
                 {previewLeft > 0 ? `👀 카드를 기억하세요! ${(previewLeft / 1000).toFixed(1)}초` : statusMsg}
               </p>
@@ -635,7 +635,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
           <div className="board-fit w-full" style={{ maxWidth: `calc((100dvh - var(--board-offset)) * ${scale})` }}>
             <div
               id="board"
-              className={`grid aspect-square w-full rounded-[26px] border-2 border-line bg-surface-2 p-2 shadow-pop sm:p-3 ${gap}`}
+              className={`grid aspect-square w-full rounded-[26px] border border-line bg-surface-2 p-2 shadow-pop sm:p-3 ${gap}`}
               style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
             >
               {cards.map((card, idx) => {
@@ -663,7 +663,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
                       {/* Back */}
                       <div className={`card-face grid place-items-center ${radius} ${border} border-line shadow-hard-sm ${back.className}`}>
                         <span
-                          className={`grid aspect-square w-[48%] place-items-center rounded-full border-2 border-line bg-surface font-display leading-none text-ink ${markSize}`}
+                          className={`grid aspect-square w-[48%] place-items-center rounded-full border border-line bg-surface font-display leading-none text-ink ${markSize}`}
                         >
                           <Emoji e={back.mark} />
                         </span>
@@ -682,7 +682,7 @@ export const MemoryGameBoard: React.FC<Props> = ({
                           </span>
                         )}
                         {card.isMatched && (
-                          <span className="absolute right-0.5 top-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-line bg-melon text-[9px] font-black text-on-bright sm:h-5 sm:w-5 sm:text-[10px]">
+                          <span className="absolute right-0.5 top-0.5 grid h-4 w-4 place-items-center rounded-full border border-line bg-melon text-[9px] font-black text-on-bright sm:h-5 sm:w-5 sm:text-[10px]">
                             ✓
                           </span>
                         )}

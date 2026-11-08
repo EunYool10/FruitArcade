@@ -66,7 +66,7 @@ export const AdminLookEditor: React.FC<Props> = ({ u, busy, onSave, onPrism }) =
           value={name}
           maxLength={NICKNAME_MAX + 4}
           onChange={(e) => setName(e.target.value)}
-          className="h-10 w-full select-text rounded-xl border-2 border-line bg-surface px-3 text-sm outline-none focus:border-grape"
+          className="h-10 w-full select-text rounded-xl border border-line bg-surface px-3 text-sm outline-none focus:border-grape"
         />
       </label>
 
@@ -116,9 +116,9 @@ export const AdminLookEditor: React.FC<Props> = ({ u, busy, onSave, onPrism }) =
       </button>
       <p className="text-[11px] text-ink-3">계정 · 프로필 카드 · 오늘 · 이번 주 · 전체 랭킹이 바뀌어요. 그 사람 기기에는 다음에 앱을 열 때 적용돼요.</p>
 
-      <div className="flex items-center gap-3 rounded-2xl border-2 border-line bg-surface p-2.5">
+      <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-2.5">
         <Framed frame={PRISM_FRAME}>
-          <span className="grid h-10 w-10 place-items-center rounded-full border-2 border-line bg-mango-soft text-xl" aria-hidden="true">
+          <span className="grid h-10 w-10 place-items-center rounded-full border border-line bg-mango-soft text-xl" aria-hidden="true">
             <Emoji e={u.avatar} />
           </span>
         </Framed>

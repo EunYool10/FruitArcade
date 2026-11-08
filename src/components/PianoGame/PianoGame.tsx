@@ -91,9 +91,9 @@ const SongButton: React.FC<{ song: Song; locked: boolean; onClick: () => void }>
       onClick={onClick}
       disabled={locked}
       aria-label={`곡: ${song.name}. 다른 곡 고르기`}
-      className="flex w-full items-center gap-2.5 rounded-2xl border-2 border-line bg-surface-2 p-2 text-left transition-colors hover:bg-surface-3 disabled:cursor-default disabled:hover:bg-surface-2"
+      className="flex w-full items-center gap-2.5 rounded-2xl border border-line bg-surface-2 p-2 text-left transition-colors hover:bg-surface-3 disabled:cursor-default disabled:hover:bg-surface-2"
     >
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border-2 border-line bg-peach-soft text-2xl" aria-hidden="true">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-line bg-peach-soft text-2xl" aria-hidden="true">
         <Emoji e={info.fruit} />
       </span>
       <span className="min-w-0 flex-1">
@@ -140,11 +140,11 @@ const SongList: React.FC<{ current: string; onPick: (id: string) => void; onClos
                       type="button"
                       aria-pressed={on}
                       onClick={() => onPick(s.id)}
-                      className={`flex w-full items-center gap-2.5 rounded-xl border-2 border-line p-2 text-left transition-all ${
+                      className={`flex w-full items-center gap-2.5 rounded-xl border border-line p-2 text-left transition-all ${
                         on ? '-translate-y-0.5 bg-peach-soft shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
                       }`}
                     >
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border-2 border-line bg-surface text-lg" aria-hidden="true">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line bg-surface text-lg" aria-hidden="true">
                         <Emoji e={info.fruit} />
                       </span>
                       <span className="min-w-0 flex-1">
@@ -742,7 +742,7 @@ export const PianoGame: React.FC<Props> = ({
           }
           if (!held) {
             const label = i === 0 && !startedRef.current ? '꾹 눌러 시작' : '꾹 누르기';
-            ctx.font = '700 15px Fredoka, Jua, sans-serif';
+            ctx.font = '15px "Do Hyeon", sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             const lw = ctx.measureText(label).width + 18;
@@ -766,7 +766,7 @@ export const PianoGame: React.FC<Props> = ({
         drawEmoji(ctx, emoji, r.x + r.w / 2, cy, 50);
 
         if (i === 0 && !startedRef.current && t.len === 1) {
-          ctx.font = '700 20px Fredoka, Jua, sans-serif';
+          ctx.font = '20px "Do Hyeon", sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.lineJoin = 'round';
@@ -798,7 +798,7 @@ export const PianoGame: React.FC<Props> = ({
       for (const f of floatsRef.current) {
         ctx.save();
         ctx.globalAlpha = Math.max(0, Math.min(1, (110 - f.life) / 30));
-        ctx.font = '700 26px Fredoka, Jua, sans-serif';
+        ctx.font = '26px "Do Hyeon", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.lineJoin = 'round';
@@ -850,7 +850,7 @@ export const PianoGame: React.FC<Props> = ({
         }
         board={
           <div className="board-fit w-full" style={{ maxWidth: 'calc((100dvh - var(--board-offset)) * 0.7333)' }}>
-            <div className="relative aspect-[440/600] w-full overflow-hidden rounded-[28px] border-2 border-line bg-surface-2 shadow-pop">
+            <div className="relative aspect-[440/600] w-full overflow-hidden rounded-[28px] border border-line bg-surface-2 shadow-pop">
               <canvas
                 ref={canvasRef}
                 aria-label={`과일 피아노 판 · ${playing.name}`}

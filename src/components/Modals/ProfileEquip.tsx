@@ -40,7 +40,7 @@ const FRUIT_NAMES = ['딸기', '수박', '귤', '레몬', '포도', '복숭아',
 
 /** A ticked corner on whatever is worn */
 const Worn = () => (
-  <span className="absolute -right-1.5 -top-1.5 z-10 grid h-5 w-5 place-items-center rounded-full border-2 border-line bg-melon text-white">
+  <span className="absolute -right-1.5 -top-1.5 z-10 grid h-5 w-5 place-items-center rounded-full border border-line bg-melon text-white">
     <Check className="h-3 w-3" strokeWidth={4} />
   </span>
 );
@@ -60,7 +60,7 @@ const Cell: React.FC<{ on: boolean; label: string; badge?: string; badgeClass?: 
     aria-pressed={on}
     aria-label={ariaLabel ?? label}
     onClick={onClick}
-    className={`relative flex flex-col items-center gap-1 rounded-2xl border-2 border-line px-1 pb-1.5 pt-2 transition-all hover:-translate-y-0.5 ${
+    className={`relative flex flex-col items-center gap-1 rounded-2xl border border-line px-1 pb-1.5 pt-2 transition-all hover:-translate-y-0.5 ${
       on ? 'bg-melon-soft shadow-hard-sm' : 'bg-surface hover:bg-surface-2'
     }`}
   >
@@ -246,7 +246,7 @@ export const ProfileEquip: React.FC<Props> = ({ tab, player, defaultLook, profil
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={`칭호 ${titles.length}개 중에서 찾기`}
-          className="h-10 w-full select-text rounded-xl border-2 border-line bg-surface pl-9 pr-9 text-sm outline-none focus:border-grape"
+          className="h-10 w-full select-text rounded-xl border border-line bg-surface pl-9 pr-9 text-sm outline-none focus:border-grape"
         />
         {query && (
           <button type="button" className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-ink-3 hover:bg-surface-3" onClick={() => setQuery('')} aria-label="지우기">
@@ -261,7 +261,7 @@ export const ProfileEquip: React.FC<Props> = ({ tab, player, defaultLook, profil
             type="button"
             aria-pressed={!profile.title}
             onClick={() => onUpdateProfile({ ...profile, title: '' })}
-            className={`flex w-full items-center gap-2.5 rounded-xl border-2 border-line px-3 py-2 text-left text-sm font-bold ${!profile.title ? 'bg-melon-soft shadow-hard-sm' : 'bg-surface hover:bg-surface-3'}`}
+            className={`flex w-full items-center gap-2.5 rounded-xl border border-line px-3 py-2 text-left text-sm font-bold ${!profile.title ? 'bg-melon-soft shadow-hard-sm' : 'bg-surface hover:bg-surface-3'}`}
           >
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-ink-3">–</span>
             <span className="flex-1">칭호 없음</span>
@@ -277,7 +277,7 @@ export const ProfileEquip: React.FC<Props> = ({ tab, player, defaultLook, profil
                 type="button"
                 aria-pressed={on}
                 onClick={() => onUpdateProfile({ ...profile, title: t.id })}
-                className={`flex w-full items-center gap-2.5 rounded-xl border-2 border-line px-3 py-2 text-left ${on ? 'bg-melon-soft shadow-hard-sm' : 'bg-surface hover:bg-surface-3'}`}
+                className={`flex w-full items-center gap-2.5 rounded-xl border border-line px-3 py-2 text-left ${on ? 'bg-melon-soft shadow-hard-sm' : 'bg-surface hover:bg-surface-3'}`}
               >
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-lg">
                   <Emoji e={t.icon} />

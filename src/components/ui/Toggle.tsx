@@ -15,12 +15,12 @@ export const Toggle: React.FC<ToggleProps> = ({ checked, onChange, label, disabl
     aria-label={label}
     disabled={disabled}
     onClick={() => onChange(!checked)}
-    className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border-2 border-line transition-colors disabled:opacity-45 ${
+    className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border border-line transition-colors disabled:opacity-45 ${
       checked ? 'bg-melon' : 'bg-surface-3'
     }`}
   >
     <span
-      className={`inline-block h-5 w-5 rounded-full border-2 border-line bg-surface shadow-[0_2px_0_0_var(--shadow)] transition-transform ${
+      className={`inline-block h-5 w-5 rounded-full border border-line bg-surface shadow-[0_2px_0_0_var(--shadow)] transition-transform ${
         checked ? 'translate-x-[29px]' : 'translate-x-[3px]'
       }`}
     />

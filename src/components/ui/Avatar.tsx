@@ -66,10 +66,10 @@ export const Avatar: React.FC<{ player: PlayerView; size?: keyof typeof SIZES }>
         alt=""
         referrerPolicy="no-referrer"
         onError={() => setBroken(player.photo ?? '')}
-        className={`${SIZES[size]} shrink-0 rounded-full border-2 border-line bg-surface-2 object-cover`}
+        className={`${SIZES[size]} shrink-0 rounded-full border border-line bg-surface-2 object-cover`}
       />
     ) : (
-      <span className={`${SIZES[size]} grid shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft`} aria-hidden="true">
+      <span className={`${SIZES[size]} grid shrink-0 place-items-center rounded-full border border-line bg-mango-soft`} aria-hidden="true">
         <Emoji e={player.emoji} />
       </span>
     )}

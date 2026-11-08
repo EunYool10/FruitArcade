@@ -248,7 +248,7 @@ const Rolling: React.FC<{ me: CreditsPlayer; onFinished: () => void; onDone: () 
       onKeyUp={(e) => onKey(e, false)}
       onContextMenu={(e) => e.preventDefault()}
       style={{ WebkitTouchCallout: 'none' }}
-      className={`credits-roll-box relative h-[60dvh] select-none rounded-2xl border-2 border-line bg-[#140f24] text-center text-white outline-none ${
+      className={`credits-roll-box relative h-[60dvh] select-none rounded-2xl border border-line bg-[#140f24] text-center text-white outline-none ${
         calm ? 'overflow-y-auto' : 'cursor-pointer touch-none overflow-hidden'
       } ${paused ? 'is-paused' : ''}`}
     >
@@ -353,7 +353,7 @@ export const CreditsModal: React.FC<Props> = ({ isOpen, onClose, me, onFinished 
       ) : (
         <div className="space-y-4">
           {/* The app */}
-          <section className="dots flex items-center gap-3 rounded-2xl border-2 border-line bg-berry p-4 text-white">
+          <section className="dots flex items-center gap-3 rounded-2xl border border-line bg-berry p-4 text-white">
             <span className="sticker h-14 w-14 shrink-0 -rotate-6 bg-surface text-3xl" aria-hidden="true">
               🍓
             </span>
@@ -374,7 +374,7 @@ export const CreditsModal: React.FC<Props> = ({ isOpen, onClose, me, onFinished 
                 <p className="font-display text-2xl leading-tight">{MAKER.name}</p>
               </div>
             </div>
-            <ul className="divide-y-2 divide-dashed divide-line rounded-2xl border-2 border-line bg-surface px-3" aria-label={`${MAKER.name}이 맡은 일`}>
+            <ul className="divide-y-2 divide-dashed divide-line rounded-2xl border border-line bg-surface px-3" aria-label={`${MAKER.name}이 맡은 일`}>
               {ROLES.map((r) => (
                 <li key={r.title} className="flex items-center gap-2.5 py-2">
                   <span className={`sticker h-8 w-8 shrink-0 text-base shadow-none ${TONE[r.tone].soft}`} aria-hidden="true">
@@ -390,7 +390,7 @@ export const CreditsModal: React.FC<Props> = ({ isOpen, onClose, me, onFinished 
           {/* Friends who helped */}
           <section>
             <h3 className="mb-2 font-display text-lg">🤝 함께 만든 사람들</h3>
-            <div className="space-y-3 rounded-2xl border-2 border-line bg-surface-2 p-3">
+            <div className="space-y-3 rounded-2xl border border-line bg-surface-2 p-3">
               <Group label="💡 아이디어" people={IDEAS} />
               <div className="border-t-2 border-dashed border-line pt-3">
                 <Group label="🧪 테스트 · QA" people={TESTERS} />

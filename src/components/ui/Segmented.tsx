@@ -28,7 +28,7 @@ export function Segmented<T extends string | number>({ value, options, onChange,
             type="button"
             aria-pressed={active}
             onClick={() => onChange(o.value)}
-            className={`rounded-2xl border-2 border-line px-2 py-2.5 text-center transition-all ${
+            className={`rounded-2xl border border-line px-2 py-2.5 text-center transition-all ${
               active ? '-translate-y-0.5 bg-mango text-on-bright shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
             }`}
           >

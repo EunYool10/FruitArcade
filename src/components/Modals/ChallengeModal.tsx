@@ -24,7 +24,7 @@ export const ChallengeModal: React.FC<Props> = ({ challenge, onAccept, onDismiss
 
   return (
     <Modal isOpen onClose={onDismiss} title="도전장이 도착했어요!" subtitle="같은 판으로 점수를 겨뤄요" icon="🥊" tone="berry" size="sm">
-      <div className={`rounded-2xl border-2 border-line p-4 text-center ${TONE[meta.tone].soft}`}>
+      <div className={`rounded-2xl border border-line p-4 text-center ${TONE[meta.tone].soft}`}>
         <span className={`sticker h-16 w-16 -rotate-6 text-4xl ${TONE[meta.tone].bg}`} aria-hidden="true">
           <Emoji e={meta.emoji} />
         </span>

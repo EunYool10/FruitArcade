@@ -68,7 +68,7 @@ export const MemorySetup: React.FC<Props> = ({ initial, settings, onStart, onBac
                   type="button"
                   aria-pressed={active}
                   onClick={() => pickMode(m.value)}
-                  className={`flex items-center gap-3 rounded-2xl border-2 border-line p-3 text-left transition-all max-[400px]:flex-col max-[400px]:items-start max-[400px]:gap-2 ${
+                  className={`flex items-center gap-3 rounded-2xl border border-line p-3 text-left transition-all max-[400px]:flex-col max-[400px]:items-start max-[400px]:gap-2 ${
                     active ? '-translate-y-0.5 bg-berry-soft shadow-hard' : 'bg-surface-2 hover:bg-surface-3'
                   }`}
                 >
@@ -101,7 +101,7 @@ export const MemorySetup: React.FC<Props> = ({ initial, settings, onStart, onBac
             }))}
           />
           {showWarning && (
-            <p className="mt-2.5 rounded-xl border-2 border-line bg-mango-soft px-3 py-2 text-sm font-semibold">
+            <p className="mt-2.5 rounded-xl border border-line bg-mango-soft px-3 py-2 text-sm font-semibold">
               ⚠️ 8×8은 카드가 많아서 5초 이상을 추천해요.
             </p>
           )}

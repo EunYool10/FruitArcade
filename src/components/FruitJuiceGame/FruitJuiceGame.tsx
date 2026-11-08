@@ -490,10 +490,10 @@ export const FruitJuiceGame: React.FC<Props> = ({
         }
         board={
           <div className="board-fit w-full" style={{ maxWidth: 'calc((100dvh - var(--board-offset)) * 0.7333)' }}>
-            <div className="@container relative aspect-[440/600] w-full select-none overflow-clip rounded-[28px] border-2 border-line bg-[#ffe9d6] shadow-pop dark:bg-[#3a2a3f]">
+            <div className="@container relative aspect-[440/600] w-full select-none overflow-clip rounded-[28px] border border-line bg-[#ffe9d6] shadow-pop dark:bg-[#3a2a3f]">
               {/* Awning with a scalloped edge, and the shop's wall */}
               <div
-                className="absolute inset-x-0 top-0 h-[6%] border-b-2 border-line"
+                className="absolute inset-x-0 top-0 h-[6%] border-b border-line"
                 style={{ background: 'repeating-linear-gradient(90deg, #ff6b8b 0 12.5%, #fff4e8 12.5% 25%)' }}
                 aria-hidden="true"
               />
@@ -572,7 +572,7 @@ export const FruitJuiceGame: React.FC<Props> = ({
                       >
                         {/* Order bubble: fruit already in the jar get a tick */}
                         <span
-                          className={`relative flex min-h-[10cqw] flex-wrap items-center justify-center gap-[0.8cqw] rounded-[3cqw] border-2 border-line px-[1.8cqw] py-[1.2cqw] text-[6.2cqw] leading-none ${
+                          className={`relative flex min-h-[10cqw] flex-wrap items-center justify-center gap-[0.8cqw] rounded-[3cqw] border border-line px-[1.8cqw] py-[1.2cqw] text-[6.2cqw] leading-none ${
                             ready ? 'bg-melon-soft ring-4 ring-melon' : making ? 'bg-mango-soft' : 'bg-surface'
                           }`}
                         >
@@ -592,13 +592,13 @@ export const FruitJuiceGame: React.FC<Props> = ({
                               </span>
                             ))
                           )}
-                          <span className="absolute -bottom-[1.5cqw] left-1/2 h-[2.6cqw] w-[2.6cqw] -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-line bg-inherit" aria-hidden="true" />
+                          <span className="absolute -bottom-[1.5cqw] left-1/2 h-[2.6cqw] w-[2.6cqw] -translate-x-1/2 rotate-45 border-b-2 border-r border-line bg-inherit" aria-hidden="true" />
                         </span>
                         <span className="mt-[0.5cqw] text-[14cqw] leading-none">
                           <Emoji e={g.face} />
                         </span>
                         {/* Patience */}
-                        <span className="h-[2.2cqw] w-[78%] overflow-hidden rounded-full border-2 border-line bg-surface">
+                        <span className="h-[2.2cqw] w-[78%] overflow-hidden rounded-full border border-line bg-surface">
                           <span className={`block h-full ${left > 0.5 ? 'bg-melon' : left > 0.25 ? 'bg-mango' : 'bg-berry'}`} style={{ width: `${left * 100}%` }} />
                         </span>
                         <span className={`h-[3.6cqw] text-[3.1cqw] font-bold leading-none ${ready ? 'text-melon-ink' : 'text-ink-3'}`}>
@@ -633,8 +633,8 @@ export const FruitJuiceGame: React.FC<Props> = ({
                   aria-label={`믹서: ${blender.length ? blender.map((f) => NAMES[f]).join(', ') : '비어 있음'}`}
                   role="status"
                 >
-                  <span className="absolute -top-[1.4cqw] left-[10%] right-[10%] z-10 h-[2.6cqw] rounded-full border-2 border-line bg-surface-3" aria-hidden="true" />
-                  <div className="absolute inset-0 overflow-hidden rounded-b-[7cqw] rounded-t-[2.5cqw] border-2 border-line bg-white/75 dark:bg-white/10">
+                  <span className="absolute -top-[1.4cqw] left-[10%] right-[10%] z-10 h-[2.6cqw] rounded-full border border-line bg-surface-3" aria-hidden="true" />
+                  <div className="absolute inset-0 overflow-hidden rounded-b-[7cqw] rounded-t-[2.5cqw] border border-line bg-white/75 dark:bg-white/10">
                     {blender.length > 0 && (
                       <div
                         className="absolute inset-x-0 bottom-0 transition-[height,background-color] duration-300"
@@ -710,7 +710,7 @@ export const FruitJuiceGame: React.FC<Props> = ({
               {news && gameState === 'PLAYING' && (
                 <span
                   key={news.key}
-                  className="pointer-events-none absolute left-1/2 top-[49.5%] z-20 whitespace-nowrap rounded-full border-2 border-line bg-mango px-[3cqw] py-[1cqw] font-display text-[4cqw] text-on-bright animate-notice"
+                  className="pointer-events-none absolute left-1/2 top-[49.5%] z-20 whitespace-nowrap rounded-full border border-line bg-mango px-[3cqw] py-[1cqw] font-display text-[4cqw] text-on-bright animate-notice"
                   onAnimationEnd={() => setNews(null)}
                 >
                   {news.text}

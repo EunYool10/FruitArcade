@@ -17,7 +17,7 @@ const TABS = [
 export const MobileTabBar: React.FC<{ friendBadge: number; onOpen: (target: NavTarget) => void }> = ({ friendBadge, onOpen }) => (
   <nav
     aria-label="메뉴"
-    className="shrink-0 border-t-2 border-line bg-surface px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] sm:hidden"
+    className="shrink-0 border-t border-line bg-surface px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] sm:hidden"
   >
     <ul className="mx-auto grid max-w-md grid-cols-5 gap-1">
       {TABS.map(({ id, label, Icon }) => (
@@ -31,7 +31,7 @@ export const MobileTabBar: React.FC<{ friendBadge: number; onOpen: (target: NavT
             <Icon className="h-5 w-5 text-ink" strokeWidth={2.5} aria-hidden="true" />
             {label}
             {id === 'friends' && friendBadge > 0 && (
-              <span className="absolute right-[calc(50%-1.4rem)] top-0 grid h-4 min-w-4 place-items-center rounded-full border-2 border-line bg-berry px-0.5 text-[9px] leading-none text-white">
+              <span className="absolute right-[calc(50%-1.4rem)] top-0 grid h-4 min-w-4 place-items-center rounded-full border border-line bg-berry px-0.5 text-[9px] leading-none text-white">
                 {friendBadge > 9 ? '9+' : friendBadge}
               </span>
             )}

@@ -67,28 +67,42 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
       {/* grid-cols-1 (minmax(0,1fr)): an implicit auto column grows to its widest content and pushes the panels off the right edge on narrow phones */}
       <section className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* Hero */}
-        <div className="panel relative flex min-h-[250px] flex-col justify-center overflow-hidden bg-mango-soft p-6 sm:p-8">
-          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-            <span className="absolute right-5 top-4 text-5xl animate-float sm:right-10 sm:text-6xl" style={tilt(12)}>
-              <Emoji e="🍉" />
-            </span>
-            <span className="absolute bottom-5 right-20 text-4xl animate-float sm:right-32 sm:text-5xl" style={tilt(-10, -1.2)}>
-              <Emoji e="🍊" />
-            </span>
-            <span className="absolute bottom-16 right-4 text-3xl animate-float sm:right-10 sm:text-4xl" style={tilt(8, -2.1)}>
-              <Emoji e="🍒" />
-            </span>
+        {/* Hero: the shop front. A striped awning, the painted sign, and a crate of fruit on the counter */}
+        <div className="panel relative flex min-h-[280px] flex-col overflow-hidden">
+          <div className="awning shrink-0" aria-hidden="true" />
+          {/* Phones: a crate the width of the counter along the bottom. Wider screens: one crate in the corner */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 sm:left-auto sm:right-8 sm:w-[210px]" aria-hidden="true">
+            <div className="relative h-[78px] sm:h-[118px]">
+              <span className="absolute bottom-[26px] left-[8%] text-[40px] sm:bottom-[30px] sm:left-[1%] sm:text-[62px]" style={{ transform: 'rotate(-14deg)' }}>
+                <Emoji e="🍉" />
+              </span>
+              <span className="absolute bottom-[30px] left-[30%] text-[34px] sm:bottom-[44px] sm:left-[35%] sm:text-[52px]" style={{ transform: 'rotate(8deg)' }}>
+                <Emoji e="🍎" />
+              </span>
+              <span className="absolute bottom-[28px] left-[52%] text-[30px] sm:hidden" style={{ transform: 'rotate(-6deg)' }}>
+                <Emoji e="🍇" />
+              </span>
+              <span className="absolute bottom-[26px] right-[8%] text-[36px] sm:bottom-[32px] sm:right-[3%] sm:text-[56px]" style={{ transform: 'rotate(16deg)' }}>
+                <Emoji e="🍊" />
+              </span>
+              <span className="absolute bottom-[38px] left-[21%] text-[26px] animate-float sm:bottom-[66px] sm:left-[24%] sm:text-[38px]" style={tilt(-6)}>
+                <Emoji e="🍓" />
+              </span>
+              <div className="crate absolute inset-x-0 bottom-0 h-[36px] rounded-none sm:h-[58px] sm:rounded-t-[0.35rem]">
+                <span className="hand absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-3deg] whitespace-nowrap rounded-sm bg-[#fff7e6] px-2 text-[13px] leading-5 text-[#7a4a1e] shadow-sm sm:text-[15px]">
+                  오늘 들어온 과일
+                </span>
+              </div>
+            </div>
           </div>
-          <span className="chip relative w-fit bg-surface">🍓 상큼 과일 아케이드 존</span>
-          <h1 className="hero-title relative mt-3 font-display text-5xl leading-[0.95] sm:text-6xl">
-            FRUIT
-            <br />
-            ARCADE
-          </h1>
-          <p className="relative mt-3 max-w-xs text-sm text-ink-2 sm:max-w-sm sm:text-base">
-            과일 게임 {GAME_ORDER.length}가지에 매일 바뀌는 미션, 업적, 친구 대결까지. 오늘도 상큼하게 한 판!
-          </p>
-          <div className="relative mt-5 flex flex-wrap gap-3">
+          <div className="relative flex flex-1 flex-col justify-center px-6 pb-[6.25rem] pt-9 sm:px-8 sm:pb-7 sm:pt-11">
+            <p className="font-display text-sm tracking-[0.3em] text-berry-ink">FRUIT ARCADE</p>
+            <h1 className="hero-title mt-1 font-display text-[2.9rem] leading-none sm:text-6xl">과일 아케이드</h1>
+            <p className="hand mt-2 text-xl text-ink-2 sm:text-2xl">오늘도 신선하게 한 판!</p>
+            <p className="mt-2 max-w-[13.5rem] text-sm text-ink-3 sm:max-w-sm">
+              과일 게임 {GAME_ORDER.length}가지, 매일 바뀌는 미션과 업적, 친구 대결까지.
+            </p>
+          <div className="relative mt-5 grid grid-cols-[1fr_auto] gap-2.5 sm:flex sm:flex-wrap sm:gap-3 sm:pr-[200px] lg:pr-[180px]">
             <button type="button" className="btn btn-lg btn-primary" onClick={() => onPlay(quick, true)}>
               <Play className="h-5 w-5 fill-current" />
               {lastGame ? `${GAMES[quick].short} 한 판 더` : '바로 시작'}
@@ -99,6 +113,7 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
             <button type="button" className="btn btn-lg hidden sm:inline-flex" onClick={() => onOpen('records')}>
               <BarChart3 className="h-5 w-5" strokeWidth={2.5} /> 내 기록
             </button>
+          </div>
           </div>
         </div>
 
@@ -120,11 +135,12 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
 
       <section aria-labelledby="games-title">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <h2 id="games-title" className="font-display text-2xl">
-            게임 고르기
+          <h2 id="games-title" className="flex items-baseline gap-2 font-display text-[1.7rem] leading-none">
+            게임 진열대
+            <span className="hand text-base text-ink-3">골라 담아 보세요</span>
           </h2>
           {/* Filter by kind, so a long list stays easy to scan */}
-          <div role="tablist" aria-label="게임 종류" className="grid w-full grid-cols-4 gap-1.5 sm:flex sm:w-auto">
+          <div role="tablist" aria-label="게임 종류" className="well grid w-full grid-cols-4 gap-1 p-1 sm:flex sm:w-auto">
             {KINDS.map(([k, label]) => {
               const count = GAME_ORDER.filter((g) => k === 'all' || GAMES[g].kind === k).length;
               const on = kind === k;
@@ -135,7 +151,7 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
                   role="tab"
                   aria-selected={on}
                   onClick={() => setKind(k)}
-                  className={`chip h-9 shrink-0 justify-center gap-1 px-1 text-[13px] sm:px-3 sm:text-sm ${on ? 'bg-ink text-surface shadow-hard-sm' : 'bg-surface hover:bg-surface-2'}`}
+                  className={`flex h-8 shrink-0 items-center justify-center gap-1 rounded-[0.55rem] px-1 text-[13px] font-bold transition-colors sm:px-3.5 sm:text-sm ${on ? 'bg-surface text-ink shadow-hard-sm' : 'text-ink-2 hover:text-ink'}`}
                 >
                   {label} <span className={`tabular-nums ${on ? 'opacity-70' : 'text-ink-3'}`}>{count}</span>
                 </button>

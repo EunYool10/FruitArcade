@@ -165,7 +165,7 @@ type Tab = 'summary' | 'terms' | 'privacy';
 const Sections: React.FC<{ list: Section[] }> = ({ list }) => (
   <div className="space-y-2">
     {list.map((s, i) => (
-      <details key={s.title} open={i === 0} className="group rounded-2xl border-2 border-line bg-surface-2 [&_summary::-webkit-details-marker]:hidden">
+      <details key={s.title} open={i === 0} className="group rounded-2xl border border-line bg-surface-2 [&_summary::-webkit-details-marker]:hidden">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3.5 py-3 font-display text-base">
           {s.title}
           <ChevronDown className="h-4 w-4 shrink-0 text-ink-3 transition-transform group-open:rotate-180" strokeWidth={2.5} />
@@ -198,7 +198,7 @@ export const TermsModal: React.FC<Props> = ({ isOpen, onClose }) => {
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`rounded-2xl border-2 border-line px-2 py-2 text-sm font-bold transition-all ${
+            className={`rounded-2xl border border-line px-2 py-2 text-sm font-bold transition-all ${
               tab === id ? '-translate-y-0.5 bg-grape text-white shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
             }`}
           >
@@ -212,7 +212,7 @@ export const TermsModal: React.FC<Props> = ({ isOpen, onClose }) => {
           <p className="well p-3.5 text-sm text-ink-2">로그인하면 이용약관과 개인정보 처리방침에 동의하는 것으로 봐요. 로그인하지 않아도 모든 게임을 할 수 있어요.</p>
           <ul className="grid gap-2 sm:grid-cols-2">
             {SUMMARY.map(([icon, title, text]) => (
-              <li key={title} className="flex items-start gap-3 rounded-2xl border-2 border-line bg-surface-2 p-3">
+              <li key={title} className="flex items-start gap-3 rounded-2xl border border-line bg-surface-2 p-3">
                 <span className="w-8 shrink-0 text-center text-2xl leading-none" aria-hidden="true">
                   {icon}
                 </span>

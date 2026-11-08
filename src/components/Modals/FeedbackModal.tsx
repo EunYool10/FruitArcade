@@ -78,7 +78,7 @@ export const FeedbackModal: React.FC<Props> = ({ isOpen, onClose, uid, name, onL
       }
     >
       {!uid && (
-        <p className="mb-3 rounded-2xl border-2 border-line bg-soda-soft px-3 py-2 text-sm font-bold">
+        <p className="mb-3 rounded-2xl border border-line bg-soda-soft px-3 py-2 text-sm font-bold">
           의견은 Google 로그인한 뒤에 보낼 수 있어요.
         </p>
       )}
@@ -104,7 +104,7 @@ export const FeedbackModal: React.FC<Props> = ({ isOpen, onClose, uid, name, onL
         disabled={!uid}
         placeholder={PLACEHOLDER[kind]}
         onChange={(e) => setMessage(e.target.value)}
-        className="w-full resize-none select-text rounded-2xl border-2 border-line bg-surface px-3 py-2.5 text-sm outline-none focus:border-soda disabled:opacity-60"
+        className="w-full resize-none select-text rounded-2xl border border-line bg-surface px-3 py-2.5 text-sm outline-none focus:border-soda disabled:opacity-60"
       />
       <div className="mt-1 flex items-center justify-between text-[11px] text-ink-3">
         <span>앱 버전과 기기 종류가 함께 전송돼요</span>
@@ -113,7 +113,7 @@ export const FeedbackModal: React.FC<Props> = ({ isOpen, onClose, uid, name, onL
         </span>
       </div>
       {error && (
-        <p role="alert" className="mt-3 rounded-2xl border-2 border-line bg-berry-soft px-3 py-2 text-sm font-bold">
+        <p role="alert" className="mt-3 rounded-2xl border border-line bg-berry-soft px-3 py-2 text-sm font-bold">
           {error}
         </p>
       )}

@@ -28,7 +28,7 @@ export const Meter: React.FC<MeterProps> = ({ value, max, label, tone = 'mango',
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={Math.min(value, max)}
-      className={`overflow-hidden rounded-full border-2 border-line bg-surface-3 ${className}`}
+      className={`overflow-hidden rounded-full border border-line bg-surface-3 ${className}`}
     >
       <div className={`stripes h-full rounded-full transition-[width] duration-500 ${FILL[tone]}`} style={{ width: `${pct}%` }} />
     </div>

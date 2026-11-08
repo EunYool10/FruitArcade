@@ -42,7 +42,7 @@ const Delta: React.FC<{ now: number; before: number; show: (v: number) => string
 };
 
 const Tile: React.FC<{ icon: string; label: string; value: string; children?: React.ReactNode }> = ({ icon, label, value, children }) => (
-  <div className="min-w-0 rounded-2xl border-2 border-line bg-surface px-3 py-2.5">
+  <div className="min-w-0 rounded-2xl border border-line bg-surface px-3 py-2.5">
     <p className="truncate text-[11px] font-bold text-ink-3">
       <span aria-hidden="true">{icon}</span> {label}
     </p>
@@ -108,7 +108,7 @@ const Trend: React.FC<{ days: DayStat[]; metric: Metric }> = ({ days, metric }) 
         {active !== null && (
           <div
             role="status"
-            className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 whitespace-nowrap rounded-xl border-2 border-line bg-surface px-2.5 py-1 shadow-hard-sm"
+            className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 whitespace-nowrap rounded-xl border border-line bg-surface px-2.5 py-1 shadow-hard-sm"
             style={{ left: `${((active + 0.5) / days.length) * 100}%` }}
           >
             <span className="font-display text-sm">{show(values[active])}</span>
@@ -229,7 +229,7 @@ export const AdminStats: React.FC<Props> = ({ stats, people, refreshing, onOpen 
               <button
                 type="button"
                 onClick={() => onOpen(t.id)}
-                className={`flex w-full items-center gap-2 rounded-xl border-2 border-line px-3 py-2 text-left text-sm font-bold transition-colors ${
+                className={`flex w-full items-center gap-2 rounded-xl border border-line px-3 py-2 text-left text-sm font-bold transition-colors ${
                   t.urgent ? 'bg-berry-soft hover:brightness-95' : 'bg-surface hover:bg-surface-3'
                 }`}
               >

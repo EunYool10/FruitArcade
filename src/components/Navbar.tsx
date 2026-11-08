@@ -116,7 +116,7 @@ export const Navbar: React.FC<Props> = ({
               >
                 <Users className={ICON} strokeWidth={2.5} />
                 {friendBadge > 0 && (
-                  <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full border-2 border-line bg-berry px-1 text-[10px] font-bold text-white">
+                  <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full border border-line bg-berry px-1 text-[10px] font-bold text-white">
                     {friendBadge > 9 ? '9+' : friendBadge}
                   </span>
                 )}

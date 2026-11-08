@@ -398,7 +398,7 @@ export const PuzzleGame: React.FC<Props> = ({
         }
         board={
           <div className="board-fit w-full" style={{ maxWidth: 'calc(100dvh - var(--board-offset))' }}>
-            <div className="relative aspect-square w-full touch-none rounded-[26px] border-2 border-line bg-surface-2 p-1.5 shadow-pop sm:p-2.5">
+            <div className="relative aspect-square w-full touch-none rounded-[26px] border border-line bg-surface-2 p-1.5 shadow-pop sm:p-2.5">
               <div className="relative h-full w-full overflow-hidden rounded-[18px]" role="grid" aria-label="과일 퍼즐 판" onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
                 {grid.map((t, i) => {
                   if (!t) return null;
@@ -420,7 +420,7 @@ export const PuzzleGame: React.FC<Props> = ({
                         onPointerDown={(e) => onPointerDown(i, e)}
                         onClick={(e) => e.detail === 0 && tap(i)}
                         onKeyDown={(e) => onKey(i, e)}
-                        className={`relative grid h-full w-full place-items-center rounded-xl border-2 border-line leading-none transition-[transform,opacity] duration-200 ${
+                        className={`relative grid h-full w-full place-items-center rounded-xl border border-line leading-none transition-[transform,opacity] duration-200 ${
                           t.drop ? 'animate-tile-drop' : t.special ? 'animate-pop-in' : ''
                         } ${isPop ? 'scale-0 opacity-0' : ''} ${isSel ? 'z-10 scale-110 shadow-hard ring-4 ring-soda' : ''} ${
                           isHint && !isSel ? 'animate-wiggle' : ''
@@ -436,7 +436,7 @@ export const PuzzleGame: React.FC<Props> = ({
                           <Emoji e={skinPiece(settings.suikaSkin, FRUIT, FRUIT[t.kind])} />
                         </span>
                         {t.special && (
-                          <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full border-2 border-line bg-mango text-[10px] font-black text-on-bright sm:h-6 sm:w-6 sm:text-xs">
+                          <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full border border-line bg-mango text-[10px] font-black text-on-bright sm:h-6 sm:w-6 sm:text-xs">
                             {SPECIAL_BADGE[t.special]}
                           </span>
                         )}
@@ -486,7 +486,7 @@ export const PuzzleGame: React.FC<Props> = ({
                             <button
                               type="button"
                               onClick={() => setMapOpen(true)}
-                              className="mt-2.5 flex w-full items-center gap-2.5 rounded-2xl border-2 border-line bg-grape-soft p-2.5 text-left transition-colors hover:bg-surface-3"
+                              className="mt-2.5 flex w-full items-center gap-2.5 rounded-2xl border border-line bg-grape-soft p-2.5 text-left transition-colors hover:bg-surface-3"
                             >
                               <span className="sticker h-10 w-10 shrink-0 bg-grape text-lg text-white shadow-none" aria-hidden="true">
                                 🗺️
@@ -510,7 +510,7 @@ export const PuzzleGame: React.FC<Props> = ({
         panel={
           <div className="panel space-y-3 p-4">
             {stage && gameState === 'PLAYING' && (
-              <div className="rounded-2xl border-2 border-line bg-grape-soft p-3">
+              <div className="rounded-2xl border border-line bg-grape-soft p-3">
                 <p className="text-[11px] font-bold text-ink-3">스테이지 {stage.no} 목표</p>
                 <p className="font-display text-lg leading-tight">{goalText(stage.goal)}</p>
                 <p className="mt-0.5 text-xs text-ink-2">이동 {stage.moves}번 안에 · 남은 이동이 많을수록 별이 많아요</p>
@@ -519,13 +519,13 @@ export const PuzzleGame: React.FC<Props> = ({
             <h3 className="font-display text-lg">특수 과일</h3>
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2.5">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border-2 border-line bg-mango font-black text-on-bright">↔</span>
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line bg-mango font-black text-on-bright">↔</span>
                 <span>
                   4개 맞추기 → <b>줄 폭탄</b> (한 줄 지우기)
                 </span>
               </li>
               <li className="flex items-center gap-2.5">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border-2 border-line bg-mango">💥</span>
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line bg-mango">💥</span>
                 <span>
                   5개 · ㄱ자 맞추기 → <b>큰 폭탄</b> (주변 9칸)
                 </span>

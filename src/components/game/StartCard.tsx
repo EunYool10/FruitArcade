@@ -18,7 +18,9 @@ export const StartCard: React.FC<StartCardProps> = ({ meta, best, onStart, child
   const { active } = useChallenge();
   const challenge = active?.g === meta.id ? active : null;
   return (
-  <div className="panel w-full max-w-[300px] p-5 text-center animate-pop-in board-short:p-4">
+  <div className="panel w-full max-w-[300px] overflow-hidden px-5 pb-5 text-center animate-pop-in board-short:px-4 board-short:pb-4">
+    {/* The game's own stall: an awning in its colour */}
+    <div className="awning -mx-5 mb-6 h-7 [--stripe:1.6rem] board-short:-mx-4 board-short:mb-4 board-tiny:mb-3" style={{ '--awning-a': `var(--${meta.tone})` } as React.CSSProperties} aria-hidden="true" />
     <span
       className={`sticker h-20 w-20 -rotate-6 text-5xl board-short:h-14 board-short:w-14 board-short:text-3xl board-tiny:hidden ${TONE[meta.tone].bg}`}
       aria-hidden="true"
@@ -30,7 +32,7 @@ export const StartCard: React.FC<StartCardProps> = ({ meta, best, onStart, child
     <ol className="mt-3 space-y-1.5 text-left text-sm text-ink-2 board-short:hidden">
       {meta.how.map((line, i) => (
         <li key={line} className="flex gap-2">
-          <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 border-line bg-surface-2 font-display text-[11px] text-ink">
+          <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-surface-3 font-display text-[11px] text-ink">
             {i + 1}
           </span>
           {line}
@@ -38,7 +40,7 @@ export const StartCard: React.FC<StartCardProps> = ({ meta, best, onStart, child
       ))}
     </ol>
     {challenge && (
-      <p className="mt-3 rounded-xl border-2 border-line bg-berry-soft px-3 py-2 text-sm font-bold">
+      <p className="mt-3 rounded-lg border border-dashed border-berry-ink/40 bg-berry-soft px-3 py-2 text-sm font-bold">
         🥊 {challenge.n}님의 <span className="font-display">{formatNumber(challenge.sc)}점</span>을 넘어 보세요!
       </p>
     )}

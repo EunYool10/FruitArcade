@@ -39,7 +39,7 @@ export const ConfirmButton: React.FC<ConfirmButtonProps> = ({
   }
 
   return (
-    <div role="alertdialog" aria-label={question} className={`space-y-2 rounded-2xl border-2 border-line bg-berry-soft p-3 ${panelClassName}`}>
+    <div role="alertdialog" aria-label={question} className={`space-y-2 rounded-2xl border border-line bg-berry-soft p-3 ${panelClassName}`}>
       <p className="text-sm font-bold text-berry-ink">{question}</p>
       <div className="flex gap-2">
         <button

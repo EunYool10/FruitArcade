@@ -107,7 +107,7 @@ export const AchievementsModal: React.FC<Props> = ({ isOpen, onClose }) => {
               role="tab"
               aria-selected={on}
               onClick={() => setCategory(c.id)}
-              className={`flex flex-col items-center rounded-2xl border-2 border-line px-1 py-1.5 transition-all ${
+              className={`flex flex-col items-center rounded-2xl border border-line px-1 py-1.5 transition-all ${
                 on ? '-translate-y-0.5 bg-mango text-on-bright shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
               }`}
             >
@@ -149,7 +149,7 @@ export const AchievementsModal: React.FC<Props> = ({ isOpen, onClose }) => {
           // A hidden one stays a question mark until it's found
           const secret = a.hidden && !date;
           return (
-            <li key={a.id} className={`relative flex items-start gap-3 rounded-2xl border-2 border-line p-3 ${date ? `${tone.soft} shadow-hard-sm` : 'bg-surface-2'}`}>
+            <li key={a.id} className={`relative flex items-start gap-3 rounded-2xl border border-line p-3 ${date ? `${tone.soft} shadow-hard-sm` : 'bg-surface-2'}`}>
               <span
                 className={`sticker h-12 w-12 shrink-0 text-2xl ${date ? `-rotate-6 ${tone.bg}` : 'bg-surface-3 shadow-none'}`}
                 aria-hidden="true"

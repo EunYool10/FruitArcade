@@ -68,7 +68,7 @@ export const GiftForm: React.FC<{
           ? '코인이 모자라요.'
           : '';
   return (
-    <div className="mt-2.5 space-y-2.5 rounded-2xl border-2 border-line bg-surface p-3">
+    <div className="mt-2.5 space-y-2.5 rounded-2xl border border-line bg-surface p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-bold">🪙 {name}님에게 보내기</p>
         {isAdmin ? (
@@ -86,7 +86,7 @@ export const GiftForm: React.FC<{
             type="button"
             aria-pressed={amount === String(a)}
             onClick={() => onAmount(String(a))}
-            className={`h-10 rounded-xl border-2 border-line text-sm font-bold tabular-nums transition-all ${
+            className={`h-10 rounded-xl border border-line text-sm font-bold tabular-nums transition-all ${
               amount === String(a) ? '-translate-y-0.5 bg-mango text-on-bright shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
             }`}
           >
@@ -101,7 +101,7 @@ export const GiftForm: React.FC<{
           onChange={(e) => onAmount(e.target.value.replace(/[^0-9]/g, '').replace(/^0+/, '').slice(0, String(COIN_MAX).length))}
           inputMode="numeric"
           placeholder="직접 입력"
-          className="h-11 w-full select-text rounded-xl border-2 border-line bg-surface-2 pl-3 pr-12 text-right font-display text-lg tabular-nums outline-none focus:border-mango"
+          className="h-11 w-full select-text rounded-xl border border-line bg-surface-2 pl-3 pr-12 text-right font-display text-lg tabular-nums outline-none focus:border-mango"
         />
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-ink-3">코인</span>
       </label>
@@ -165,11 +165,11 @@ export const GiftTable: React.FC<{ received: GiftDoc[]; sent: GiftDoc[]; nameOf:
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-2xl border-2 border-line bg-melon-soft px-3 py-2">
+        <div className="rounded-2xl border border-line bg-melon-soft px-3 py-2">
           <p className="text-[11px] font-bold text-ink-3">📥 받은 코인 · {got.length}번</p>
           <p className="font-display text-lg tabular-nums">🪙 {formatCompact(sum(got))}</p>
         </div>
-        <div className="rounded-2xl border-2 border-line bg-mango-soft px-3 py-2">
+        <div className="rounded-2xl border border-line bg-mango-soft px-3 py-2">
           <p className="text-[11px] font-bold text-ink-3">📤 보낸 코인 · {sent.length}번</p>
           <p className="font-display text-lg tabular-nums">🪙 {formatCompact(sum(sent))}</p>
         </div>
@@ -177,7 +177,7 @@ export const GiftTable: React.FC<{ received: GiftDoc[]; sent: GiftDoc[]; nameOf:
       {rows.length === 0 ? (
         <p className="rounded-2xl bg-surface-2 p-3 text-center text-sm text-ink-3">아직 없어요.</p>
       ) : (
-        <div className="overflow-hidden rounded-2xl border-2 border-line">
+        <div className="overflow-hidden rounded-2xl border border-line">
           <table className="w-full table-fixed text-sm">
             <thead className="bg-surface-3 text-left text-[11px] text-ink-3">
               <tr>
@@ -227,7 +227,7 @@ const PlayerBadge: React.FC<{ p: PublicPlayer | null; fallback?: string; seen?: 
     <span className="flex min-w-0 flex-1 items-center gap-2.5">
       <span className="relative shrink-0">
         <Framed frame={p?.frame}>
-          <AvatarFace emoji={p?.avatar ?? '❔'} photo={p?.photo} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft text-xl" />
+          <AvatarFace emoji={p?.avatar ?? '❔'} photo={p?.photo} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line bg-mango-soft text-xl" />
         </Framed>
         {isOnline(seen) && <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-surface bg-melon" aria-hidden="true" />}
       </span>
@@ -465,7 +465,7 @@ export const FriendsModal: React.FC<Props> = ({
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`relative rounded-2xl border-2 border-line px-2 py-2 text-sm font-bold transition-all ${
+            className={`relative rounded-2xl border border-line px-2 py-2 text-sm font-bold transition-all ${
               tab === id ? '-translate-y-0.5 bg-soda text-on-bright shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
             }`}
           >
@@ -477,7 +477,7 @@ export const FriendsModal: React.FC<Props> = ({
         ))}
       </div>
 
-      {error && <p className="mb-3 rounded-xl border-2 border-line bg-berry-soft p-3 text-sm font-bold">{error}</p>}
+      {error && <p className="mb-3 rounded-xl border border-line bg-berry-soft p-3 text-sm font-bold">{error}</p>}
       {!links && !error && (
         <p className="flex items-center justify-center gap-2 py-8 text-sm text-ink-3">
           <Loader2 className="h-4 w-4 animate-spin" /> 불러오는 중…
@@ -488,7 +488,7 @@ export const FriendsModal: React.FC<Props> = ({
         <div className="space-y-3">
           {/* Add a friend by code: open while there are no friends, folded away after that */}
           {adding || friends.length === 0 ? (
-            <section className="space-y-2 rounded-2xl border-2 border-line bg-soda-soft p-3">
+            <section className="space-y-2 rounded-2xl border border-line bg-soda-soft p-3">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-bold">➕ 친구 추가</p>
                 {friends.length > 0 && (
@@ -513,7 +513,7 @@ export const FriendsModal: React.FC<Props> = ({
                   placeholder="친구 코드 8자리 (예: ABCD-2345)"
                   aria-label="친구 코드"
                   maxLength={12}
-                  className="min-w-0 flex-1 rounded-2xl border-2 border-line bg-surface px-3 py-2 font-display uppercase tracking-wider outline-none focus:border-soda"
+                  className="min-w-0 flex-1 rounded-2xl border border-line bg-surface px-3 py-2 font-display uppercase tracking-wider outline-none focus:border-soda"
                 />
                 <button type="submit" className="btn btn-sm btn-soda shrink-0" disabled={busy === 'find' || !codeInput.trim()}>
                   {busy === 'find' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" strokeWidth={2.5} />} 찾기
@@ -521,7 +521,7 @@ export const FriendsModal: React.FC<Props> = ({
               </form>
               {found === 'none' && <p className="text-xs font-bold text-berry-ink">그 코드의 플레이어가 없어요. 8자리를 다시 확인해 주세요.</p>}
               {found && found !== 'none' && (
-                <div className="flex items-center gap-2 rounded-2xl border-2 border-line bg-soda-soft p-2.5">
+                <div className="flex items-center gap-2 rounded-2xl border border-line bg-soda-soft p-2.5">
                   <PlayerBadge p={found} />
                   {found.uid === uid ? (
                     <span className="chip h-8 shrink-0 bg-surface text-xs">나예요</span>
@@ -557,7 +557,7 @@ export const FriendsModal: React.FC<Props> = ({
                     value={friendQuery}
                     onChange={(e) => setFriendQuery(e.target.value)}
                     placeholder="친구 이름으로 찾기"
-                    className="h-10 w-full select-text rounded-xl border-2 border-line bg-surface pl-9 pr-3 text-sm outline-none focus:border-soda"
+                    className="h-10 w-full select-text rounded-xl border border-line bg-surface pl-9 pr-3 text-sm outline-none focus:border-soda"
                   />
                 </label>
               )}
@@ -573,7 +573,7 @@ export const FriendsModal: React.FC<Props> = ({
                     const online = isOnline(l.lastSeen);
                     const bests = GAME_ORDER.filter((g) => (l.other?.best[g] ?? 0) > 0).slice(0, 3);
                     return (
-                      <li key={l.pair} className={`rounded-2xl border-2 border-line p-2.5 ${online ? 'bg-melon-soft' : 'bg-surface-2'}`}>
+                      <li key={l.pair} className={`rounded-2xl border border-line p-2.5 ${online ? 'bg-melon-soft' : 'bg-surface-2'}`}>
                         <div className="flex items-center gap-2">
                           <button type="button" className="flex min-w-0 flex-1 text-left" onClick={() => onViewPlayer(l.otherUid)} aria-label={`${l.other?.name ?? '친구'} 프로필`}>
                             <PlayerBadge p={l.other} seen={l.lastSeen ?? null} />
@@ -659,7 +659,7 @@ export const FriendsModal: React.FC<Props> = ({
             ) : (
               <ul className="space-y-2">
                 {incoming.map((l) => (
-                  <li key={l.pair} className="flex items-center gap-2 rounded-2xl border-2 border-line bg-surface-2 p-2.5">
+                  <li key={l.pair} className="flex items-center gap-2 rounded-2xl border border-line bg-surface-2 p-2.5">
                     <PlayerBadge p={l.other} />
                     <button
                       type="button"
@@ -700,7 +700,7 @@ export const FriendsModal: React.FC<Props> = ({
             ) : (
               <ul className="space-y-2">
                 {outgoing.map((l) => (
-                  <li key={l.pair} className="flex items-center gap-2 rounded-2xl border-2 border-line bg-surface-2 p-2.5">
+                  <li key={l.pair} className="flex items-center gap-2 rounded-2xl border border-line bg-surface-2 p-2.5">
                     <PlayerBadge p={l.other} />
                     <span className="chip h-8 shrink-0 bg-surface text-xs">기다리는 중</span>
                     <button
@@ -740,7 +740,7 @@ export const FriendsModal: React.FC<Props> = ({
             ) : (
               <ul className="space-y-2">
                 {inbox.map((g) => (
-                  <li key={g.id} className="flex items-center gap-2 rounded-2xl border-2 border-line bg-mango-soft p-2.5">
+                  <li key={g.id} className="flex items-center gap-2 rounded-2xl border border-line bg-mango-soft p-2.5">
                     <span className="text-2xl" aria-hidden="true">
                       🎁
                     </span>

@@ -54,7 +54,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-50 items-end justify-center bg-[rgb(18_12_28/0.55)] animate-fade-in sm:items-center sm:p-6 ${onTop ? 'flex' : 'hidden'}`}
+      className={`fixed inset-0 z-50 items-end justify-center bg-[rgb(38_26_14/0.48)] animate-fade-in sm:items-center sm:p-6 ${onTop ? 'flex' : 'hidden'}`}
       onMouseDown={(e) => {
         if (onClose && e.target === e.currentTarget) onClose();
       }}
@@ -65,7 +65,7 @@ export const Modal: React.FC<ModalProps> = ({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`relative flex max-h-[88dvh] w-full flex-col rounded-t-[28px] border-2 border-line bg-surface outline-none animate-sheet-up sm:rounded-[28px] sm:shadow-pop-lg sm:animate-pop-in ${SIZES[size]}`}
+        className={`relative flex max-h-[88dvh] w-full flex-col rounded-t-[28px] border border-line bg-surface outline-none animate-sheet-up sm:rounded-[28px] sm:shadow-pop-lg sm:animate-pop-in ${SIZES[size]}`}
       >
         <div className="mx-auto mt-2.5 h-1.5 w-12 shrink-0 rounded-full bg-ink-3/40 sm:hidden" aria-hidden="true" />
         <header className="flex shrink-0 items-start gap-3 px-5 pb-3 pt-3 sm:pt-5">

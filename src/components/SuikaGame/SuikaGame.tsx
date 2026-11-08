@@ -884,7 +884,7 @@ export const SuikaGame: React.FC<Props> = ({
         const ft = floatTextsRef.current[t];
         ctx.save();
         ctx.globalAlpha = Math.max(0, ft.alpha);
-        ctx.font = '700 24px Fredoka, Jua, sans-serif';
+        ctx.font = '24px "Do Hyeon", sans-serif';
         ctx.textAlign = 'center';
         ctx.lineJoin = 'round';
         ctx.lineWidth = 5;
@@ -1042,7 +1042,7 @@ export const SuikaGame: React.FC<Props> = ({
         board={
           // The item row under the HUD sits above the board on phones, so the board leaves room for it
           <div className="board-fit board-fit-hud-row w-full" style={{ maxWidth: `calc((100dvh - var(--board-offset)) * ${CW / CH})` }}>
-            <div className="relative w-full overflow-hidden rounded-[28px] border-2 border-line bg-surface-2 shadow-pop" style={{ aspectRatio: `${CW} / ${CH}` }}>
+            <div className="relative w-full overflow-hidden rounded-[28px] border border-line bg-surface-2 shadow-pop" style={{ aspectRatio: `${CW} / ${CH}` }}>
               <canvas
                 ref={canvasRef}
                 aria-label="수박 게임 판"
@@ -1119,7 +1119,7 @@ export const SuikaGame: React.FC<Props> = ({
                   <li
                     key={f.name}
                     title={`${f.name} · ${f.score}점`}
-                    className={`grid aspect-square place-items-center rounded-xl border-2 border-line text-xl transition-all ${
+                    className={`grid aspect-square place-items-center rounded-xl border border-line text-xl transition-all ${
                       isTop ? '-translate-y-0.5 bg-mango-soft shadow-hard-sm' : reached ? 'bg-surface-2' : 'bg-surface-3 opacity-40 grayscale'
                     }`}
                   >

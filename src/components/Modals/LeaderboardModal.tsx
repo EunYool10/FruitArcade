@@ -157,7 +157,7 @@ const ReportForm: React.FC<{ entry: RankEntry; onSend: (reason: ReportReason, no
   const [reason, setReason] = useState<ReportReason>('score');
   const [note, setNote] = useState('');
   return (
-    <div className="mt-2 space-y-2 rounded-2xl border-2 border-line bg-surface p-3">
+    <div className="mt-2 space-y-2 rounded-2xl border border-line bg-surface p-3">
       <p className="text-sm font-bold">{entry.name}님을 신고하는 이유</p>
       <div role="group" aria-label="신고 이유" className="flex flex-wrap gap-1.5">
         {REASONS.map(([value, label]) => (
@@ -178,7 +178,7 @@ const ReportForm: React.FC<{ entry: RankEntry; onSend: (reason: ReportReason, no
         placeholder="자세한 내용 (선택)"
         aria-label="자세한 내용"
         onChange={(e) => setNote(e.target.value)}
-        className="h-10 w-full select-text rounded-xl border-2 border-line bg-surface-2 px-3 text-sm outline-none focus:border-berry"
+        className="h-10 w-full select-text rounded-xl border border-line bg-surface-2 px-3 text-sm outline-none focus:border-berry"
       />
       <div className="flex gap-2">
         <button type="button" className="btn btn-sm btn-primary flex-1" onClick={() => onSend(reason, note)}>
@@ -349,7 +349,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
       tone="mango"
       footer={
         !uid && (
-          <div className="flex items-center gap-3 rounded-2xl border-2 border-line bg-soda-soft p-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-line bg-soda-soft p-3">
             <p className="flex-1 text-sm font-bold">로그인하면 내 점수도 랭킹에 올라가요!</p>
             <button type="button" className="btn btn-sm btn-soda" onClick={onLogin}>
               <LogIn className="h-4 w-4" strokeWidth={2.5} /> 로그인
@@ -366,7 +366,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
             role="tab"
             aria-selected={g === game}
             onClick={() => setGame(g)}
-            className={`flex flex-col items-center rounded-2xl border-2 border-line px-1 py-1.5 transition-all ${
+            className={`flex flex-col items-center rounded-2xl border border-line px-1 py-1.5 transition-all ${
               g === game ? '-translate-y-0.5 bg-mango text-on-bright shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
             }`}
           >
@@ -411,7 +411,7 @@ export const LeaderboardModal: React.FC<Props> = ({ isOpen, onClose, game: initi
       {notice && (
         <p
           role="status"
-          className={`mb-3 rounded-2xl border-2 border-line px-3 py-2 text-sm font-bold ${notice.ok ? 'bg-melon-soft' : 'bg-berry-soft'}`}
+          className={`mb-3 rounded-2xl border border-line px-3 py-2 text-sm font-bold ${notice.ok ? 'bg-melon-soft' : 'bg-berry-soft'}`}
         >
           {notice.text}
         </p>

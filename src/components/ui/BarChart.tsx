@@ -27,7 +27,7 @@ export const BarChart: React.FC<BarChartProps> = ({ data, ariaLabel, format = (v
           <div key={d.label} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-0.5">
             <span className="text-[10px] font-bold tabular-nums leading-none text-ink-2">{d.value > 0 ? format(d.value) : ''}</span>
             <div
-              className={`w-full max-w-[44px] rounded-t-lg border-2 border-line ${d.value > 0 ? TONE[tone].bg : 'bg-surface-3'}`}
+              className={`w-full max-w-[44px] rounded-t-lg border border-line ${d.value > 0 ? TONE[tone].bg : 'bg-surface-3'}`}
               style={{ height: Math.max(d.value > 0 ? 6 : 3, Math.round((d.value / max) * height)) }}
             />
           </div>

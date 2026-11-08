@@ -191,7 +191,7 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
             role="tab"
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
-            className={`relative flex flex-col items-center rounded-2xl border-2 border-line px-0.5 py-1.5 font-bold transition-all sm:flex-row sm:justify-center sm:gap-1.5 sm:py-2 ${
+            className={`relative flex flex-col items-center rounded-2xl border border-line px-0.5 py-1.5 font-bold transition-all sm:flex-row sm:justify-center sm:gap-1.5 sm:py-2 ${
               tab === t.id ? '-translate-y-0.5 bg-grape text-white shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
             }`}
           >
@@ -200,7 +200,7 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
             </span>
             <span className="text-[11px] sm:text-sm">{t.label}</span>
             {!!t.badge && (
-              <span className="absolute -right-1.5 -top-2 grid h-5 min-w-5 place-items-center rounded-full border-2 border-line bg-berry px-1 text-[10px] text-white">
+              <span className="absolute -right-1.5 -top-2 grid h-5 min-w-5 place-items-center rounded-full border border-line bg-berry px-1 text-[10px] text-white">
                 {t.badge > 99 ? '99+' : t.badge}
               </span>
             )}
@@ -226,7 +226,7 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
         <p
           key={notice.id}
           role="status"
-          className={`mb-3 rounded-2xl border-2 border-line px-3 py-2 text-sm font-bold animate-pop-in ${notice.ok ? 'bg-melon-soft' : 'bg-berry-soft'}`}
+          className={`mb-3 rounded-2xl border border-line px-3 py-2 text-sm font-bold animate-pop-in ${notice.ok ? 'bg-melon-soft' : 'bg-berry-soft'}`}
         >
           {notice.ok ? '✅' : '⚠️'} {notice.text}
         </p>
@@ -290,7 +290,7 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
           ) : (
             <ul className="space-y-2">
               {reports.map((r) => (
-                <li key={r.id} className={`rounded-2xl border-2 border-line p-3 ${r.status === 'open' ? 'bg-surface-2' : 'bg-surface opacity-70'}`}>
+                <li key={r.id} className={`rounded-2xl border border-line p-3 ${r.status === 'open' ? 'bg-surface-2' : 'bg-surface opacity-70'}`}>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="font-bold">{r.targetName}</span>
                     <span className="chip h-6 bg-berry-soft px-2 text-[11px]">{REASON[r.reason]}</span>
@@ -368,7 +368,7 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
         ) : (
           <ul className="space-y-2">
             {feedback.map((f) => (
-              <li key={f.id} className={`rounded-2xl border-2 border-line p-3 ${f.status === 'new' ? 'bg-surface-2' : 'bg-surface opacity-70'}`}>
+              <li key={f.id} className={`rounded-2xl border border-line p-3 ${f.status === 'new' ? 'bg-surface-2' : 'bg-surface opacity-70'}`}>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="chip h-6 bg-soda-soft px-2 text-[11px]">{KIND[f.kind]}</span>
                   <span className="font-bold">{f.name}</span>
@@ -422,7 +422,7 @@ export const AdminModal: React.FC<Props> = ({ isOpen, onClose, adminUid }) => {
         ) : (
           <ul className="space-y-1.5">
             {bans.map((b) => (
-              <li key={b.uid} className="flex items-center gap-2 rounded-2xl border-2 border-line bg-surface-2 px-3 py-2 text-sm">
+              <li key={b.uid} className="flex items-center gap-2 rounded-2xl border border-line bg-surface-2 px-3 py-2 text-sm">
                 <button type="button" className="flex min-w-0 flex-1 items-center gap-1.5 text-left" onClick={() => openUser(b.uid)} aria-label={`${b.name} 유저 보기`}>
                   <UserSearch className="h-4 w-4 shrink-0 text-ink-3" strokeWidth={2.5} />
                   <span className="truncate font-bold">{b.name}</span>

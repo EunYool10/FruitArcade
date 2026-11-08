@@ -7,7 +7,7 @@ import { Emoji } from './ui/Emoji';
 export const HistoryRow: React.FC<{ entry: HistoryEntry }> = ({ entry }) => {
   const meta = GAMES[entry.game];
   return (
-    <li className="flex items-center gap-3 rounded-2xl border-2 border-line bg-surface-2 px-3 py-2.5">
+    <li className="flex items-center gap-3 rounded-2xl border border-line bg-surface-2 px-3 py-2.5">
       <span className={`sticker h-10 w-10 shrink-0 text-xl ${TONE[meta.tone].bg}`} aria-hidden="true">
         <Emoji e={meta.emoji} />
       </span>

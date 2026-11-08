@@ -45,7 +45,7 @@ export const StageMap: React.FC<{ progress: StageProgress; onPlay: (st: Stage) =
           <X className="h-4 w-4" strokeWidth={2.5} />
         </button>
       </div>
-      <div className="mb-3 h-2.5 overflow-hidden rounded-full border-2 border-line bg-surface-3">
+      <div className="mb-3 h-2.5 overflow-hidden rounded-full border border-line bg-surface-3">
         <div className="h-full rounded-full bg-mango transition-[width] duration-500" style={{ width: `${(totalStars / (STAGE_COUNT * 3)) * 100}%` }} />
       </div>
 
@@ -55,7 +55,7 @@ export const StageMap: React.FC<{ progress: StageProgress; onPlay: (st: Stage) =
           const stars = stages.reduce((n, s) => n + (progress[s.no] || 0), 0);
           const open = isUnlocked(progress, stages[0].no);
           return (
-            <section key={ch.name} className={`rounded-2xl border-2 border-line p-2.5 ${open ? ch.tone : 'bg-surface-3 opacity-70'}`}>
+            <section key={ch.name} className={`rounded-2xl border border-line p-2.5 ${open ? ch.tone : 'bg-surface-3 opacity-70'}`}>
               <p className="mb-2 flex items-center justify-between gap-2 text-sm font-bold">
                 <span>
                   <Emoji e={ch.emoji} /> {c + 1}장 · {ch.name}
@@ -76,7 +76,7 @@ export const StageMap: React.FC<{ progress: StageProgress; onPlay: (st: Stage) =
                       aria-pressed={on}
                       onClick={() => setPicked(st)}
                       aria-label={`스테이지 ${st.no}${s ? ` 별 ${s}개` : ''}${unlocked ? '' : ' 잠김'}`}
-                      className={`relative flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-line transition-all ${
+                      className={`relative flex aspect-square flex-col items-center justify-center rounded-xl border border-line transition-all ${
                         on ? '-translate-y-0.5 bg-surface shadow-hard-sm ring-2 ring-grape' : unlocked ? 'bg-surface hover:-translate-y-0.5' : 'bg-surface-3'
                       }`}
                     >
@@ -102,7 +102,7 @@ export const StageMap: React.FC<{ progress: StageProgress; onPlay: (st: Stage) =
       </div>
 
       {/* The picked stage, kept in view at the bottom */}
-      <div className="sticky bottom-0 -mx-1 mt-3 rounded-2xl border-2 border-line bg-surface p-3 shadow-hard-sm">
+      <div className="sticky bottom-0 -mx-1 mt-3 rounded-2xl border border-line bg-surface p-3 shadow-hard-sm">
         <div className="flex items-center gap-3">
           <span className="sticker h-12 w-12 shrink-0 bg-grape text-2xl shadow-none" aria-hidden="true">
             <Emoji e={goalIcon(picked.goal)} />

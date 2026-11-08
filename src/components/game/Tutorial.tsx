@@ -41,7 +41,7 @@ export const Tutorial: React.FC<{ game: GameType | null; onClose: () => void }> 
 
   return (
     <Modal isOpen onClose={close} title={`${meta.name} 하는 법`} subtitle={`${step + 1} / ${steps.length}`} icon={meta.emoji} tone={meta.tone} size="sm">
-      <div className={`grid h-36 place-items-center rounded-2xl border-2 border-line ${TONE[meta.tone].soft}`}>
+      <div className={`grid h-36 place-items-center rounded-2xl border border-line ${TONE[meta.tone].soft}`}>
         <span key={step} className="text-6xl animate-bounce-in" aria-hidden="true">
           {s.emoji}
         </span>

@@ -98,7 +98,7 @@ export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onB
               setShown(PAGE);
             }}
             placeholder="닉네임 · 친구 코드 · UID"
-            className="h-10 w-full select-text rounded-xl border-2 border-line bg-surface pl-9 pr-9 text-sm outline-none focus:border-grape"
+            className="h-10 w-full select-text rounded-xl border border-line bg-surface pl-9 pr-9 text-sm outline-none focus:border-grape"
           />
           {search && (
             <button
@@ -115,7 +115,7 @@ export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onB
           value={sort}
           onChange={(e) => setSort(e.target.value as Sort)}
           aria-label="정렬"
-          className="h-10 shrink-0 rounded-xl border-2 border-line bg-surface px-2 text-sm font-bold outline-none focus:border-grape"
+          className="h-10 shrink-0 rounded-xl border border-line bg-surface px-2 text-sm font-bold outline-none focus:border-grape"
         >
           {SORTS.map(([v, label]) => (
             <option key={v} value={v}>
@@ -154,7 +154,7 @@ export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onB
             const expanded = open === u.uid;
             const t = titleDef(u.title);
             return (
-              <li key={u.uid} className={`overflow-hidden rounded-2xl border-2 border-line ${u.bannedAt ? 'bg-berry-soft' : 'bg-surface-2'}`}>
+              <li key={u.uid} className={`overflow-hidden rounded-2xl border border-line ${u.bannedAt ? 'bg-berry-soft' : 'bg-surface-2'}`}>
                 <button
                   type="button"
                   className="flex w-full items-center gap-2.5 p-2.5 text-left"
@@ -162,7 +162,7 @@ export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onB
                   aria-expanded={expanded}
                 >
                   <Framed frame={u.frame}>
-                    <AvatarFace emoji={u.avatar} photo={u.photo} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-line bg-mango-soft text-xl" />
+                    <AvatarFace emoji={u.avatar} photo={u.photo} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line bg-mango-soft text-xl" />
                   </Framed>
                   <span className="min-w-0 flex-1">
                     <span className="flex min-w-0 items-center gap-1.5">
@@ -184,7 +184,7 @@ export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onB
                 </button>
 
                 {expanded && (
-                  <div className="space-y-2.5 border-t-2 border-line bg-surface p-3">
+                  <div className="space-y-2.5 border-t border-line bg-surface p-3">
                     {u.rawName !== u.name && (
                       <p className="rounded-xl bg-berry-soft px-2.5 py-1.5 text-xs font-bold">⚠️ 실제 닉네임: {u.rawName} (다른 사람에게는 가려져 보여요)</p>
                     )}
@@ -196,7 +196,7 @@ export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onB
                         ['업적', `${formatNumber(u.achievements)}개`],
                         ['프로필 갱신', u.cardAt ? relativeTime(u.cardAt) : '–'],
                       ].map(([label, value]) => (
-                        <div key={label} className="min-w-0 rounded-xl border-2 border-line bg-surface-2 px-2.5 py-1.5">
+                        <div key={label} className="min-w-0 rounded-xl border border-line bg-surface-2 px-2.5 py-1.5">
                           <dt className="text-[10px] font-bold text-ink-3">{label}</dt>
                           <dd className="truncate font-bold tabular-nums">{value}</dd>
                         </div>
@@ -204,7 +204,7 @@ export const AdminUsers: React.FC<Props> = ({ users, search, onSearch, busy, onB
                     </dl>
                     <div className="grid grid-cols-4 gap-1.5">
                       {RANKED_GAMES.map((g) => (
-                        <div key={g} className={`min-w-0 rounded-xl border-2 border-line px-1 py-1.5 text-center ${TONE[GAMES[g].tone].soft}`}>
+                        <div key={g} className={`min-w-0 rounded-xl border border-line px-1 py-1.5 text-center ${TONE[GAMES[g].tone].soft}`}>
                           <p className="text-base leading-none" aria-hidden="true">
                             <Emoji e={GAMES[g].emoji} />
                           </p>

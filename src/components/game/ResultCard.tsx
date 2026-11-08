@@ -9,7 +9,7 @@ import { useChallenge } from '../ChallengeContext';
 import { useRank } from '../RankContext';
 import { Emoji } from '../ui/Emoji';
 
-const TONE_HEX: Record<Tone, string> = { berry: '#ff4778', melon: '#2ec27e', mango: '#ffb627', grape: '#7a5cff', soda: '#2ea9ff', peach: '#ff8a5b' };
+const TONE_HEX: Record<Tone, string> = { berry: '#e5483d', melon: '#4aa364', mango: '#f4b63a', grape: '#8257b8', soda: '#3f8fd0', peach: '#f0895a' };
 
 /** Link to this app (works under a sub-path such as /FruitArcade/) */
 export const appUrl = () => window.location.origin + window.location.pathname;
@@ -108,8 +108,16 @@ export const ResultCard: React.FC<ResultCardProps> = ({
   };
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="panel w-full max-w-sm p-5 text-center animate-pop-in sm:p-6">
-      <div className="text-6xl animate-bounce-in" aria-hidden="true">
+    // Laid out like a shop receipt: the game at the top, the items on dotted lines, the total, and a
+    // red stamp for a new best
+    <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="panel relative w-full max-w-sm px-5 pb-5 pt-4 text-center animate-pop-in sm:px-6 sm:pb-6">
+      <p className="font-display text-xs tracking-[0.3em] text-ink-3">FRUIT ARCADE · 계산서</p>
+      {reward?.newBest && (
+        <span className="stamp absolute right-5 top-14 bg-surface/70 text-lg text-berry-deep animate-stamp" style={{ '--tilt': '12deg' } as React.CSSProperties}>
+          최고 기록!
+        </span>
+      )}
+      <div className="mt-2 text-6xl animate-bounce-in" aria-hidden="true">
         <Emoji e={emoji} />
       </div>
       <h2 id={titleId} className={`mt-1 font-display text-4xl ${TONE[tone].ink}`}>
@@ -118,31 +126,43 @@ export const ResultCard: React.FC<ResultCardProps> = ({
       {subtitle && <p className="text-sm text-ink-2">{subtitle}</p>}
 
       {reward?.challenge && (
-        <p className={`mt-3 rounded-2xl border-2 border-line px-3 py-2 text-sm font-bold ${reward.challenge.won ? 'bg-melon-soft' : 'bg-berry-soft'}`}>
+        <p className={`mt-3 rounded-xl border border-line px-3 py-2 text-sm font-bold ${reward.challenge.won ? 'bg-melon-soft' : 'bg-berry-soft'}`}>
           {reward.challenge.won
             ? `🥊 도전 성공! ${reward.challenge.name}님의 ${formatNumber(reward.challenge.target)}점을 넘었어요`
             : `😤 아깝다! ${reward.challenge.name}님까지 ${formatNumber(reward.challenge.target - score + 1)}점 남았어요`}
         </p>
       )}
 
-      <div className="well relative mt-4 px-4 py-3">
-        <p className="text-xs font-bold text-ink-3">{scoreLabel}</p>
-        <p className="mt-0.5 font-display text-5xl leading-none tabular-nums">
+      <dl className="mt-4 space-y-1 border-y border-dashed border-line py-3 text-left text-sm">
+        {stats.map((s) => (
+          <div key={s.label} className="flex items-baseline gap-2">
+            <dt className="shrink-0 text-ink-2">{s.label}</dt>
+            <span className="mb-1 min-w-4 flex-1 border-b border-dotted border-ink-3/50" aria-hidden="true" />
+            <dd className="truncate font-display text-lg tabular-nums">{s.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="relative mt-3 flex items-end justify-between gap-3 text-left">
+        <div>
+          <p className="text-xs font-bold text-ink-3">{scoreLabel}</p>
+          {reward && !reward.newBest && reward.prevBest > 0 && (
+            <p className="mt-0.5 text-xs text-ink-3">
+              최고 기록 {formatNumber(reward.prevBest)}
+              {unit}
+            </p>
+          )}
+        </div>
+        <p className="font-display text-5xl leading-none tabular-nums">
           {formatNumber(score)}
           {unit !== '점' && <span className="text-3xl">{unit}</span>}
         </p>
-        {reward?.newBest ? (
-          <span className="chip absolute -right-2 -top-3 rotate-12 bg-berry-deep text-white">NEW BEST!</span>
-        ) : (
-          reward &&
-          reward.prevBest > 0 && <p className="mt-1 text-xs text-ink-3">최고 기록 {formatNumber(reward.prevBest)}{unit}</p>
-        )}
       </div>
 
       {ranked && reward && (rank.signedIn ? myRank : score > 0) && (
         <button
           type="button"
-          className={`mt-2 inline-flex items-center gap-1.5 rounded-full border-2 border-line px-3 py-1 text-sm font-bold ${
+          className={`mt-3 inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1 text-sm font-bold ${
             myRank?.status === 'rejected' || myRank?.status === 'error' ? 'bg-berry-soft' : 'bg-mango-soft hover:bg-mango'
           }`}
           onClick={() => rank.open(game)}
@@ -167,15 +187,6 @@ export const ResultCard: React.FC<ResultCardProps> = ({
           )}
         </button>
       )}
-
-      <dl className="mt-3 grid grid-cols-2 gap-2 text-left">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-xl border-2 border-line bg-surface-2 px-3 py-1.5">
-            <dt className="text-[11px] font-bold text-ink-3">{s.label}</dt>
-            <dd className="truncate font-display text-lg tabular-nums">{s.value}</dd>
-          </div>
-        ))}
-      </dl>
 
       {reward && (
         <div className="mt-3 flex flex-wrap justify-center gap-1.5">

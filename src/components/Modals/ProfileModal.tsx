@@ -148,7 +148,7 @@ export const ProfileModal: React.FC<Props> = ({
       tone="melon"
     >
       {error && (
-        <div role="alert" className="mb-3 flex items-start gap-2.5 rounded-2xl border-2 border-line bg-berry-soft p-3 text-sm">
+        <div role="alert" className="mb-3 flex items-start gap-2.5 rounded-2xl border border-line bg-berry-soft p-3 text-sm">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-berry-ink" strokeWidth={2.5} />
           <div>
             <p className="font-bold text-berry-ink">로그인하지 못했어요</p>
@@ -174,7 +174,7 @@ export const ProfileModal: React.FC<Props> = ({
                 onChange={(e) => setNickDraft(e.target.value)}
                 onBlur={commitNickname}
                 onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                className="h-10 min-w-0 flex-1 select-text rounded-xl border-2 border-line bg-surface px-3 font-display text-lg outline-none focus:border-soda"
+                className="h-10 min-w-0 flex-1 select-text rounded-xl border border-line bg-surface px-3 font-display text-lg outline-none focus:border-soda"
               />
               {player.verified && <VerifiedBadge className="h-6 w-6" />}
             </div>
@@ -221,7 +221,7 @@ export const ProfileModal: React.FC<Props> = ({
             role="tab"
             aria-selected={shown === id}
             onClick={() => setTab(id)}
-            className={`rounded-2xl border-2 border-line px-2 py-2 text-sm font-bold transition-all ${
+            className={`rounded-2xl border border-line px-2 py-2 text-sm font-bold transition-all ${
               shown === id ? '-translate-y-0.5 bg-melon text-on-bright shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
             }`}
           >
@@ -253,7 +253,7 @@ export const ProfileModal: React.FC<Props> = ({
               ['🏆 업적', `${achievementCount}/${ACHIEVEMENT_COUNT}`],
               ['🏅 미션 도장', `${stats.missionStamps}개`],
             ].map(([k, v]) => (
-              <div key={k} className="rounded-xl border-2 border-line bg-surface-2 px-3 py-2">
+              <div key={k} className="rounded-xl border border-line bg-surface-2 px-3 py-2">
                 <dt className="text-[11px] font-bold text-ink-3">{k}</dt>
                 <dd className="font-display text-lg">{v}</dd>
               </div>
@@ -263,7 +263,7 @@ export const ProfileModal: React.FC<Props> = ({
             <p className="mb-1.5 text-[11px] font-bold text-ink-3">게임별 최고 기록</p>
             <div className="grid grid-cols-3 gap-1.5">
               {GAME_ORDER.map((g) => (
-                <div key={g} className={`min-w-0 rounded-xl border-2 border-line px-1 py-2 text-center ${TONE[GAMES[g].tone].soft}`}>
+                <div key={g} className={`min-w-0 rounded-xl border border-line px-1 py-2 text-center ${TONE[GAMES[g].tone].soft}`}>
                   <p className="text-lg" aria-hidden="true">
                     <Emoji e={GAMES[g].emoji} />
                   </p>

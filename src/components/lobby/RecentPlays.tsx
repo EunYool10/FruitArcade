@@ -49,7 +49,7 @@ export const RecentPlays: React.FC<{ history: HistoryEntry[]; onOpenRecords: () 
               ['플레이 시간', formatTime(todaySeconds)],
               ['신기록', `${todayBests}번`],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-xl border-2 border-line bg-surface-2 px-2 py-1.5">
+              <div key={label} className="rounded-xl border border-line bg-surface-2 px-2 py-1.5">
                 <dt className="text-[10px] font-bold text-ink-3">{label}</dt>
                 <dd className="font-display text-base tabular-nums">{value}</dd>
               </div>
@@ -59,7 +59,7 @@ export const RecentPlays: React.FC<{ history: HistoryEntry[]; onOpenRecords: () 
             {history.slice(0, SHOWN).map((h, i) => {
               const meta = GAMES[h.game];
               return (
-                <li key={`${h.at}-${i}`} className="flex items-center gap-3 rounded-2xl border-2 border-line bg-surface-2 py-2 pl-2 pr-2.5">
+                <li key={`${h.at}-${i}`} className="flex items-center gap-3 rounded-2xl border border-line bg-surface-2 py-2 pl-2 pr-2.5">
                   <span className={`sticker h-10 w-10 shrink-0 text-xl shadow-none ${TONE[meta.tone].bg}`} aria-hidden="true">
                     <Emoji e={meta.emoji} />
                   </span>

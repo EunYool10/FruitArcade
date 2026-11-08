@@ -74,7 +74,7 @@ export const MissionsCard: React.FC<Props> = ({ daily, streak, stamps, onPlay })
           // floor: 2,999/3,000 isn't done, so it shouldn't read 100%
           const pct = Math.min(100, Math.floor((value / m.target) * 100));
           return (
-            <li key={m.id} className={`relative overflow-hidden rounded-2xl border-2 border-line ${done ? 'bg-melon-soft' : 'bg-surface-2'}`}>
+            <li key={m.id} className={`relative overflow-hidden rounded-2xl border border-line ${done ? 'bg-melon-soft' : 'bg-surface-2'}`}>
               <div className="flex items-center gap-3 p-3">
                 <span className={`sticker h-11 w-11 shrink-0 text-xl shadow-none ${done ? 'bg-melon' : tone.bg}`} aria-hidden="true">
                   {done ? <Check className="h-6 w-6 text-white" strokeWidth={3.5} /> : <Emoji e={m.icon} />}
@@ -120,7 +120,7 @@ export const MissionsCard: React.FC<Props> = ({ daily, streak, stamps, onPlay })
               return (
                 <span
                   key={m.id}
-                  className={`grid h-9 w-9 place-items-center rounded-full border-2 border-line text-base transition-transform ${
+                  className={`grid h-9 w-9 place-items-center rounded-full border border-line text-base transition-transform ${
                     done ? 'bg-mango' : 'bg-surface-2 opacity-60'
                   }`}
                   style={done ? { transform: `rotate(${(i - 1) * 10}deg)` } : undefined}

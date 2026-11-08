@@ -965,7 +965,7 @@ export const FruitSliceGame: React.FC<Props> = ({
       for (const m of missesRef.current) {
         ctx.save();
         ctx.globalAlpha = Math.max(0, 1 - m.life / 70);
-        ctx.font = '700 34px Fredoka, Jua, sans-serif';
+        ctx.font = '34px "Do Hyeon", sans-serif';
         ctx.lineJoin = 'round';
         ctx.lineWidth = 6;
         ctx.strokeStyle = P.outline;
@@ -979,7 +979,7 @@ export const FruitSliceGame: React.FC<Props> = ({
       for (const t of floatsRef.current) {
         ctx.save();
         ctx.globalAlpha = Math.max(0, 1 - t.life / 50);
-        ctx.font = `700 ${t.big ? 28 : 22}px Fredoka, Jua, sans-serif`;
+        ctx.font = `${t.big ? 28 : 22}px "Do Hyeon", sans-serif`;
         ctx.lineJoin = 'round';
         ctx.lineWidth = 5;
         ctx.strokeStyle = P.outline;
@@ -1104,7 +1104,7 @@ export const FruitSliceGame: React.FC<Props> = ({
         }
         board={
           <div className="board-fit w-full" style={{ maxWidth: 'calc((100dvh - var(--board-offset)) * 0.7333)' }}>
-            <div className="relative aspect-[440/600] w-full overflow-hidden rounded-[28px] border-2 border-line bg-surface-2 shadow-pop">
+            <div className="relative aspect-[440/600] w-full overflow-hidden rounded-[28px] border border-line bg-surface-2 shadow-pop">
               <canvas
                 ref={canvasRef}
                 aria-label="과일 자르기 판"

@@ -196,7 +196,7 @@ export const SettingsModal: React.FC<Props> = ({
               role="tab"
               aria-selected={shown === id}
               onClick={() => setTab(id)}
-              className={`flex flex-col items-center gap-0.5 rounded-2xl border-2 border-line px-1 py-2 text-[11px] font-bold leading-tight transition-all ${
+              className={`flex flex-col items-center gap-0.5 rounded-2xl border border-line px-1 py-2 text-[11px] font-bold leading-tight transition-all ${
                 shown === id ? '-translate-y-0.5 bg-grape text-white shadow-hard-sm' : 'bg-surface-2 hover:bg-surface-3'
               }`}
             >
@@ -301,7 +301,7 @@ export const SettingsModal: React.FC<Props> = ({
           <Section icon="⌨️" title="조작키">
             <dl className="grid gap-1.5 sm:grid-cols-2">
               {SHORTCUTS.map(([what, key]) => (
-                <div key={what} className="flex items-center justify-between gap-2 rounded-xl border-2 border-line bg-surface px-3 py-2 text-xs">
+                <div key={what} className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs">
                   <dt className="font-semibold text-ink-2">{what}</dt>
                   <dd className="font-display whitespace-nowrap">{key}</dd>
                 </div>

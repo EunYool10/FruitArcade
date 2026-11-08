@@ -326,7 +326,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = resolvedTheme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolvedTheme === 'dark' ? '#151020' : '#fff5e6');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolvedTheme === 'dark' ? '#17130f' : '#f3eadb');
   }, [resolvedTheme]);
 
   useEffect(() => {

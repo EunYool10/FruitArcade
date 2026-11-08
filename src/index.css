@@ -99,7 +99,7 @@
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", sans-serif;
   /* Shop-sign lettering for titles and numbers, handwriting for price-tag notes */
   --font-display: "Do Hyeon", "Pretendard Variable", Pretendard, system-ui, sans-serif;
-  --font-hand: "Gaegu", "Pretendard Variable", Pretendard, system-ui, sans-serif;
+  --font-hand: "Jua", "Pretendard Variable", Pretendard, system-ui, sans-serif;
 
   --animate-float: float 3.4s ease-in-out infinite;
   --animate-pop-in: pop-in 0.26s cubic-bezier(0.2, 1.3, 0.4, 1) both;
@@ -433,10 +433,55 @@
     opacity: 0.88;
   }
 
-  /* Handwritten note */
+  /* Price-tag notes ("오늘도 신선하게 한 판!") */
   .hand {
     font-family: var(--font-hand);
-    font-weight: 700;
+    font-weight: 400;
+  }
+
+  /* The top bar keeps its look from before the renewal (the user asked for it unchanged):
+     thick outlines with a hard shadow under each button, Fredoka/Jua lettering */
+  .nav-classic {
+    --classic-line: #2b2140;
+    --classic-fill: #ffffff;
+  }
+  :root[data-theme="dark"] .nav-classic {
+    --classic-line: #07050c;
+    --classic-fill: #251d36;
+  }
+  .nav-classic .btn {
+    --btn-bg: var(--classic-fill);
+    --btn-fg: var(--ink);
+    border: 2px solid var(--classic-line);
+    border-radius: 1rem;
+    font-family: "Fredoka", "Jua", var(--font-sans);
+    font-weight: 600;
+    box-shadow: 0 4px 0 0 var(--classic-line);
+  }
+  .nav-classic .btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 0 0 var(--classic-line);
+  }
+  .nav-classic .btn:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 0 var(--classic-line);
+  }
+  .nav-classic .btn-mango {
+    --btn-bg: #ffb627;
+    --btn-fg: #22183a;
+  }
+  .nav-classic .btn-grape {
+    --btn-bg: #5f3ff0;
+    --btn-fg: #fff;
+  }
+  .nav-classic .sticker {
+    border: 2px solid var(--classic-line);
+    border-radius: 1rem;
+    box-shadow: 3px 3px 0 0 var(--classic-line);
+  }
+  .nav-classic .nav-title {
+    font-family: "Fredoka", "Jua", var(--font-sans);
+    font-weight: 600;
   }
 
   /* The striped shop awning with a scalloped edge (a row of half-circles under the stripes) */

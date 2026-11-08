@@ -52,14 +52,14 @@ export const Navbar: React.FC<Props> = ({
   const inLobby = screen === 'lobby';
 
   return (
-    <header className="w-full shrink-0">
+    <header className="nav-classic w-full shrink-0">
       <div className="mx-auto flex h-16 max-w-[1080px] items-center gap-2 px-4 short:h-14 sm:px-6">
         {inLobby ? (
           <div className="flex min-w-0 items-center gap-2">
-            <span className="sticker h-10 w-10 shrink-0 -rotate-6 bg-berry text-xl" aria-hidden="true">
+            <span className="sticker h-10 w-10 shrink-0 -rotate-6 bg-[#ff4778] text-xl" aria-hidden="true">
               🍓
             </span>
-            <span className="truncate font-display text-lg tracking-tight max-[380px]:hidden sm:text-xl">FRUIT ARCADE</span>
+            <span className="nav-title truncate text-lg tracking-tight max-[380px]:hidden sm:text-xl">FRUIT ARCADE</span>
           </div>
         ) : (
           <div className="flex min-w-0 items-center gap-2.5">
@@ -82,7 +82,7 @@ export const Navbar: React.FC<Props> = ({
                     🥊 {challenge.n} {formatNumber(challenge.sc)}점
                   </span>
                 ) : (
-                  <span className="truncate font-display text-lg">{GAMES[game].name}</span>
+                  <span className="nav-title truncate text-lg">{GAMES[game].name}</span>
                 )}
               </span>
             )}
@@ -116,7 +116,7 @@ export const Navbar: React.FC<Props> = ({
               >
                 <Users className={ICON} strokeWidth={2.5} />
                 {friendBadge > 0 && (
-                  <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full border border-line bg-berry px-1 text-[10px] font-bold text-white">
+                  <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full border-2 border-[var(--classic-line)] bg-[#ff4778] px-1 text-[10px] font-bold text-white">
                     {friendBadge > 9 ? '9+' : friendBadge}
                   </span>
                 )}

@@ -10,7 +10,7 @@ import { formatNumber, formatTime } from '../../utils/format';
 import { BoardOverlay, GameFrame, Hud, HudStat, ScreenOverlay } from '../game/GameFrame';
 import { StartCard } from '../game/StartCard';
 import { ResultCard } from '../game/ResultCard';
-import { Body, Merge, TICK_MS, World, addBody, bodyAt, createWorld, drawPos, removeBody, stepWorld } from './physics';
+import { Body, Merge, TICK_MS, World, addBody, bodyAt, createWorld, drawPos, pileStill, removeBody, restingOver, stepWorld } from './physics';
 import { drawEmoji, preloadEmoji } from '../../utils/emoji';
 import { Emoji } from '../ui/Emoji';
 import { Meter } from '../ui/Meter';
@@ -49,8 +49,17 @@ const DANGER_SECONDS = 5;
 /** Below this speed (px per frame) a fruit over the line counts as overflowing */
 const SETTLED_SPEED = 1;
 const COOLDOWN_MS = 550;
-/** After a shake, fruit flying over the line don't count for this long */
+/**
+ * After a shake the overflow check looks away for at least this long (fruit fly over the line),
+ * then until the pile has stopped shifting, but never longer than GRACE_MAX_SECONDS
+ */
 const GRACE_SECONDS = 1.5;
+const GRACE_MAX_SECONDS = 8;
+/** The pile counts as still once no fruit in it moves this fast (px per frame) for STILL_SECONDS */
+const STILL_SPEED = 0.25;
+const STILL_SECONDS = 0.25;
+/** A fruit over the line sinking faster than this (px per frame) is on its way back down */
+const SINKING_SPEED = 0.15;
 /** How long the hammer's swing shows (60 fps frames) */
 const SMASH_FRAMES = 22;
 /** Once the round is over the fruit keep falling this long, so none is left hanging in the air */
@@ -277,8 +286,10 @@ export const SuikaGame: React.FC<Props> = ({
   /** Picks which item a merge streak earns; seeded apart from the fruit so a challenge stays fair */
   const itemRngRef = useRef<Rng>(Math.random);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** Seconds the overflow check looks away after a shake throws fruit up */
-  const graceRef = useRef(0);
+  /** Seconds since the last shake while the overflow check still looks away (null: it's looking) */
+  const graceRef = useRef<number | null>(null);
+  /** How long the pile has been still during that grace */
+  const stillRef = useRef(0);
   /** Hammer swings still showing (life in 60 fps frames) */
   const smashesRef = useRef<{ x: number; y: number; life: number }[]>([]);
   /** Seconds the fruit keep falling after the round ended */
@@ -402,7 +413,8 @@ export const SuikaGame: React.FC<Props> = ({
     setWatermelons(0);
     setItemGauge(0);
     setItemToast(null);
-    graceRef.current = 0;
+    graceRef.current = null;
+    stillRef.current = 0;
 
     const cLv = randLevel();
     const nLv = randLevel();
@@ -511,7 +523,15 @@ export const SuikaGame: React.FC<Props> = ({
       b.vy = Math.min(b.vy, 0) - lift - Math.random() * 1.2;
     }
     shakeRef.current = Math.max(shakeRef.current, 9);
-    graceRef.current = GRACE_SECONDS;
+    // The pile takes a few seconds to sort itself out again; the countdown waits for that, and
+    // since a shake is how players get out of trouble, it then starts over from the full time
+    graceRef.current = 0;
+    stillRef.current = 0;
+    dangerTimerRef.current = DANGER_SECONDS;
+    shownDangerRef.current = DANGER_SECONDS;
+    setDangerTime(DANGER_SECONDS);
+    dangerRef.current = false;
+    setIsDanger(false);
     setItemCount('shake', itemsRef.current.shake - 1);
     playSound('levelup', settings);
     vibrate(HAPTIC.crash, settings);
@@ -622,16 +642,22 @@ export const SuikaGame: React.FC<Props> = ({
       smashesRef.current = smashesRef.current.filter((sm) => sm.life < SMASH_FRAMES);
 
       // Danger deadline check: a fruit that has come to rest over the line. One still falling
-      // into the pile pokes over it for a moment as it lands; that is not overflowing. Nor is
-      // one a shake has just thrown up. Once the round is over the fruit only settle.
-      if (graceRef.current > 0) graceRef.current = Math.max(0, graceRef.current - TICK_SEC);
+      // into the pile pokes over it for a moment as it lands; that is not overflowing, nor is
+      // one sinking back under it. After a shake the whole pile slides about slowly for a few
+      // seconds (slow enough to look "at rest"), so the check waits until it has stopped.
+      // Once the round is over the fruit only settle.
+      if (graceRef.current !== null) {
+        graceRef.current += TICK_SEC;
+        stillRef.current = pileStill(worldRef.current, STILL_SPEED) ? stillRef.current + TICK_SEC : 0;
+        if (graceRef.current >= GRACE_MAX_SECONDS || (graceRef.current >= GRACE_SECONDS && stillRef.current >= STILL_SECONDS)) {
+          graceRef.current = null;
+        }
+      }
       if (!isPlayingRef.current) settleRef.current = Math.max(0, settleRef.current - TICK_SEC);
       const isHazard =
         isPlayingRef.current &&
-        graceRef.current === 0 &&
-        worldRef.current.bodies.some(
-          (b) => b.landed && b.scale >= 0.85 && b.y - b.r * b.scale < DEADLINE && Math.hypot(b.vx, b.vy) < SETTLED_SPEED
-        );
+        graceRef.current === null &&
+        restingOver(worldRef.current, DEADLINE, SETTLED_SPEED, SINKING_SPEED) !== undefined;
       if (isHazard) {
         calmRef.current = 0;
         dangerTimerRef.current = Math.max(0, dangerTimerRef.current - TICK_SEC);

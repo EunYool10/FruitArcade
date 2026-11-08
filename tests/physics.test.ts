@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addBody, createWorld, stepWorld, type Merge } from '../src/components/SuikaGame/physics';
+import { addBody, createWorld, pileStill, restingOver, stepWorld, type Merge } from '../src/components/SuikaGame/physics';
 
 // Same sizes and jar as the game (SuikaGame.tsx)
 const RADII = [17, 24, 32, 41, 50, 60, 71, 83, 96, 110, 126];
@@ -54,5 +54,16 @@ describe('suika physics', () => {
     const falling = addBody(w, 2, 252, 300);
     expect(run(w, 900)).toHaveLength(0);
     expect(falling.y).toBeGreaterThan(500);
+  });
+
+  it('over the line, only a fruit at rest counts; one sinking back down does not', () => {
+    const w = jar();
+    const apple = addBody(w, 5, 264, 150, { landed: true });
+    expect(restingOver(w, 130, 1, 0.15)).toBe(apple);
+    apple.vy = 0.5; // sliding down slowly, as a shaken pile does
+    expect(restingOver(w, 130, 1, 0.15)).toBeUndefined();
+    expect(pileStill(w, 0.25)).toBe(false);
+    apple.vy = 0;
+    expect(pileStill(w, 0.25)).toBe(true);
   });
 });

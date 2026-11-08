@@ -329,6 +329,22 @@ export function stepWorld(world: World): Merge[] {
   return findMerges(world);
 }
 
+/**
+ * A fruit that has come to rest over the line `y` (its top above it), if any. Falling fruit, ones
+ * still growing, ones moving at `settled` px per frame or more and ones sinking faster than
+ * `sinking` (on their way back under the line) don't count.
+ */
+export function restingOver(world: World, y: number, settled: number, sinking: number): Body | undefined {
+  return world.bodies.find(
+    (b) => b.landed && b.scale >= 0.85 && b.y - b.r * b.scale < y && b.vy <= sinking && Math.hypot(b.vx, b.vy) < settled
+  );
+}
+
+/** No fruit in the pile moves at `speed` px per frame or more (falling ones aren't looked at) */
+export function pileStill(world: World, speed: number): boolean {
+  return !world.bodies.some((b) => b.landed && Math.hypot(b.vx, b.vy) >= speed);
+}
+
 /** Take a body out of the jar (the hammer) */
 export function removeBody(world: World, body: Body): void {
   world.bodies = world.bodies.filter((b) => b !== body);

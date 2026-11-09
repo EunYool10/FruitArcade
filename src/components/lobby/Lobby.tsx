@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { BarChart3, Crown, Play } from 'lucide-react';
 import { PlayerView } from '../ui/Avatar';
 import { GameType, HistoryEntry, UserStatistics } from '../../types';
-import { APP_VERSION, GAMES, GAME_ORDER, GameMeta } from '../../constants';
+import { APP_VERSION, GAMES, GAME_ORDER, GameMeta, KIND_LABEL } from '../../constants';
 import { LevelInfo, bestKey, playsKey } from '../../utils/progress';
 import { DailyState } from '../../utils/missions';
 import { PlayerCard } from './PlayerCard';
@@ -33,9 +33,9 @@ interface LobbyProps {
 type Kind = 'all' | GameMeta['kind'];
 const KINDS: [Kind, string][] = [
   ['all', '전체'],
-  ['reflex', '순발력'],
-  ['brain', '두뇌'],
-  ['party', '여럿이'],
+  ['reflex', KIND_LABEL.reflex],
+  ['brain', KIND_LABEL.brain],
+  ['party', KIND_LABEL.party],
 ];
 
 /** Plain text links along the bottom of the lobby */
@@ -161,7 +161,7 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
           {shown.map((g) => (
-            <GameCard key={g} meta={GAMES[g]} best={stats[bestKey(g)]} plays={stats[playsKey(g)]} onPlay={() => onPlay(g)} />
+            <GameCard key={g} meta={GAMES[g]} best={stats[bestKey(g)]} plays={stats[playsKey(g)]} recent={g === lastGame} onPlay={() => onPlay(g)} />
           ))}
         </div>
       </section>

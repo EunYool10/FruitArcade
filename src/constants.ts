@@ -59,6 +59,9 @@ export interface GameMeta {
   tutorial: { emoji: string; title: string; text: string }[];
 }
 
+/** The lobby's names for each kind of game */
+export const KIND_LABEL: Record<GameMeta['kind'], string> = { reflex: '순발력', brain: '두뇌', party: '여럿이' };
+
 export const GAMES: Record<GameType, GameMeta> = {
   memory: {
     id: 'memory',

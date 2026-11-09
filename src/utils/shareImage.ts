@@ -95,7 +95,7 @@ export async function renderResultImage(d: ShareCardData): Promise<Blob | null> 
 
   // Title + game
   ctx.fillStyle = INK;
-  ctx.font = `700 84px ${DISPLAY}`;
+  ctx.font = `84px ${DISPLAY}`;
   ctx.fillText(d.title, mid, cy + 420);
   ctx.font = `600 40px ${BODY}`;
   ctx.fillStyle = '#54496b';
@@ -107,7 +107,7 @@ export async function renderResultImage(d: ShareCardData): Promise<Blob | null> 
   ctx.font = `700 34px ${BODY}`;
   ctx.fillText('최종 점수', mid, cy + 595);
   ctx.fillStyle = INK;
-  ctx.font = `700 130px ${DISPLAY}`;
+  ctx.font = `130px ${DISPLAY}`;
   ctx.fillText(Math.round(d.score).toLocaleString('ko-KR'), mid, cy + 685);
 
   if (d.newBest) {
@@ -116,7 +116,7 @@ export async function renderResultImage(d: ShareCardData): Promise<Blob | null> 
     ctx.rotate(0.21);
     panel(ctx, -150, -40, 300, 80, 40, '#c93a2f', 0);
     ctx.fillStyle = '#ffffff';
-    ctx.font = `700 40px ${DISPLAY}`;
+    ctx.font = `40px ${DISPLAY}`;
     ctx.fillText('NEW BEST!', 0, 2);
     ctx.restore();
   }
@@ -133,14 +133,14 @@ export async function renderResultImage(d: ShareCardData): Promise<Blob | null> 
     ctx.font = `700 24px ${BODY}`;
     ctx.fillText(s.label, x + 26, y + 30);
     ctx.fillStyle = INK;
-    ctx.font = `600 36px ${DISPLAY}`;
+    ctx.font = `36px ${DISPLAY}`;
     ctx.fillText(s.value, x + 26, y + 64);
   });
 
   // Footer
   ctx.textAlign = 'center';
   ctx.fillStyle = INK;
-  ctx.font = `700 48px ${DISPLAY}`;
+  ctx.font = `48px ${DISPLAY}`;
   ctx.fillText('🍓 FRUIT ARCADE', W / 2, H - 120);
   ctx.fillStyle = '#7a7090';
   ctx.font = `500 30px ${BODY}`;

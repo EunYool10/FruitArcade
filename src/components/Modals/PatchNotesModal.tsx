@@ -9,6 +9,13 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.39.4',
+    title: '넘침 선 글자 자리 고정',
+    items: [
+      ['🍉 수박 게임', '"넘침 선" 글자가 과일을 따라 반대쪽으로 옮겨 다니던 문제를 고쳤어요. 이제 선 바로 아래 같은 자리에 있어요.'],
+    ],
+  },
+  {
     version: '3.39.3',
     title: '수박 게임 병 다듬기',
     items: [

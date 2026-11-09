@@ -802,6 +802,19 @@ export const SuikaGame: React.FC<Props> = ({
       const aimX = clampX(dropXRef.current, aimFruit.r);
       const target = hammerOut ? hammerTarget() : null;
 
+      // Aiming guide (under the fruits)
+      if (aiming) {
+        ctx.save();
+        ctx.strokeStyle = P.guide;
+        ctx.setLineDash([3, 7]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(aimX, DEADLINE);
+        ctx.lineTo(aimX, BOTTOM);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       // Overflow line. In danger: the space above it pulses red and a red bar on the line
       // shrinks toward the middle as the seconds run out.
       ctx.save();
@@ -831,28 +844,19 @@ export const SuikaGame: React.FC<Props> = ({
         ctx.lineTo(mid + half, DEADLINE);
         ctx.stroke();
       } else {
-        ctx.fillStyle = P.deadline;
+        // Always in the same place, just under the line: the waiting fruit hangs above the line, so
+        // it can't cover the label, and the label never has to get out of its way. The patch behind
+        // the letters keeps the aim guide off them.
         ctx.font = '15px "Do Hyeon", sans-serif';
-        // The label moves to the other end while the waiting fruit hangs over it
-        const labelLeft = aiming && aimX + aimFruit.r > lineR - 60;
-        ctx.textAlign = labelLeft ? 'left' : 'right';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText('넘침 선', labelLeft ? lineL : lineR, DEADLINE - 5);
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        const labelWidth = ctx.measureText('넘침 선').width;
+        ctx.fillStyle = P.jarTop;
+        ctx.fillRect(lineR - labelWidth - 4, DEADLINE + 4, labelWidth + 4, 20);
+        ctx.fillStyle = P.deadline;
+        ctx.fillText('넘침 선', lineR, DEADLINE + 7);
       }
       ctx.restore();
-
-      // Aiming guide (under the fruits)
-      if (aiming) {
-        ctx.save();
-        ctx.strokeStyle = P.guide;
-        ctx.setLineDash([3, 7]);
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(aimX, DEADLINE);
-        ctx.lineTo(aimX, BOTTOM);
-        ctx.stroke();
-        ctx.restore();
-      }
 
       // Fruits, back to front
       const sortedBodies = [...worldRef.current.bodies].sort((a, b) => a.y - b.y);

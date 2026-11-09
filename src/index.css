@@ -690,6 +690,51 @@
     }
   }
 
+  /* 수박 게임: the item button that just earned one, and its "+1" */
+  .item-gained {
+    --btn-bg: var(--mango-soft);
+    border-color: var(--mango-deep);
+    animation: item-gain 0.5s cubic-bezier(0.2, 1.5, 0.4, 1);
+  }
+  @keyframes item-gain {
+    35% {
+      transform: translateY(-2px) scale(1.07);
+    }
+  }
+  .item-plus {
+    position: absolute;
+    right: 0.3rem;
+    top: -0.7rem;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--mango-ink);
+    text-shadow: 0 0 3px var(--surface), 0 0 3px var(--surface), 0 0 3px var(--surface);
+    pointer-events: none;
+    animation: item-plus 1.6s ease-out both;
+  }
+  @keyframes item-plus {
+    0% {
+      opacity: 0;
+      transform: translateY(8px) scale(0.7);
+    }
+    15% {
+      opacity: 1;
+      transform: translateY(0) scale(1.2);
+    }
+    28% {
+      transform: translateY(0) scale(1);
+    }
+    72% {
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+  }
+
   /* RGB 테두리 (an admins' gift): the ring runs red → violet and back, with a glow */
   .frame-prism {
     background-color: #ff3b30;

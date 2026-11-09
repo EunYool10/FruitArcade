@@ -64,6 +64,10 @@ const SINKING_SPEED = 0.15;
 const GLASS = 8;
 /** Inner corner of the jar. No bigger than the smallest fruit, or that fruit pokes through the curve */
 const JAR_CORNER = 14;
+/** How long the note about a new item stays (ms) */
+const ITEM_NOTICE_MS = 2400;
+/** How long a new item's picture rises out of the merge (60 fps frames) */
+const GAIN_FRAMES = 46;
 /** How long a merge's ring spreads (60 fps frames) */
 const RING_FRAMES = 20;
 /** How long the hammer's swing shows (60 fps frames) */
@@ -263,8 +267,8 @@ export const SuikaGame: React.FC<Props> = ({
   const [hammer, setHammer] = useState(false);
   /** Merges toward the next item */
   const [itemGauge, setItemGauge] = useState(0);
-  /** "🔨 망치 획득!" on the board for a moment */
-  const [itemToast, setItemToast] = useState<{ id: number; text: string } | null>(null);
+  /** The item just earned, for the note under the item buttons (kind null: no room for another) */
+  const [itemToast, setItemToast] = useState<{ id: number; kind: ItemKind | null; count: number } | null>(null);
   /** Watermelons made this round, and merges in all (for the result card) */
   const [watermelons, setWatermelons] = useState(0);
   const watermelonsRef = useRef(0);
@@ -310,6 +314,8 @@ export const SuikaGame: React.FC<Props> = ({
   const smashesRef = useRef<{ x: number; y: number; life: number }[]>([]);
   /** Rings spreading from merges (life in 60 fps frames) */
   const ringsRef = useRef<{ x: number; y: number; r: number; color: string; life: number }[]>([]);
+  /** Pictures of newly earned items rising from their merges (life in 60 fps frames) */
+  const gainsRef = useRef<{ kind: ItemKind; x: number; y: number; life: number }[]>([]);
   /** Seconds the fruit keep falling after the round ended */
   const settleRef = useRef(0);
 
@@ -330,10 +336,10 @@ export const SuikaGame: React.FC<Props> = ({
     hammerRef.current = on;
     setHammer(on);
   };
-  const showItemToast = (text: string) => {
-    setItemToast({ id: Date.now(), text });
+  const showItemToast = (kind: ItemKind | null, count: number) => {
+    setItemToast({ id: Date.now(), kind, count });
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setItemToast(null), 1600);
+    toastTimerRef.current = setTimeout(() => setItemToast(null), ITEM_NOTICE_MS);
   };
 
   // Dev server only (compiled out of real builds): lets browser tests look inside and hand out items
@@ -414,6 +420,7 @@ export const SuikaGame: React.FC<Props> = ({
     floatTextsRef.current = [];
     smashesRef.current = [];
     ringsRef.current = [];
+    gainsRef.current = [];
     settleRef.current = 0;
     shakeRef.current = 0;
     dangerTimerRef.current = DANGER_SECONDS;
@@ -627,12 +634,12 @@ export const SuikaGame: React.FC<Props> = ({
           shakeRef.current = Math.max(shakeRef.current, 10);
           if (settingsRef.current.celebrateEffect) celebrate(true);
         }
-        countMerge();
+        countMerge(m.x, m.y);
       }
     };
 
     /** Every MERGES_PER_ITEM merges earn one item (one the player doesn't already hold the most of) */
-    const countMerge = () => {
+    const countMerge = (x: number, y: number) => {
       mergesRef.current += 1;
       setMergeTotal(mergesRef.current);
       const toward = mergesRef.current % MERGES_PER_ITEM;
@@ -640,10 +647,15 @@ export const SuikaGame: React.FC<Props> = ({
       if (toward !== 0) return;
       const open = ITEM_KINDS.filter((k) => itemsRef.current[k] < ITEM_MAX);
       const roll = itemRngRef.current();
-      if (!open.length) return;
+      if (!open.length) {
+        showItemToast(null, ITEM_MAX);
+        return;
+      }
       const kind = open[Math.floor(roll * open.length)];
-      setItemCount(kind, itemsRef.current[kind] + 1);
-      showItemToast(`${ITEMS[kind].emoji} ${ITEMS[kind].name} 획득!`);
+      const count = itemsRef.current[kind] + 1;
+      setItemCount(kind, count);
+      showItemToast(kind, count);
+      if (settingsRef.current.comboEffect) gainsRef.current.push({ kind, x, y, life: 0 });
       playSound('star', settingsRef.current);
     };
 
@@ -661,6 +673,8 @@ export const SuikaGame: React.FC<Props> = ({
       smashesRef.current.forEach((sm) => (sm.life += TICK_FRAMES));
       ringsRef.current.forEach((rg) => (rg.life += TICK_FRAMES));
       ringsRef.current = ringsRef.current.filter((rg) => rg.life < RING_FRAMES);
+      gainsRef.current.forEach((g) => (g.life += TICK_FRAMES));
+      gainsRef.current = gainsRef.current.filter((g) => g.life < GAIN_FRAMES);
       smashesRef.current = smashesRef.current.filter((sm) => sm.life < SMASH_FRAMES);
 
       // Danger deadline check: a fruit that has come to rest over the line. One still falling
@@ -937,6 +951,15 @@ export const SuikaGame: React.FC<Props> = ({
         ctx.restore();
       }
 
+      // An item earned: its picture pops out of the merge that paid for it and floats up
+      for (const g of gainsRef.current) {
+        const t = g.life / GAIN_FRAMES;
+        ctx.save();
+        ctx.globalAlpha = t > 0.7 ? (1 - t) / 0.3 : 1;
+        drawEmoji(ctx, ITEMS[g.kind].emoji, g.x, g.y - 24 - t * 76, 54 * Math.min(1, 0.5 + t * 5));
+        ctx.restore();
+      }
+
       // Floating score texts
       for (let t = 0; t < floatTextsRef.current.length; t++) {
         const ft = floatTextsRef.current[t];
@@ -1077,6 +1100,7 @@ export const SuikaGame: React.FC<Props> = ({
                     const it = ITEMS[k];
                     const on = k === 'hammer' && hammer;
                     const count = unlimitedItems ? Infinity : items[k];
+                    const gained = itemToast?.kind === k ? itemToast : null;
                     return (
                       <button
                         key={k}
@@ -1084,7 +1108,7 @@ export const SuikaGame: React.FC<Props> = ({
                         title={`${it.name}: ${it.desc} (${it.key})`}
                         aria-label={`${it.name} ${unlimitedItems ? '무한' : `${count}개`} · ${on ? '부술 과일을 고르세요, 다시 누르면 넣어요' : it.desc}`}
                         aria-pressed={k === 'hammer' ? on : undefined}
-                        className={`btn btn-sm h-10 gap-1.5 px-2 ${on ? 'btn-mango animate-pulse' : ''}`}
+                        className={`btn btn-sm relative h-10 gap-1.5 px-2 ${on ? 'btn-mango animate-pulse' : ''} ${gained ? 'item-gained' : ''}`}
                         disabled={gameState !== 'PLAYING' || isPaused || (count <= 0 && !on)}
                         onClick={(e) => {
                           e.currentTarget.blur();
@@ -1093,23 +1117,48 @@ export const SuikaGame: React.FC<Props> = ({
                       >
                         <Emoji e={it.emoji} className="text-xl leading-none" />
                         {on ? '넣기' : it.name}
-                        <span className="rounded-md bg-on-bright/10 px-1.5 text-sm tabular-nums">{unlimitedItems ? '∞' : count}</span>
+                        <span key={gained ? `count-${gained.id}` : 'count'} className={`rounded-md px-1.5 text-sm tabular-nums ${gained ? 'animate-bump bg-mango text-on-bright' : 'bg-on-bright/10'}`}>
+                          {unlimitedItems ? '∞' : count}
+                        </span>
                         <span className="kbd hidden xl:inline-block">{it.key}</span>
+                        {gained && !unlimitedItems && (
+                          <span key={`plus-${gained.id}`} className="item-plus" aria-hidden="true">
+                            +1
+                          </span>
+                        )}
                       </button>
                     );
                   })}
                 </div>
-                {unlimitedItems ? (
-                  <p className="mt-1.5 text-center text-[10px] font-bold text-ink-3 sm:text-[11px]">🛡️ 운영진은 망치 · 흔들기가 무한이에요</p>
-                ) : (
-                  <div className="mt-1.5 flex items-center gap-2" title={`과일을 ${MERGES_PER_ITEM}번 합칠 때마다 아이템 1개`}>
-                    <span className="shrink-0 text-[10px] font-bold text-ink-3 sm:text-[11px]">🎁 다음 아이템</span>
-                    <Meter value={itemGauge} max={MERGES_PER_ITEM} label="다음 아이템까지 합체 횟수" tone="grape" className="h-2.5 flex-1" />
-                    <span className="shrink-0 text-[10px] font-bold tabular-nums text-ink-3 sm:text-[11px]">
-                      {itemGauge}/{MERGES_PER_ITEM}
-                    </span>
-                  </div>
-                )}
+                {/* One line that never changes height: the note about a new item takes the place of the gauge for a moment */}
+                <div className="mt-1.5 flex h-4 items-center justify-center">
+                  {itemToast ? (
+                    <p key={itemToast.id} role="status" className="flex items-center gap-1 rounded bg-mango-soft px-2 text-[11px] font-bold leading-4 text-mango-ink animate-pop-in sm:text-xs sm:leading-4">
+                      {itemToast.kind ? (
+                        <>
+                          <Emoji e={ITEMS[itemToast.kind].emoji} /> {ITEMS[itemToast.kind].name} 1개를 받았어요
+                          {!unlimitedItems && (
+                            <span className="font-semibold">
+                              · 이제 {itemToast.count}개{itemToast.count >= ITEM_MAX ? ' (최대)' : ''}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        '아이템이 가득 차서 이번엔 못 받았어요'
+                      )}
+                    </p>
+                  ) : unlimitedItems ? (
+                    <p className="text-center text-[10px] font-bold text-ink-3 sm:text-[11px]">🛡️ 운영진은 망치 · 흔들기가 무한이에요</p>
+                  ) : (
+                    <div className="flex w-full items-center gap-2" title={`과일을 ${MERGES_PER_ITEM}번 합칠 때마다 아이템 1개`}>
+                      <span className="shrink-0 text-[10px] font-bold text-ink-3 sm:text-[11px]">🎁 다음 아이템</span>
+                      <Meter value={itemGauge} max={MERGES_PER_ITEM} label="다음 아이템까지 합체 횟수" tone="grape" className="h-2.5 flex-1" />
+                      <span className="shrink-0 text-[10px] font-bold tabular-nums text-ink-3 sm:text-[11px]">
+                        {itemGauge}/{MERGES_PER_ITEM}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             }
           >
@@ -1146,18 +1195,9 @@ export const SuikaGame: React.FC<Props> = ({
                 </div>
               )}
 
-              {gameState === 'PLAYING' && (hammer || itemToast) && (
-                <div className="pointer-events-none absolute left-2 top-2 z-10 flex flex-col items-start gap-1.5">
-                  {hammer && (
-                    <div role="status" className="chip bg-mango text-on-bright shadow-hard-sm animate-pop-in">
-                      <Emoji e={ITEMS.hammer.emoji} /> 부술 과일을 톡!
-                    </div>
-                  )}
-                  {itemToast && (
-                    <div key={itemToast.id} role="status" className="chip bg-grape-deep text-white shadow-hard-sm animate-pop-in">
-                      {itemToast.text}
-                    </div>
-                  )}
+              {gameState === 'PLAYING' && hammer && (
+                <div role="status" className="chip pointer-events-none absolute left-2 top-2 z-10 bg-mango text-on-bright shadow-hard-sm animate-pop-in">
+                  <Emoji e={ITEMS.hammer.emoji} /> 부술 과일을 톡!
                 </div>
               )}
 

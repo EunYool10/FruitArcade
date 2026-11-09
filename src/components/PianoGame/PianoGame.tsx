@@ -52,7 +52,96 @@ const TILE: Record<string, { fill: string; deep: string }> = {
   '🍇': { fill: '#9b5de5', deep: '#6a3fb5' },
   '🍑': { fill: '#ffa48a', deep: '#e5737a' },
 };
-preloadEmoji(PIANO_FRUITS);
+// ───────── stages ─────────
+// A round runs through short stages, each with its own colours, its own drifting background and
+// its own way for the tiles to move. All of it is looks only: where the tiles are, the speed and
+// the points never change, and the motion dies away near the bottom, where tiles get tapped.
+type Motion = 'plain' | 'wave' | 'hop' | 'pop' | 'swing' | 'step' | 'fog';
+interface Stage {
+  name: string;
+  motion: Motion;
+  /** The little picture drifting behind the tiles */
+  deco: string;
+  /** Lane colours for the light and the dark theme */
+  light: [string, string];
+  dark: [string, string];
+  /** A dark board even in the light theme */
+  night?: boolean;
+}
+/** The first one always opens the round; the others come shuffled, over and over */
+const STAGES: Stage[] = [
+  { name: '과수원', motion: 'plain', deco: '🍀', light: ['#fffbf3', '#f8f0e2'], dark: ['#231d17', '#1f1a14'] },
+  { name: '물결', motion: 'wave', deco: '💧', light: ['#eef7fb', '#e0eff7'], dark: ['#17232b', '#142029'] },
+  { name: '통통', motion: 'hop', deco: '🎵', light: ['#fdf3d9', '#fbe8bf'], dark: ['#2b2514', '#262011'] },
+  { name: '팝콘', motion: 'pop', deco: '✨', light: ['#fdeaf0', '#fbdde6'], dark: ['#2c1a22', '#27171e'] },
+  { name: '시계추', motion: 'swing', deco: '🎶', light: ['#eef6e6', '#e1efd6'], dark: ['#1b2618', '#172115'] },
+  { name: '쿵짝', motion: 'step', deco: '🍭', light: ['#f3ecfa', '#e9dff5'], dark: ['#231c2b', '#1f1826'] },
+  { name: '밤 무대', motion: 'fog', deco: '⭐', light: ['#141c2e', '#111827'], dark: ['#141c2e', '#111827'], night: true },
+];
+/** A stage lasts about half a lap of the song, within these limits (rows) */
+const stageRows = (lap: Lap) => Math.max(28, Math.min(56, Math.round(lap.rows / 2)));
+/** How long the column of light from a tapped lane, and the ring round the tile, last (ms) */
+const FLASH_MS = 280;
+
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+const mixHex = (a: string, b: string, t: number) => {
+  const at = (c: string) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+  const pa = at(a);
+  const pb = at(b);
+  return `#${pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, '0')).join('')}`;
+};
+
+/** How a tile is drawn off its true place. `up` is how many rows its bottom edge is above the bottom of the board. */
+function tileMotion(motion: Motion, up: number, pos: number, row: number, lane: number, long: boolean) {
+  const m = { x: 0, y: 0, rot: 0, sx: 1, sy: 1, alpha: 1, pivotTop: false };
+  // Full strength in the upper half of the board, nothing in the lower quarter
+  const k = clamp01((up - 0.8) / 1.4);
+  switch (motion) {
+    case 'wave': {
+      const p = pos * 1.4 + row * 0.8;
+      m.x = Math.sin(p) * 15 * k;
+      if (!long) m.rot = Math.cos(p) * 0.07 * k;
+      break;
+    }
+    case 'hop': {
+      // One hop per row, landing on the beat
+      const h = Math.abs(Math.sin(pos * Math.PI));
+      m.y = -h * 30 * k;
+      if (!long) {
+        m.sy = 1 - (1 - h) * 0.1 * k;
+        m.sx = 1 + (1 - h) * 0.08 * k;
+      }
+      break;
+    }
+    case 'pop': {
+      // Not there at the very top, then bursts in with a little overshoot
+      const p = clamp01((3.7 - up) / 0.6);
+      m.alpha = Math.min(1, p * 2);
+      if (!long) m.sx = m.sy = Math.max(0.05, 1 + 2.70158 * Math.pow(p - 1, 3) + 1.70158 * Math.pow(p - 1, 2));
+      break;
+    }
+    case 'swing':
+      if (!long) {
+        m.rot = Math.sin(pos * 1.6 + lane * 1.2 + row * 0.5) * 0.17 * k;
+        m.pivotTop = true;
+      }
+      break;
+    case 'step': {
+      // Stop-and-go: tiles rush through the middle of each row and rest on the beat
+      const f = pos - Math.floor(pos);
+      const eased = f < 0.5 ? 4 * f * f * f : 1 - Math.pow(-2 * f + 2, 3) / 2;
+      m.y = (eased - f) * RH * k;
+      break;
+    }
+    case 'fog':
+      // Tiles come out of the dark
+      m.alpha = 1 - clamp01((up - 1.5) / 1.6) * 0.72;
+      break;
+  }
+  return m;
+}
+
+preloadEmoji([...PIANO_FRUITS, ...STAGES.map((s) => s.deco)]);
 
 const BOARD = {
   light: { bg: '#fffbf3', alt: '#f8f0e2', line: 'rgba(58, 44, 34, 0.12)', outline: '#3a2c22', done: 'rgba(58, 44, 34, 0.06)' },
@@ -267,6 +356,12 @@ export const PianoGame: React.FC<Props> = ({
   const endRef = useRef<{ cause: EndCause; row: number; lane: number; at: number } | null>(null);
   const bitsRef = useRef<Bit[]>([]);
   const floatsRef = useRef<{ text: string; life: number }[]>([]);
+  /** Light going up a tapped lane, and a ring round the tile (performance.now) */
+  const flashesRef = useRef<{ lane: number; x: number; y: number; color: string; at: number }[]>([]);
+  /** The order of the stages: seeded apart from the tiles, so a challenge keeps its tiles */
+  const stageRngRef = useRef<Rng>(Math.random);
+  const stageOrderRef = useRef<number[]>([0]);
+  const stageSpanRef = useRef(40);
   const isPlayingRef = useRef(false);
   const lastTimeRef = useRef(performance.now());
   const animFrameRef = useRef<number | null>(null);
@@ -317,6 +412,22 @@ export const PianoGame: React.FC<Props> = ({
     }
   };
 
+  /** Stage number i of this round */
+  const stageAt = (i: number): Stage => {
+    const order = stageOrderRef.current;
+    while (order.length <= i) {
+      const deck = STAGES.map((_, k) => k).slice(1);
+      for (let k = deck.length - 1; k > 0; k--) {
+        const j = Math.floor(stageRngRef.current() * (k + 1));
+        [deck[k], deck[j]] = [deck[j], deck[k]];
+      }
+      // Never the same one twice in a row
+      if (deck[0] === order[order.length - 1]) deck.push(deck.shift()!);
+      order.push(...deck);
+    }
+    return STAGES[order[Math.max(0, i)]];
+  };
+
   const speedNow = () => Math.min(MAX_SPEED, roundSongRef.current.speed * (1 + LAP_SPEEDUP * lapsRef.current) + RAMP * scoreRef.current);
 
   const addScore = (points: number) => {
@@ -334,6 +445,7 @@ export const PianoGame: React.FC<Props> = ({
       },
       end: () => endRef.current,
       score: () => scoreRef.current,
+      stage: () => stageAt(Math.floor(Math.max(0, posRef.current) / stageSpanRef.current)).name,
     };
   });
 
@@ -352,10 +464,13 @@ export const PianoGame: React.FC<Props> = ({
     const chosen = challengeSong ?? songById(songIdRef.current) ?? SONGS[0];
     const roundSeed = seed ?? `${chosen.id}.${randomSeed()}`;
     rngRef.current = seededRandom(roundSeed);
+    stageRngRef.current = seededRandom(`${roundSeed}:stages`);
+    stageOrderRef.current = [0];
     onRoundSeed?.(roundSeed);
     holdRef.current?.note.release();
     roundSongRef.current = chosen;
     lapRef.current = songLap(chosen);
+    stageSpanRef.current = stageRows(lapRef.current);
     tilesRef.current = [];
     leftRef.current = [];
     playedRef.current = new Map();
@@ -370,6 +485,7 @@ export const PianoGame: React.FC<Props> = ({
     endRef.current = null;
     bitsRef.current = [];
     floatsRef.current = [];
+    flashesRef.current = [];
     growRows(lapRef.current.rows * 2);
 
     setScore(0);
@@ -466,6 +582,15 @@ export const PianoGame: React.FC<Props> = ({
     startedRef.current = true;
     addScore(1);
     burst(tile, 4);
+    if (s.animEnabled) {
+      flashesRef.current.push({
+        lane: tile.lane,
+        x: tile.lane * LW + LW / 2,
+        y: CH - (tile.row + 0.5 - posRef.current) * RH,
+        color: TILE[fruitOf(tile.note)].fill,
+        at: performance.now(),
+      });
+    }
 
     // More song further up, and the next tile
     if (leftRef.current.length < tile.row + tile.len + 32) growRows(tile.row + tile.len + 32 + lapRef.current.rows);
@@ -630,17 +755,71 @@ export const PianoGame: React.FC<Props> = ({
 
       // ───────── drawing ─────────
       ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      const anim = live.current.settings.animEnabled;
+      const span = stageSpanRef.current;
+      const stageNo = Math.max(0, Math.floor(posRef.current / span));
+      const stage = stageAt(stageNo);
+      // A new stage washes in over the first row or so after its first row reaches the bottom
+      const wash = stageNo > 0 ? clamp01((posRef.current - stageNo * span) / 1.2) : 1;
+      const [from1, from2] = stageNo > 0 ? stageAt(stageNo - 1)[dark ? 'dark' : 'light'] : stage[dark ? 'dark' : 'light'];
+      const [to1, to2] = stage[dark ? 'dark' : 'light'];
       for (let l = 0; l < LANES; l++) {
-        ctx.fillStyle = l % 2 ? P.alt : P.bg;
+        ctx.fillStyle = l % 2 ? mixHex(from2, to2, wash) : mixHex(from1, to1, wash);
         ctx.fillRect(l * LW, 0, LW, CH);
       }
-      ctx.strokeStyle = P.line;
+      ctx.strokeStyle = stage.night ? BOARD.dark.line : P.line;
       ctx.lineWidth = 2;
       for (let l = 1; l < LANES; l++) {
         ctx.beginPath();
         ctx.moveTo(l * LW, 0);
         ctx.lineTo(l * LW, CH);
         ctx.stroke();
+      }
+
+      if (anim) {
+        // The stage's little pictures drift down behind the tiles, slower than the tiles
+        const drift = Math.max(0, posRef.current) * RH * 0.35;
+        ctx.save();
+        ctx.globalAlpha = (dark || stage.night ? 0.32 : 0.24) * wash;
+        for (let i = 0; i < 7; i++) {
+          const x = i * 67 + 30 + Math.sin(posRef.current * 0.4 + i) * 18;
+          const y = ((drift + i * 137) % (CH + 80)) - 40;
+          drawEmoji(ctx, stage.deco, x, y, 24 + (i % 3) * 8);
+        }
+        ctx.restore();
+
+        // Light rising from each lane just played
+        flashesRef.current = flashesRef.current.filter((f) => now - f.at < FLASH_MS);
+        for (const f of flashesRef.current) {
+          const light = ctx.createLinearGradient(0, CH, 0, CH * 0.05);
+          light.addColorStop(0, f.color + 'b0');
+          light.addColorStop(1, f.color + '00');
+          ctx.save();
+          ctx.globalAlpha = 1 - (now - f.at) / FLASH_MS;
+          ctx.fillStyle = light;
+          ctx.fillRect(f.lane * LW, 0, LW, CH);
+          ctx.restore();
+        }
+      }
+
+      // The next stage's name rides down the board on a line, behind the tiles
+      if (startedRef.current) {
+        const by = CH - ((stageNo + 1) * span - posRef.current) * RH;
+        if (by > -20 && by < CH + 20) {
+          const name = stageAt(stageNo + 1).name;
+          ctx.save();
+          ctx.fillStyle = P.outline;
+          ctx.fillRect(0, by - 1.5, CW, 3);
+          ctx.font = '17px "Do Hyeon", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const w = ctx.measureText(name).width + 28;
+          roundRect(CW / 2 - w / 2, by - 14, w, 28, 14);
+          ctx.fill();
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(name, CW / 2, by + 1);
+          ctx.restore();
+        }
       }
 
       const blink = end ? Math.floor((now - end.at) / 140) % 2 === 0 : false;
@@ -671,6 +850,19 @@ export const PianoGame: React.FC<Props> = ({
             ctx.restore();
           }
           continue;
+        }
+
+        // Stages move a tile by its own row, so a new stage arrives from the top of the board
+        ctx.save();
+        if (anim && !held && !end && startedRef.current) {
+          const m = tileMotion(stageAt(Math.floor(t.row / span)).motion, t.row - pos, pos, t.row, t.lane, t.len > 1);
+          const px = r.x + r.w / 2;
+          const py = m.pivotTop ? r.y : r.y + r.h / 2;
+          ctx.globalAlpha = m.alpha;
+          ctx.translate(px + m.x, py + m.y);
+          ctx.rotate(m.rot);
+          ctx.scale(m.sx, m.sy);
+          ctx.translate(-px, -py);
         }
 
         const missed = end?.cause === 'miss' && end.row === t.row;
@@ -776,6 +968,7 @@ export const PianoGame: React.FC<Props> = ({
           ctx.fillStyle = '#ffffff';
           ctx.fillText('시작', r.x + r.w / 2, r.y + r.h - 30);
         }
+        ctx.restore();
       }
 
       // A wrong press lights up the empty spot
@@ -783,6 +976,18 @@ export const PianoGame: React.FC<Props> = ({
         ctx.fillStyle = 'rgba(255, 59, 48, 0.85)';
         roundRect(end.lane * LW + 5, CH - (end.row + 1 - pos) * RH + 5, LW - 10, RH - 10, 18);
         ctx.fill();
+      }
+
+      for (const f of flashesRef.current) {
+        const k = (now - f.at) / FLASH_MS;
+        ctx.save();
+        ctx.globalAlpha = 1 - k;
+        ctx.strokeStyle = f.color;
+        ctx.lineWidth = 8 * (1 - k) + 1;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 36 + k * 44, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
       }
 
       for (const b of bitsRef.current) {
@@ -900,6 +1105,14 @@ export const PianoGame: React.FC<Props> = ({
                 </span>
                 <span>
                   긴 타일은 <b>끝까지 꾹</b> 누르면 점수가 더 올라요
+                </span>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <span className="sticker h-8 w-8 shrink-0 bg-grape-soft text-base shadow-none" aria-hidden="true">
+                  🎶
+                </span>
+                <span>
+                  구간이 바뀌면 <b>배경과 타일 움직임</b>도 달라져요
                 </span>
               </li>
               <li className="flex items-center gap-2.5">

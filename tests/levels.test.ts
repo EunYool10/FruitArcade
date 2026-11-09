@@ -40,11 +40,11 @@ describe('levels', () => {
 });
 
 describe('RGB series', () => {
-  it('sells the avatar, title, card back and runner for 777억; the frame is an admins’ gift', () => {
+  it('sells everything for 777억, except the prism frame, which is an admins’ gift', () => {
     const rgb = SHOP_ITEMS.filter((i) => i.rgb);
-    expect(rgb.map((i) => i.kind).sort()).toEqual(['avatar', 'cardBack', 'frame', 'runner', 'title']);
+    expect([...new Set(rgb.map((i) => i.kind))].sort()).toEqual(['avatar', 'blade', 'cardBack', 'frame', 'runner', 'title']);
     for (const i of rgb) {
-      if (i.kind === 'frame') expect(forSale(i)).toBe(false);
+      if (i.id === 'owner_frame_prism') expect(forSale(i)).toBe(false);
       else expect([forSale(i), i.price]).toEqual([true, RGB_PRICE]);
     }
   });

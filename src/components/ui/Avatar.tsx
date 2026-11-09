@@ -43,11 +43,16 @@ export const Framed: React.FC<{ frame?: string; shape?: 'circle' | 'sticker'; ch
     return (
       <span className={`relative inline-grid shrink-0 p-[3px] ${round}`}>
         <span className={`absolute inset-0 ${round} ${ring} ${shape === 'circle' ? runs : 'frame-run'}`} aria-hidden="true" />
-        <span className="relative inline-grid">{children}</span>
+        <span className={`relative inline-grid bg-surface ${round}`}>{children}</span>
       </span>
     );
   }
-  return <span className={`inline-grid shrink-0 p-[3px] ${round} ${ring}`}>{children}</span>;
+  // bg-surface: in the dark theme the face is see-through, and the ring's colour would fill it
+  return (
+    <span className={`inline-grid shrink-0 p-[3px] ${round} ${ring}`}>
+      <span className={`inline-grid bg-surface ${round}`}>{children}</span>
+    </span>
+  );
 };
 
 /**

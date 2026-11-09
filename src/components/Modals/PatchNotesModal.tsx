@@ -9,6 +9,14 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.39.2',
+    title: '내 정보 카드 정리',
+    items: [
+      ['📋 내 정보', '로비의 내 정보 카드를 한눈에 보기 좋게 다시 정리했어요. 업적 · 플레이 · 출석 · 도장은 한 줄로 모았어요.'],
+      ['🌙 어두운 테마', '테두리 색이 아바타 안까지 비치던 문제를 고쳤어요.'],
+    ],
+  },
+  {
     version: '3.39.1',
     title: '그림자와 과일 상자 다듬기',
     items: [

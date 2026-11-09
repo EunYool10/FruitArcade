@@ -82,7 +82,50 @@ interface Dust {
 
 /** Collectible fruit, for the shop's fruit skins */
 const JUMP_FRUITS = ['🍒'];
-preloadEmoji(['🌵', '🪨', '🍄', '🐝', '🍒', '☁️', '☀️', '🌙']);
+preloadEmoji(['🌵', '🪨', '🍄', '🐝', '🍒']);
+
+/** A puffy cloud: a darker underside, then the white puffs over it (s is its width) */
+function drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, top: string, under: string) {
+  const puffs: [number, number, number][] = [
+    [-0.32, 0.04, 0.24],
+    [-0.08, -0.14, 0.3],
+    [0.2, -0.06, 0.25],
+    [0.38, 0.06, 0.18],
+    [0.05, 0.08, 0.26],
+  ];
+  const draw = (dy: number) => {
+    ctx.beginPath();
+    for (const [px, py, pr] of puffs) {
+      ctx.moveTo(x + px * s + pr * s, y + py * s + dy);
+      ctx.arc(x + px * s, y + py * s + dy, pr * s, 0, Math.PI * 2);
+    }
+    // A flat bottom
+    ctx.rect(x - 0.42 * s, y + 0.04 * s + dy, 0.84 * s, 0.14 * s);
+    ctx.fill();
+  };
+  ctx.fillStyle = under;
+  draw(0.06 * s);
+  ctx.fillStyle = top;
+  draw(0);
+}
+
+/** The sun or the moon: a soft glow and a disc */
+function drawOrb(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, disc: string, rim: string, glow: string) {
+  const g = ctx.createRadialGradient(x, y, r * 0.6, x, y, r * 3.2);
+  g.addColorStop(0, glow);
+  g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, r * 3.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = disc;
+  ctx.strokeStyle = rim;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+}
 
 const BOARD = {
   light: {
@@ -112,7 +155,8 @@ const BOARD = {
 const mix = (a: string, b: string, t: number) => {
   const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
   const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
-  return `rgb(${pa.map((v, i) => Math.round(v + (pb[i] - v) * t)).join(',')})`;
+  // Hex out, so a mix can be mixed again
+  return `#${pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, '0')).join('')}`;
 };
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
@@ -182,9 +226,10 @@ export const FruitJumpGame: React.FC<Props> = ({
   const dustRef = useRef<Dust[]>([]);
   const floatsRef = useRef<{ x: number; y: number; text: string; life: number }[]>([]);
   const cloudsRef = useRef([
-    { x: 120, y: 60, s: 38 },
-    { x: 330, y: 95, s: 30 },
-    { x: 520, y: 45, s: 44 },
+    { x: 60, y: 46, s: 54, far: true },
+    { x: 260, y: 30, s: 48, far: true },
+    { x: 170, y: 92, s: 84, far: false },
+    { x: 440, y: 70, s: 96, far: false },
   ]);
   const crashedRef = useRef(false);
   const endRef = useRef<number | null>(null);
@@ -214,6 +259,10 @@ export const FruitJumpGame: React.FC<Props> = ({
         obstaclesRef.current = [];
         cherriesRef.current = [];
         worldRef.current.toNext = 100000;
+      },
+      /** Jump to a score (to look at the sky at any time of day) */
+      score: (n: number) => {
+        worldRef.current.distance = n / SCORE_PER_PX;
       },
       place: (kind: Kind, x = 300) => obstaclesRef.current.push({ kind, x, phase: 0, passed: false }),
       cherries: (n: number, x = 300) => {
@@ -499,10 +548,11 @@ export const FruitJumpGame: React.FC<Props> = ({
 
         // Clouds drift even on the start card
         for (const c of cloudsRef.current) {
-          c.x -= (isPlayingRef.current ? w.speed * 0.18 : 0.3) * dt;
-          if (c.x < -60) {
-            c.x = CW + 40 + Math.random() * 120;
-            c.y = 35 + Math.random() * 80;
+          const drift = c.far ? 0.5 : 1;
+          c.x -= (isPlayingRef.current ? w.speed * 0.16 : 0.28) * drift * dt;
+          if (c.x < -c.s) {
+            c.x = CW + c.s + Math.random() * 160;
+            c.y = c.far ? 24 + Math.random() * 40 : 60 + Math.random() * 60;
           }
         }
         for (let i = dustRef.current.length - 1; i >= 0; i--) {
@@ -555,12 +605,34 @@ export const FruitJumpGame: React.FC<Props> = ({
           ctx.fillRect(sx, sy, 2 * tw, 2 * tw);
         }
       }
-      ctx.globalAlpha = 1 - night;
-      drawEmoji(ctx, '☀️', CW - 70, 58, 46);
-      ctx.globalAlpha = night;
-      drawEmoji(ctx, '🌙', CW - 70, 58, 40);
-      ctx.globalAlpha = 0.85 - night * 0.4;
-      for (const c of cloudsRef.current) drawEmoji(ctx, '☁️', c.x, c.y, c.s);
+      // The sun sets behind the hills (drawn next) as evening comes and rises again at dawn; the
+      // moon comes up on the other side for the night
+      const sunDown = smooth(0.42, 0.6, phase) * (1 - smooth(0.9, 1, phase));
+      const moonUp = smooth(0.56, 0.7, phase) * (1 - smooth(0.84, 0.94, phase));
+      const horizon = GROUND_Y - 10;
+      if (sunDown < 1) {
+        const sunY = 62 + sunDown * (horizon - 62);
+        drawOrb(ctx, CW - 86, sunY, 22, mix('#ffd45c', '#ff9a4a', sunDown), mix('#f6b23a', '#e8763a', sunDown), `rgba(255, 214, 110, ${0.5 - sunDown * 0.2})`);
+      }
+      if (moonUp > 0) {
+        const moonY = horizon - moonUp * (horizon - 64);
+        drawOrb(ctx, 92, moonY, 17, '#f6f0dc', '#d9cfb0', 'rgba(255, 248, 220, 0.22)');
+        // A few soft craters
+        ctx.fillStyle = 'rgba(190, 178, 145, 0.45)';
+        ctx.beginPath();
+        ctx.arc(86, moonY - 4, 4, 0, Math.PI * 2);
+        ctx.arc(98, moonY + 5, 3, 0, Math.PI * 2);
+        ctx.arc(95, moonY - 8, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Clouds pass in front of the sun and moon; far ones first and fainter. They blush at
+      // dusk and turn grey-blue at night.
+      const cloudTop = mix(mix('#ffffff', '#ffe1cf', Math.min(1, dusk)), '#5d6478', night);
+      const cloudUnder = mix(mix('#d9e6f0', '#e8b9a6', Math.min(1, dusk)), '#3c4152', night);
+      for (const far of [true, false]) {
+        ctx.globalAlpha = far ? 0.7 - night * 0.3 : 0.95 - night * 0.35;
+        for (const c of cloudsRef.current) if (c.far === far) drawCloud(ctx, c.x, c.y, c.s, cloudTop, cloudUnder);
+      }
       ctx.globalAlpha = 1;
 
       // Far hills, slower than the ground

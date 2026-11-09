@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { TitleDef } from '../../utils/titles';
-import { FRAME_CLASS } from '../../utils/shop';
+import { FRAME_CLASS, runningFrame } from '../../utils/shop';
 import { Emoji } from './Emoji';
 
 const SIZES = {
@@ -35,7 +35,19 @@ export const Framed: React.FC<{ frame?: string; shape?: 'circle' | 'sticker'; ch
 }) => {
   const ring = frame ? FRAME_CLASS[frame] : undefined;
   if (!ring) return <>{children}</>;
-  return <span className={`inline-grid shrink-0 p-[3px] ${shape === 'circle' ? 'rounded-full' : 'rounded-[1.2rem]'} ${ring}`}>{children}</span>;
+  const round = shape === 'circle' ? 'rounded-full' : 'rounded-[1.2rem]';
+  const runs = frame ? runningFrame(frame) : null;
+  // A running frame gets its own layer, so the colours change on the ring and not on the face inside it.
+  // Only a circle can spin; on a rounded square the corners would swing out.
+  if (runs) {
+    return (
+      <span className={`relative inline-grid shrink-0 p-[3px] ${round}`}>
+        <span className={`absolute inset-0 ${round} ${ring} ${shape === 'circle' ? runs : 'frame-run'}`} aria-hidden="true" />
+        <span className="relative inline-grid">{children}</span>
+      </span>
+    );
+  }
+  return <span className={`inline-grid shrink-0 p-[3px] ${round} ${ring}`}>{children}</span>;
 };
 
 /**

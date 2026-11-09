@@ -39,7 +39,7 @@ const TABS: [Tab, string][] = [
   ['blade', '🔪 칼날'],
   ['runner', '🏃 러너'],
   ['suikaSkin', '🎨 과일 스킨'],
-  ['rgb', '🌈 RGB'],
+  ['rgb', '🌈 RGB 시리즈'],
   ['level', '🎖️ 레벨 보상'],
 ];
 
@@ -62,10 +62,20 @@ const TAB_HINT: Record<Tab, string> = {
   blade: '과일 자르기에서 긋는 칼날 자국 색이에요',
   runner: 'FRUIT DASH와 과일 점프에서 달리는 캐릭터예요',
   suikaSkin: '메모리와 그리기를 뺀 모든 게임의 과일이 다른 모양으로 바뀌어요 (크기와 점수는 그대로)',
-  staff: '운영진만 쓸 수 있는 전용 시리즈예요. 칭호와 테두리는 다른 사람은 랭킹에 달 수 없어요',
-  rgb: '빨강부터 보라까지 색이 계속 바뀌는 시리즈예요. 아바타 · 칭호 · 카드 뒷면 · 러너는 각 777억 코인, 테두리는 운영진 선물로만 받아요',
+  staff: '운영진만 쓸 수 있는 전용 시리즈예요. 테두리는 색이 계속 바뀌어요. 칭호와 테두리는 다른 사람은 랭킹에 달 수 없어요',
+  rgb: '색이 계속 바뀌는 시리즈예요. 전부 각 777억 코인이고, 프리즘 테두리만 운영진 선물로 받아요',
   level: '레벨이 오르면 저절로 생기는 보상이에요. 레벨이 오를 때마다 코인도 받아요 (일반 플레이어 최고 Lv.100)',
 };
+
+/** The RGB tab's groups, in order */
+const RGB_GROUPS: [ItemKind, string][] = [
+  ['frame', '테두리'],
+  ['avatar', '아바타'],
+  ['title', '칭호'],
+  ['cardBack', '카드 뒷면'],
+  ['blade', '칼날'],
+  ['runner', '러너'],
+];
 
 const BladePreview: React.FC<{ id: string }> = ({ id }) => {
   const b = bladeStyle(id);
@@ -75,7 +85,7 @@ const BladePreview: React.FC<{ id: string }> = ({ id }) => {
     : `linear-gradient(90deg, transparent, rgba(${glow}, 0.85) 45%, rgb(${b.core}))`;
   return (
     <span className="grid h-14 w-16 place-items-center rounded-xl border border-line bg-[#ffdca6]">
-      <span className="block h-2 w-14 -rotate-[24deg] rounded-full" style={{ background, boxShadow: `0 0 8px 2px rgba(${glow}, 0.7)` }} />
+      <span className={`block h-2 w-14 -rotate-[24deg] rounded-full ${id.startsWith('rgb_') ? 'rgb-hue' : ''}`} style={{ background, boxShadow: `0 0 8px 2px rgba(${glow}, 0.7)` }} />
     </span>
   );
 };
@@ -178,6 +188,48 @@ export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, 
   const missing = SHOP_ITEMS.filter((i) => forSale(i) && !owned[i.id]).length;
   const unlimited = !Number.isFinite(balance);
 
+  const renderItem = (item: ShopItem) => {
+    const has = !!owned[item.id];
+    const isOn = equipped[item.kind] === item.id;
+    return (
+      <li
+        key={item.id}
+        className={`flex flex-col items-center gap-2 rounded-2xl border border-line p-3 text-center ${isOn ? 'bg-mango-soft' : 'bg-surface-2'}`}
+      >
+        <Preview kind={item.kind} id={item.id} player={player} />
+        <p className="text-sm font-bold">{item.rgb ? <span className="rgb-text font-black">{item.name}</span> : item.name}</p>
+        {item.gift && <span className="chip h-5 bg-[#1e3a8a] px-1.5 text-[10px] text-white">🛡️ 운영진 선물</span>}
+        {item.level && <span className="chip h-5 bg-grape-soft px-1.5 text-[10px]">🎖️ Lv.{item.level} 보상</span>}
+        {isOn ? (
+          <InUse />
+        ) : has ? (
+          <button type="button" className="btn btn-sm w-full" onClick={() => onEquip(item.kind, item)}>
+            사용하기
+          </button>
+        ) : !forSale(item) ? (
+          <span className="chip h-8 w-full justify-center bg-surface text-xs text-ink-3">{lockLabel(item)}</span>
+        ) : unlimited ? (
+          <button type="button" className="btn btn-sm btn-mango w-full" onClick={() => onBuy(item)}>
+            <Gift className="h-4 w-4" strokeWidth={2.5} /> 받기
+          </button>
+        ) : balance < item.price ? (
+          <button type="button" className="btn btn-sm w-full" disabled>
+            🪙 {price(item.price)} · 부족
+          </button>
+        ) : (
+          <ConfirmButton
+            className="btn btn-sm btn-mango w-full"
+            question={`${item.name}${josa(item.name, '을', '를')} 🪙 ${price(item.price)}에 살까요?`}
+            confirmLabel="살게요"
+            onConfirm={() => onBuy(item)}
+          >
+            🪙 {price(item.price)}
+          </ConfirmButton>
+        )}
+      </li>
+    );
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -241,48 +293,17 @@ export const ShopModal: React.FC<Props> = ({ isOpen, onClose, balance, isAdmin, 
             )}
           </li>
         )}
-        {items.map((item) => {
-          const has = !!owned[item.id];
-          const isOn = equipped[item.kind] === item.id;
-          return (
-            <li
-              key={item.id}
-              className={`flex flex-col items-center gap-2 rounded-2xl border border-line p-3 text-center ${isOn ? 'bg-mango-soft' : 'bg-surface-2'}`}
-            >
-              <Preview kind={item.kind} id={item.id} player={player} />
-              <p className="text-sm font-bold">{item.rgb ? <span className="rgb-text font-black">{item.name}</span> : item.name}</p>
-              {item.gift && <span className="chip h-5 bg-[#1e3a8a] px-1.5 text-[10px] text-white">🛡️ 운영진 선물</span>}
-              {item.level && <span className="chip h-5 bg-grape-soft px-1.5 text-[10px]">🎖️ Lv.{item.level} 보상</span>}
-              {isOn ? (
-                <InUse />
-              ) : has ? (
-                <button type="button" className="btn btn-sm w-full" onClick={() => onEquip(item.kind, item)}>
-                  사용하기
-                </button>
-              ) : !forSale(item) ? (
-                <span className="chip h-8 w-full justify-center bg-surface text-xs text-ink-3">{lockLabel(item)}</span>
-              ) : unlimited ? (
-                <button type="button" className="btn btn-sm btn-mango w-full" onClick={() => onBuy(item)}>
-                  <Gift className="h-4 w-4" strokeWidth={2.5} /> 받기
-                </button>
-              ) : balance < item.price ? (
-                <button type="button" className="btn btn-sm w-full" disabled>
-                  🪙 {price(item.price)} · 부족
-                </button>
-              ) : (
-                <ConfirmButton
-                  className="btn btn-sm btn-mango w-full"
-                  question={`${item.name}${josa(item.name, '을', '를')} 🪙 ${price(item.price)}에 살까요?`}
-                  confirmLabel="살게요"
-                  onConfirm={() => onBuy(item)}
-                >
-                  🪙 {price(item.price)}
-                </ConfirmButton>
-              )}
-            </li>
-          );
-        })}
+        {tab !== 'rgb' && items.map(renderItem)}
       </ul>
+
+      {/* RGB: one short shelf per kind */}
+      {tab === 'rgb' &&
+        RGB_GROUPS.map(([kind, label]) => (
+          <section key={kind} className="mb-4" aria-label={`RGB ${label}`}>
+            <h3 className="mb-2 border-b border-dashed border-line pb-1 font-display text-lg">{label}</h3>
+            <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">{items.filter((i) => i.kind === kind).map(renderItem)}</ul>
+          </section>
+        ))}
 
       <div className="well mt-4 p-3.5 text-xs text-ink-2">
         <p className="mb-1 font-bold text-ink">🪙 코인 모으는 법</p>

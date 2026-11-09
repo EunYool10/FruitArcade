@@ -666,6 +666,19 @@
     to { background-position: -125% 0; }
   }
 
+  /* Running frames (운영진 series, sold RGB frames): the colours keep changing on the ring's own layer */
+  .frame-run {
+    animation: rgb-hue 5s linear infinite;
+  }
+  .frame-spin {
+    animation: rgb-hue 5s linear infinite, frame-spin 3s linear infinite;
+  }
+  @keyframes frame-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
   /* RGB 테두리 (an admins' gift): the ring runs red → violet and back, with a glow */
   .frame-prism {
     background-color: #ff3b30;

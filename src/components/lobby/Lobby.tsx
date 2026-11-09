@@ -41,7 +41,14 @@ const KINDS: [Kind, string][] = [
 /** Plain text links along the bottom of the lobby */
 const FOOTER_LINK = 'underline-offset-4 hover:text-ink hover:underline';
 
-const tilt = (deg: number, delay = 0) => ({ '--tilt': `${deg}deg`, animationDelay: `${delay}s` }) as React.CSSProperties;
+/** What's in the lobby's crate, with a slight lean each; the grapes only fit on the wide phone crate */
+const CRATE_FRUIT: [string, number][] = [
+  ['🍉', -8],
+  ['🍎', 5],
+  ['🍇', -4],
+  ['🍓', -6],
+  ['🍊', 8],
+];
 
 export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, daily, level, achievementCount, coins, friendBadge, onPlay, onOpen }) => {
   const lastGame = history[0]?.game;
@@ -71,23 +78,16 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
         <div className="panel relative flex min-h-[280px] flex-col overflow-hidden">
           <div className="awning shrink-0" aria-hidden="true" />
           {/* Phones: a crate the width of the counter along the bottom. Wider screens: one crate in the corner */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 sm:left-auto sm:right-8 sm:w-[210px]" aria-hidden="true">
-            <div className="relative h-[78px] sm:h-[118px]">
-              <span className="absolute bottom-[26px] left-[8%] text-[40px] sm:bottom-[30px] sm:left-[1%] sm:text-[62px]" style={{ transform: 'rotate(-14deg)' }}>
-                <Emoji e="🍉" />
-              </span>
-              <span className="absolute bottom-[30px] left-[30%] text-[34px] sm:bottom-[44px] sm:left-[35%] sm:text-[52px]" style={{ transform: 'rotate(8deg)' }}>
-                <Emoji e="🍎" />
-              </span>
-              <span className="absolute bottom-[28px] left-[52%] text-[30px] sm:hidden" style={{ transform: 'rotate(-6deg)' }}>
-                <Emoji e="🍇" />
-              </span>
-              <span className="absolute bottom-[26px] right-[8%] text-[36px] sm:bottom-[32px] sm:right-[3%] sm:text-[56px]" style={{ transform: 'rotate(16deg)' }}>
-                <Emoji e="🍊" />
-              </span>
-              <span className="absolute bottom-[38px] left-[21%] text-[26px] animate-float sm:bottom-[66px] sm:left-[24%] sm:text-[38px]" style={tilt(-6)}>
-                <Emoji e="🍓" />
-              </span>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 sm:left-auto sm:right-6 sm:w-[188px]" aria-hidden="true">
+            <div className="relative h-[78px] sm:h-[100px]">
+              {/* One row, evenly spaced; the crate is drawn after it, so the fruit sit inside */}
+              <div className="absolute inset-x-4 bottom-[26px] flex items-end justify-between text-[38px] leading-none sm:inset-x-1 sm:bottom-[46px] sm:text-[44px]">
+                {CRATE_FRUIT.map(([e, deg], i) => (
+                  <span key={e} className={i === 2 ? 'sm:hidden' : ''} style={{ transform: `rotate(${deg}deg)` }}>
+                    <Emoji e={e} />
+                  </span>
+                ))}
+              </div>
               <div className="crate absolute inset-x-0 bottom-0 h-[36px] rounded-none sm:h-[58px] sm:rounded-t-[0.35rem]">
                 <span className="hand absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-3deg] whitespace-nowrap rounded-sm bg-[#fff7e6] px-2 text-[13px] leading-5 text-[#7a4a1e] shadow-sm sm:text-[15px]">
                   오늘 들어온 과일

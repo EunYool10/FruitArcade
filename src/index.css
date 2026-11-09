@@ -26,6 +26,8 @@
   --shadow: rgb(74 50 28 / 0.3);
   --shade-1: rgb(74 50 28 / 0.1);
   --shade-2: rgb(74 50 28 / 0.26);
+  /* The offset shadow under cards and buttons */
+  --shade-hard: rgb(74 50 28 / 0.2);
   --on-bright: #2a1d12; /* text on bright fruit fills, same in both themes */
   /* Paper grain laid over the page */
   --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.07'/></svg>");
@@ -78,6 +80,7 @@
   --shadow: rgb(0 0 0 / 0.55);
   --shade-1: rgb(0 0 0 / 0.3);
   --shade-2: rgb(0 0 0 / 0.55);
+  --shade-hard: rgb(0 0 0 / 0.5);
   --crate: #8f6537;
   --crate-deep: #6b4a26;
 
@@ -210,11 +213,11 @@
   --color-peach-soft: var(--peach-soft);
   --color-peach-ink: var(--peach-ink);
 
-  /* Paper resting on paper: a contact line and a soft fall-off (the names are kept from the old hard shadows) */
-  --shadow-hard-sm: 0 1px 1px var(--shade-1), 0 2px 5px -2px var(--shade-2);
-  --shadow-hard: 0 1px 2px var(--shade-1), 0 4px 10px -4px var(--shade-2);
-  --shadow-pop: 0 1px 2px var(--shade-1), 0 10px 24px -14px var(--shade-2);
-  --shadow-pop-lg: 0 2px 4px var(--shade-1), 0 22px 40px -18px var(--shade-2);
+  /* A light offset shadow, like the solid ones from before the renewal */
+  --shadow-hard-sm: 0 2px 0 0 var(--shade-hard);
+  --shadow-hard: 0 3px 0 0 var(--shade-hard);
+  --shadow-pop: 3px 3px 0 0 var(--shade-hard);
+  --shadow-pop-lg: 5px 5px 0 0 var(--shade-hard);
 }
 
 /* ───────────── Base ───────────── */
@@ -284,7 +287,7 @@
     border-radius: 0.8rem;
   }
 
-  /* A solid, pressable button: a darker lip along the bottom that flattens when pressed */
+  /* A solid, pressable button: it stands on its shadow and presses down into it */
   .btn {
     --btn-bg: var(--surface);
     --btn-fg: var(--ink);
@@ -305,17 +308,18 @@
     letter-spacing: 0.01em;
     line-height: 1;
     white-space: nowrap;
-    box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.13), var(--shadow-hard-sm);
+    box-shadow: 0 3px 0 0 var(--shade-hard);
     transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease, background-color 0.15s ease;
     user-select: none;
   }
   .btn:hover:not(:disabled) {
     transform: translateY(-1px);
+    box-shadow: 0 4px 0 0 var(--shade-hard);
     filter: brightness(1.04);
   }
   .btn:active:not(:disabled) {
-    transform: translateY(1px);
-    box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.13), 0 0 0 0 transparent;
+    transform: translateY(3px);
+    box-shadow: 0 0 0 0 var(--shade-hard);
   }
   .btn:disabled {
     opacity: 0.45;
@@ -325,6 +329,13 @@
     padding: 0 0.8rem;
     font-size: 0.93rem;
     border-radius: 0.65rem;
+    box-shadow: 0 2px 0 0 var(--shade-hard);
+  }
+  .btn-sm:hover:not(:disabled) {
+    box-shadow: 0 3px 0 0 var(--shade-hard);
+  }
+  .btn-sm:active:not(:disabled) {
+    transform: translateY(2px);
   }
   .btn-lg {
     height: 3.4rem;
@@ -404,7 +415,7 @@
     place-items: center;
     border: 1px solid rgb(0 0 0 / 0.08);
     border-radius: 0.95rem;
-    box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.12), var(--shadow-hard);
+    box-shadow: 2px 2px 0 0 var(--shade-hard);
     line-height: 1;
   }
 
@@ -523,7 +534,7 @@
       repeating-linear-gradient(180deg, transparent 0 calc(33.3% - 2px), rgb(0 0 0 / 0.28) calc(33.3% - 2px) 33.3%),
       linear-gradient(180deg, var(--crate), var(--crate-deep));
     border-radius: 0.35rem;
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25), var(--shadow-hard);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.25);
   }
 
   .kbd {

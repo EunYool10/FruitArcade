@@ -9,6 +9,14 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.39.1',
+    title: '그림자와 과일 상자 다듬기',
+    items: [
+      ['🎨 화면', '카드와 버튼에 예전처럼 살짝 그림자를 넣었어요. 버튼은 누르면 쏙 들어가요.'],
+      ['🍎 로비', '첫 화면 상자에 담긴 과일을 같은 크기로 가지런히 놓았어요.'],
+    ],
+  },
+  {
     version: '3.39.0',
     title: '상점 새 상품과 과일 점프 하늘',
     items: [

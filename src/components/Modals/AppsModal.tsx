@@ -35,6 +35,13 @@ const APPS = [
     url: 'https://eunyool10.github.io/LogicMaze/',
   },
   {
+    icon: 'apps/lastroom.png',
+    color: '#b07a3c',
+    name: '마지막 방',
+    about: '고인이 남긴 방을 치우고, 남겨진 물건으로 마지막 이야기를 듣는 1인칭 추리 게임 · PC · 모바일 · 브라우저',
+    url: 'https://eunyool10.github.io/LastRoom/',
+  },
+  {
     icon: 'apps/schoolfix.png',
     color: '#1d4ed8',
     slow: true,

@@ -60,6 +60,10 @@ const STILL_SPEED = 0.25;
 const STILL_SECONDS = 0.25;
 /** A fruit over the line sinking faster than this (px per frame) is on its way back down */
 const SINKING_SPEED = 0.15;
+/** Thickness of the glass: drawn outside the bounds, so its inner face is where fruit stop */
+const GLASS = 8;
+/** Inner corner of the jar. No bigger than the smallest fruit, or that fruit pokes through the curve */
+const JAR_CORNER = 14;
 /** How long a merge's ring spreads (60 fps frames) */
 const RING_FRAMES = 20;
 /** How long the hammer's swing shows (60 fps frames) */
@@ -767,13 +771,13 @@ export const SuikaGame: React.FC<Props> = ({
       ctx.translate(shakeX, shakeY);
 
       // The wooden counter the jar stands on
-      const counter = ctx.createLinearGradient(0, BOTTOM - 4, 0, CH);
+      const counter = ctx.createLinearGradient(0, BOTTOM + 6, 0, CH);
       counter.addColorStop(0, P.counter);
       counter.addColorStop(1, P.counterDeep);
       ctx.fillStyle = counter;
-      ctx.fillRect(-12, BOTTOM - 4, CW + 24, CH - BOTTOM + 16);
+      ctx.fillRect(-12, BOTTOM + 6, CW + 24, CH - BOTTOM + 6);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
-      ctx.fillRect(-12, BOTTOM + 9, CW + 24, 1.5);
+      ctx.fillRect(-12, BOTTOM + 13, CW + 24, 1.5);
 
       // Jar interior
       const jarGrad = ctx.createLinearGradient(0, JAR_TOP, 0, BOTTOM);
@@ -781,8 +785,22 @@ export const SuikaGame: React.FC<Props> = ({
       jarGrad.addColorStop(1, P.jarBottom);
       ctx.fillStyle = jarGrad;
       ctx.beginPath();
-      ctx.roundRect(LEFT, JAR_TOP, RIGHT - LEFT, BOTTOM - JAR_TOP, [0, 0, 24, 24]);
+      ctx.roundRect(LEFT - GLASS / 2, JAR_TOP, RIGHT - LEFT + GLASS, BOTTOM - JAR_TOP + GLASS / 2, [0, 0, JAR_CORNER + GLASS / 2, JAR_CORNER + GLASS / 2]);
       ctx.fill();
+      // The shine: a soft streak down the left of the glass
+      const shine = ctx.createLinearGradient(LEFT + 10, 0, LEFT + 28, 0);
+      shine.addColorStop(0, P.shine);
+      shine.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = shine;
+      ctx.beginPath();
+      ctx.roundRect(LEFT + 9, JAR_TOP + 40, 18, BOTTOM - JAR_TOP - 130, 9);
+      ctx.fill();
+
+      const hammerOut = isPlayingRef.current && hammerRef.current;
+      const aiming = isPlayingRef.current && !isCooldownRef.current && !hammerOut;
+      const aimFruit = fruitsRef.current[curLevelRef.current];
+      const aimX = clampX(dropXRef.current, aimFruit.r);
+      const target = hammerOut ? hammerTarget() : null;
 
       // Overflow line. In danger: the space above it pulses red and a red bar on the line
       // shrinks toward the middle as the seconds run out.
@@ -815,17 +833,13 @@ export const SuikaGame: React.FC<Props> = ({
       } else {
         ctx.fillStyle = P.deadline;
         ctx.font = '15px "Do Hyeon", sans-serif';
-        ctx.textAlign = 'right';
+        // The label moves to the other end while the waiting fruit hangs over it
+        const labelLeft = aiming && aimX + aimFruit.r > lineR - 60;
+        ctx.textAlign = labelLeft ? 'left' : 'right';
         ctx.textBaseline = 'bottom';
-        ctx.fillText('넘침 선', lineR, DEADLINE - 5);
+        ctx.fillText('넘침 선', labelLeft ? lineL : lineR, DEADLINE - 5);
       }
       ctx.restore();
-
-      const hammerOut = isPlayingRef.current && hammerRef.current;
-      const aiming = isPlayingRef.current && !isCooldownRef.current && !hammerOut;
-      const aimFruit = fruitsRef.current[curLevelRef.current];
-      const aimX = clampX(dropXRef.current, aimFruit.r);
-      const target = hammerOut ? hammerTarget() : null;
 
       // Aiming guide (under the fruits)
       if (aiming) {
@@ -936,20 +950,22 @@ export const SuikaGame: React.FC<Props> = ({
       }
 
       // Jar walls: thick tinted glass with a bright inner edge, a rim at the top and a shine
+      const mid = GLASS / 2;
       const jarPath = () => {
+        const r = JAR_CORNER + mid;
         ctx.beginPath();
-        ctx.moveTo(LEFT, JAR_TOP);
-        ctx.lineTo(LEFT, BOTTOM - 24);
-        ctx.arcTo(LEFT, BOTTOM, LEFT + 24, BOTTOM, 24);
-        ctx.lineTo(RIGHT - 24, BOTTOM);
-        ctx.arcTo(RIGHT, BOTTOM, RIGHT, BOTTOM - 24, 24);
-        ctx.lineTo(RIGHT, JAR_TOP);
+        ctx.moveTo(LEFT - mid, JAR_TOP);
+        ctx.lineTo(LEFT - mid, BOTTOM + mid - r);
+        ctx.arcTo(LEFT - mid, BOTTOM + mid, LEFT - mid + r, BOTTOM + mid, r);
+        ctx.lineTo(RIGHT + mid - r, BOTTOM + mid);
+        ctx.arcTo(RIGHT + mid, BOTTOM + mid, RIGHT + mid, BOTTOM + mid - r, r);
+        ctx.lineTo(RIGHT + mid, JAR_TOP);
       };
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.setLineDash([]);
       ctx.strokeStyle = P.wall;
-      ctx.lineWidth = 8;
+      ctx.lineWidth = GLASS;
       jarPath();
       ctx.stroke();
       ctx.strokeStyle = P.wallEdge;
@@ -957,25 +973,18 @@ export const SuikaGame: React.FC<Props> = ({
       ctx.save();
       ctx.translate(0, 0);
       ctx.beginPath();
-      ctx.moveTo(LEFT + 4, JAR_TOP + 6);
-      ctx.lineTo(LEFT + 4, BOTTOM - 26);
-      ctx.moveTo(RIGHT - 4, JAR_TOP + 6);
-      ctx.lineTo(RIGHT - 4, BOTTOM - 26);
+      ctx.moveTo(LEFT - 2, JAR_TOP + 6);
+      ctx.lineTo(LEFT - 2, BOTTOM - JAR_CORNER - 4);
+      ctx.moveTo(RIGHT + 2, JAR_TOP + 6);
+      ctx.lineTo(RIGHT + 2, BOTTOM - JAR_CORNER - 4);
       ctx.stroke();
       ctx.restore();
       // The rim
       ctx.fillStyle = P.wall;
       ctx.beginPath();
-      ctx.roundRect(LEFT - 9, JAR_TOP - 5, 18, 10, 5);
-      ctx.roundRect(RIGHT - 9, JAR_TOP - 5, 18, 10, 5);
-      ctx.fill();
-      // The shine: a soft streak down the left of the glass
-      const shine = ctx.createLinearGradient(LEFT + 10, 0, LEFT + 28, 0);
-      shine.addColorStop(0, P.shine);
-      shine.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      ctx.fillStyle = shine;
-      ctx.beginPath();
-      ctx.roundRect(LEFT + 9, JAR_TOP + 40, 18, BOTTOM - JAR_TOP - 130, 9);
+      // The rims stay outside the inner face too, so the waiting fruit clears them
+      ctx.roundRect(LEFT - 14, JAR_TOP - 5, 15, 10, 5);
+      ctx.roundRect(RIGHT - 1, JAR_TOP - 5, 15, 10, 5);
       ctx.fill();
 
       ctx.restore();

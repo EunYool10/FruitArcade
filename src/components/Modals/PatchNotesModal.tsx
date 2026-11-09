@@ -9,6 +9,14 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.39.3',
+    title: '수박 게임 병 다듬기',
+    items: [
+      ['🍉 수박 게임', '과일이 유리병 벽이나 바닥 모서리에 겹쳐 보이던 문제를 고쳤어요.'],
+      ['🍉 넘침 선', '떨어뜨릴 과일이 "넘침 선" 글자를 가리지 않아요.'],
+    ],
+  },
+  {
     version: '3.39.2',
     title: '내 정보 카드와 게임 진열대 정리',
     items: [

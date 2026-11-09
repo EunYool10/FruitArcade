@@ -43,7 +43,14 @@ export const HudStat: React.FC<{ label: string; value: React.ReactNode; tone?: S
         tone === 'warn' ? 'text-berry-ink' : ''
       }`}
     >
-      {value}
+      {/* The score hops each time it changes (a new key restarts the animation) */}
+      {label === '점수' && typeof value === 'string' && value !== '0' ? (
+        <span key={value} className="inline-block origin-center animate-bump lg:origin-left">
+          {value}
+        </span>
+      ) : (
+        value
+      )}
     </p>
   </div>
 );

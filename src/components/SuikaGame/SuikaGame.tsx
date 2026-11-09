@@ -60,6 +60,8 @@ const STILL_SPEED = 0.25;
 const STILL_SECONDS = 0.25;
 /** A fruit over the line sinking faster than this (px per frame) is on its way back down */
 const SINKING_SPEED = 0.15;
+/** How long a merge's ring spreads (60 fps frames) */
+const RING_FRAMES = 20;
 /** How long the hammer's swing shows (60 fps frames) */
 const SMASH_FRAMES = 22;
 /** Once the round is over the fruit keep falling this long, so none is left hanging in the air */
@@ -302,6 +304,8 @@ export const SuikaGame: React.FC<Props> = ({
   const stillRef = useRef(0);
   /** Hammer swings still showing (life in 60 fps frames) */
   const smashesRef = useRef<{ x: number; y: number; life: number }[]>([]);
+  /** Rings spreading from merges (life in 60 fps frames) */
+  const ringsRef = useRef<{ x: number; y: number; r: number; color: string; life: number }[]>([]);
   /** Seconds the fruit keep falling after the round ended */
   const settleRef = useRef(0);
 
@@ -405,6 +409,7 @@ export const SuikaGame: React.FC<Props> = ({
     particlesRef.current = [];
     floatTextsRef.current = [];
     smashesRef.current = [];
+    ringsRef.current = [];
     settleRef.current = 0;
     shakeRef.current = 0;
     dangerTimerRef.current = DANGER_SECONDS;
@@ -600,6 +605,7 @@ export const SuikaGame: React.FC<Props> = ({
         });
 
         shakeRef.current = Math.max(shakeRef.current, 1 + nl * 0.6);
+        if (settingsRef.current.comboEffect) ringsRef.current.push({ x: m.x, y: m.y, r: nf.r, color: nf.color, life: 0 });
         if (nl > highestFruitRef.current) {
           highestFruitRef.current = nl;
           setHighestFruit(nl);
@@ -649,6 +655,8 @@ export const SuikaGame: React.FC<Props> = ({
 
       stepWorld(worldRef.current).forEach(onMerge);
       smashesRef.current.forEach((sm) => (sm.life += TICK_FRAMES));
+      ringsRef.current.forEach((rg) => (rg.life += TICK_FRAMES));
+      ringsRef.current = ringsRef.current.filter((rg) => rg.life < RING_FRAMES);
       smashesRef.current = smashesRef.current.filter((sm) => sm.life < SMASH_FRAMES);
 
       // Danger deadline check: a fruit that has come to rest over the line. One still falling
@@ -863,6 +871,19 @@ export const SuikaGame: React.FC<Props> = ({
         ctx.rotate(-0.5 + Math.sin(time * 0.012) * 0.15);
         ctx.globalAlpha = target ? 1 : 0.6;
         drawEmoji(ctx, ITEMS.hammer.emoji, 0, 0, 58);
+        ctx.restore();
+      }
+
+      // Merge rings: thin and fading as they spread past the new fruit's edge
+      for (const rg of ringsRef.current) {
+        const t = rg.life / RING_FRAMES;
+        ctx.save();
+        ctx.globalAlpha = (1 - t) * 0.7;
+        ctx.strokeStyle = rg.color;
+        ctx.lineWidth = 6 * (1 - t) + 1;
+        ctx.beginPath();
+        ctx.arc(rg.x, rg.y, rg.r * (0.9 + t * 0.7), 0, Math.PI * 2);
+        ctx.stroke();
         ctx.restore();
       }
 

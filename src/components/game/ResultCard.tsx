@@ -1,4 +1,4 @@
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { Check, Crown, Download, Home, Loader2, RotateCcw, Share2 } from 'lucide-react';
 import { GameReward, GameType } from '../../types';
 import { GAMES, TONE, Tone } from '../../constants';
@@ -8,6 +8,31 @@ import { usePlayer } from '../PlayerContext';
 import { useChallenge } from '../ChallengeContext';
 import { useRank } from '../RankContext';
 import { Emoji } from '../ui/Emoji';
+
+/**
+ * The total rings up like a till: it counts from 0 to `target` over a moment (at once when the
+ * player asked for less motion). Whole numbers only while counting, the exact value at the end.
+ */
+function useCountUp(target: number, ms = 700): number {
+  const [shown, setShown] = useState(() => (matchMedia('(prefers-reduced-motion: reduce)').matches ? target : 0));
+  useEffect(() => {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || target <= 0) {
+      setShown(target);
+      return;
+    }
+    const start = performance.now();
+    let frame = 0;
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / ms);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setShown(t < 1 ? Math.floor(target * eased) : target);
+      if (t < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [target, ms]);
+  return shown;
+}
 
 const TONE_HEX: Record<Tone, string> = { berry: '#e5483d', melon: '#4aa364', mango: '#f4b63a', grape: '#8257b8', soda: '#3f8fd0', peach: '#f0895a' };
 
@@ -55,6 +80,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
   unit = '점',
 }) => {
   const titleId = useId();
+  const shownScore = useCountUp(score);
   const player = usePlayer();
   const { linkFor } = useChallenge();
   const rank = useRank();
@@ -154,7 +180,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
           )}
         </div>
         <p className="font-display text-5xl leading-none tabular-nums">
-          {formatNumber(score)}
+          {formatNumber(shownScore)}
           {unit !== '점' && <span className="text-3xl">{unit}</span>}
         </p>
       </div>

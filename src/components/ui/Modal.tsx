@@ -65,10 +65,11 @@ export const Modal: React.FC<ModalProps> = ({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`relative flex max-h-[88dvh] w-full flex-col rounded-t-[28px] border border-line bg-surface outline-none animate-sheet-up sm:rounded-[28px] sm:shadow-pop-lg sm:animate-pop-in ${SIZES[size]}`}
+        className={`relative flex max-h-[88dvh] w-full flex-col overflow-hidden rounded-t-[22px] border border-line bg-surface outline-none animate-sheet-up sm:rounded-[22px] sm:shadow-pop-lg sm:animate-pop-in ${SIZES[size]}`}
       >
-        <div className="mx-auto mt-2.5 h-1.5 w-12 shrink-0 rounded-full bg-ink-3/40 sm:hidden" aria-hidden="true" />
-        <header className="flex shrink-0 items-start gap-3 px-5 pb-3 pt-3 sm:pt-5">
+        {/* Every window is a little stall of its own: an awning in its colour along the top */}
+        <div className="awning h-4 shrink-0 [--stripe:1.25rem]" style={{ '--awning-a': `var(--${tone})` } as React.CSSProperties} aria-hidden="true" />
+        <header className="mx-5 flex shrink-0 items-start gap-3 border-b border-dashed border-line pb-3 pt-6">
           {icon && (
             <span className={`sticker h-12 w-12 shrink-0 -rotate-6 text-2xl text-on-bright ${TONE[tone].bg}`} aria-hidden="true">
               {typeof icon === 'string' ? <Emoji e={icon} /> : icon}
@@ -86,7 +87,7 @@ export const Modal: React.FC<ModalProps> = ({
             </button>
           )}
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-1 pb-[max(1.25rem,env(safe-area-inset-bottom))]">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">{children}</div>
         {footer && <footer className="shrink-0 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-1">{footer}</footer>}
       </div>
     </div>

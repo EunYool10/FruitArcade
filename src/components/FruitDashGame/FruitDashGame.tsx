@@ -128,6 +128,8 @@ export const FruitDashGame: React.FC<Props> = ({
   const rngRef = useRef<Rng>(Math.random);
   const difficulty = lockedDifficulty ?? settings.dashDifficulty;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  /** How hard the screen is jolting (px), dying away each frame */
+  const joltRef = useRef(0);
 
   const [gameState, setGameState] = useState<'IDLE' | 'PLAYING' | 'OVER'>('IDLE');
   const [score, setScore] = useState(0);
@@ -260,6 +262,7 @@ export const FruitDashGame: React.FC<Props> = ({
     const { settings: s, onUnlockAchieve: unlock, onGameComplete: complete } = live.current;
     isPlayingRef.current = false;
     crashedRef.current = true;
+    joltRef.current = 11;
     setGameState('OVER');
     playSound('over', s);
     vibrate(HAPTIC.crash, s);
@@ -477,6 +480,7 @@ export const FruitDashGame: React.FC<Props> = ({
             if (f.isHazard && fx.shield > 0) {
               // The shield takes the hit
               fx.shield = 0;
+              joltRef.current = 7;
               live.current.onUnlockAchieve('dash_shield_save');
               playSound('merge', settings, { level: 6 });
               vibrate(HAPTIC.crash, settings);
@@ -586,6 +590,15 @@ export const FruitDashGame: React.FC<Props> = ({
       const P = dark ? PALETTE.dark : PALETTE.light;
       ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
       ctx.clearRect(0, 0, CW, CH);
+      // A jolt: a quick sway that dies away (off with the screen-shake setting)
+      if (joltRef.current > 0.2 && live.current.settings.shakeEffect) {
+        const j = joltRef.current;
+        ctx.translate(Math.sin(time * 0.09) * j, Math.cos(time * 0.11) * j * 0.5);
+        // Paint past the edges so the moving frame never shows a gap
+        ctx.fillStyle = P.skyTop;
+        ctx.fillRect(-20, -20, CW + 40, CH + 40);
+      }
+      joltRef.current *= Math.pow(0.86, dt);
 
       // 1. Sky
       const sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y);

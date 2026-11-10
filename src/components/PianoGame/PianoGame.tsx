@@ -143,6 +143,9 @@ function tileMotion(motion: Motion, up: number, pos: number, row: number, lane: 
 
 preloadEmoji([...PIANO_FRUITS, ...STAGES.map((s) => s.deco)]);
 
+/** A missed tile's colours while it blinks */
+const MISSED_TILE = { fill: '#ff3b30', deep: '#a4161a' };
+
 const BOARD = {
   light: { bg: '#fffbf3', alt: '#f8f0e2', line: 'rgba(58, 44, 34, 0.12)', outline: '#3a2c22', done: 'rgba(58, 44, 34, 0.06)' },
   dark: { bg: '#231d17', alt: '#1f1a14', line: 'rgba(245, 236, 221, 0.1)', outline: '#0c0907', done: 'rgba(245, 236, 221, 0.06)' },
@@ -833,7 +836,11 @@ export const PianoGame: React.FC<Props> = ({
         const r = tileRect(t);
         const fruit = fruitOf(t.note);
         const emoji = skinPiece(skin, PIANO_FRUITS, fruit);
-        const color = TILE[fruit];
+        const missed = end?.cause === 'miss' && end.row === t.row;
+        // A missed tile blinks red as a whole: fill, base, rim and outline together
+        const flash = missed && blink;
+        const color = flash ? MISSED_TILE : TILE[fruit];
+        const outline = flash ? MISSED_TILE.deep : P.outline;
         const playedAt = playedRef.current.get(i);
         const held = hold?.tile === i;
 
@@ -865,9 +872,8 @@ export const PianoGame: React.FC<Props> = ({
           ctx.translate(-px, -py);
         }
 
-        const missed = end?.cause === 'miss' && end.row === t.row;
-        ctx.fillStyle = missed && blink ? '#ff3b30' : color.fill;
-        ctx.strokeStyle = P.outline;
+        ctx.fillStyle = color.fill;
+        ctx.strokeStyle = outline;
         ctx.lineWidth = 3;
         roundRect(r.x, r.y, r.w, r.h, 18);
         ctx.fill();
@@ -910,7 +916,7 @@ export const PianoGame: React.FC<Props> = ({
           }
           if (trackBottom > trackTop) {
             ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.strokeStyle = P.outline;
+            ctx.strokeStyle = outline;
             ctx.lineWidth = 2.5;
             roundRect(cx - tw / 2, trackTop, tw, trackBottom - trackTop, tw / 2);
             ctx.fill();
@@ -939,7 +945,7 @@ export const PianoGame: React.FC<Props> = ({
             ctx.textBaseline = 'middle';
             const lw = ctx.measureText(label).width + 18;
             const ly = r.y + r.h - 28;
-            ctx.fillStyle = P.outline;
+            ctx.fillStyle = outline;
             roundRect(cx - lw / 2, ly - 11, lw, 22, 11);
             ctx.fill();
             ctx.fillStyle = '#ffffff';
@@ -963,7 +969,7 @@ export const PianoGame: React.FC<Props> = ({
           ctx.textBaseline = 'middle';
           ctx.lineJoin = 'round';
           ctx.lineWidth = 5;
-          ctx.strokeStyle = P.outline;
+          ctx.strokeStyle = outline;
           ctx.strokeText('시작', r.x + r.w / 2, r.y + r.h - 30);
           ctx.fillStyle = '#ffffff';
           ctx.fillText('시작', r.x + r.w / 2, r.y + r.h - 30);

@@ -9,6 +9,13 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.40.1',
+    title: '피아노 놓친 타일 깜빡임',
+    items: [
+      ['🎹 과일 피아노', '놓친 타일이 깜빡일 때 테두리 선은 그대로 남던 것을 고쳤어요. 이제 타일 전체가 함께 빨갛게 깜빡여요.'],
+    ],
+  },
+  {
     version: '3.40.0',
     title: '피아노 무대와 수박 아이템 알림',
     items: [

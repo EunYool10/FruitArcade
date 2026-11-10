@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { Check, Crown, Download, Home, Loader2, RotateCcw, Share2 } from 'lucide-react';
 import { GameReward, GameType } from '../../types';
 import { GAMES, TONE, Tone } from '../../constants';
@@ -81,6 +81,10 @@ export const ResultCard: React.FC<ResultCardProps> = ({
 }) => {
   const titleId = useId();
   const shownScore = useCountUp(score);
+  // Keyboard focus starts on "다시 하기", but the card stays scrolled to its top: on a phone held
+  // sideways autoFocus scrolled the title and the score out of sight
+  const retryRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => retryRef.current?.focus({ preventScroll: true }), []);
   const player = usePlayer();
   const { linkFor } = useChallenge();
   const rank = useRank();
@@ -241,7 +245,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
       )}
 
       <div className="mt-5 space-y-2">
-        <button type="button" className="btn btn-lg btn-primary w-full" onClick={onRetry} autoFocus>
+        <button ref={retryRef} type="button" className="btn btn-lg btn-primary w-full" onClick={onRetry}>
           <RotateCcw className="h-5 w-5" strokeWidth={2.5} /> 다시 하기
         </button>
         <div className="grid grid-cols-2 gap-2">

@@ -9,6 +9,14 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.40.2',
+    title: '작은 버그 수정',
+    items: [
+      ['📋 결과 화면', '휴대폰을 가로로 들고 있을 때 결과 화면이 제목과 점수가 잘린 채로 열리던 문제를 고쳤어요.'],
+      ['🎹 과일 피아노', '게임 도중 화면 효과를 끄면 누른 자리의 동그라미가 사라지지 않던 문제와, 타일을 놓쳤을 때 배경이 이전 무대로 잠깐 돌아가던 문제를 고쳤어요.'],
+    ],
+  },
+  {
     version: '3.40.1',
     title: '피아노 놓친 타일 깜빡임',
     items: [

@@ -352,6 +352,8 @@ export const PianoGame: React.FC<Props> = ({
   /** Left-hand notes waiting for their moment (performance.now) */
   const pendingRef = useRef<{ at: number; notes: number[] }[]>([]);
   const posRef = useRef(START_POS);
+  /** The furthest the board has gone: stages follow this, so a missed tile sliding back into view doesn't bring the last stage back */
+  const peakPosRef = useRef(START_POS);
   const startedRef = useRef(false);
   const lapsRef = useRef(0);
   const scoreRef = useRef(0);
@@ -481,6 +483,7 @@ export const PianoGame: React.FC<Props> = ({
     holdRef.current = null;
     nextRef.current = 0;
     posRef.current = START_POS;
+    peakPosRef.current = START_POS;
     startedRef.current = false;
     lapsRef.current = 0;
     scoreRef.current = 0;
@@ -760,10 +763,13 @@ export const PianoGame: React.FC<Props> = ({
       ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
       const anim = live.current.settings.animEnabled;
       const span = stageSpanRef.current;
-      const stageNo = Math.max(0, Math.floor(posRef.current / span));
+      // Old flashes go even when effects were switched off mid-round (they would hang on, growing, otherwise)
+      flashesRef.current = flashesRef.current.filter((f) => now - f.at < FLASH_MS);
+      peakPosRef.current = Math.max(peakPosRef.current, posRef.current);
+      const stageNo = Math.max(0, Math.floor(peakPosRef.current / span));
       const stage = stageAt(stageNo);
       // A new stage washes in over the first row or so after its first row reaches the bottom
-      const wash = stageNo > 0 ? clamp01((posRef.current - stageNo * span) / 1.2) : 1;
+      const wash = stageNo > 0 ? clamp01((peakPosRef.current - stageNo * span) / 1.2) : 1;
       const [from1, from2] = stageNo > 0 ? stageAt(stageNo - 1)[dark ? 'dark' : 'light'] : stage[dark ? 'dark' : 'light'];
       const [to1, to2] = stage[dark ? 'dark' : 'light'];
       for (let l = 0; l < LANES; l++) {
@@ -792,7 +798,6 @@ export const PianoGame: React.FC<Props> = ({
         ctx.restore();
 
         // Light rising from each lane just played
-        flashesRef.current = flashesRef.current.filter((f) => now - f.at < FLASH_MS);
         for (const f of flashesRef.current) {
           const light = ctx.createLinearGradient(0, CH, 0, CH * 0.05);
           light.addColorStop(0, f.color + 'b0');

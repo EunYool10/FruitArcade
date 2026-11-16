@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, Save } from 'lucide-react';
-import type { LookChange, UserRow } from '../../utils/adminService';
+import type { LookChange, UserRow } from '../../api/adminService';
 import { AVATARS, NICKNAME_MAX, cleanNickname, isReservedNickname } from '../../utils/profile';
 import { hasBadWords } from '../../utils/badWords';
 import { PRISM_FRAME } from '../../utils/shop';
@@ -8,7 +8,7 @@ import { Framed } from '../ui/Avatar';
 import { Emoji } from '../ui/Emoji';
 import { ConfirmButton } from '../ui/ConfirmButton';
 
-const adminApi = () => import('../../utils/adminService');
+const adminApi = () => import('../../api/adminService');
 
 interface Props {
   u: UserRow;

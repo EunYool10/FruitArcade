@@ -64,7 +64,7 @@ export const Lobby: React.FC<LobbyProps> = ({ player, streak, stats, history, da
           <span className="text-2xl" aria-hidden="true">
             ✨
           </span>
-          <p className="flex-1 text-sm font-bold">새 버전이 나왔어요! 잠시 뒤 자동으로 바뀌어요</p>
+          <p className="flex-1 text-sm font-bold">새 버전이 준비됐어요. 업데이트 버튼을 누르면 적용돼요.</p>
           <button type="button" className="btn btn-sm btn-soda" onClick={applyUpdate}>
             지금 바꾸기
           </button>

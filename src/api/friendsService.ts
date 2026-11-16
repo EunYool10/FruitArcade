@@ -19,9 +19,9 @@ import {
 import { db } from '../firestore';
 import { GameType } from '../types';
 import { RANKED_GAMES } from '../constants';
-import { cleanPhoto, kstDay } from './ranking';
-import { COIN_MAX, GIFT_LIMITS } from './coins';
-import { maskBadWords } from './badWords';
+import { cleanPhoto, kstDay } from '../utils/ranking';
+import { COIN_MAX, GIFT_LIMITS } from '../utils/coins';
+import { maskBadWords } from '../utils/badWords';
 
 // Friends and coin gifts (signed-in players only).
 //   players/{uid}       public card: name, avatar, title, frame, level, achievements, best scores, friend code

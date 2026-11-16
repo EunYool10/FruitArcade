@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Ban, Check, Loader2, RefreshCw, RotateCcw, Trash2, UserSearch } from 'lucide-react';
-import type { AdminStats as Stats, FeedbackItem, ReportItem, UserRow } from '../../utils/adminService';
-import type { BanEntry } from '../../utils/leaderboardService';
+import type { AdminStats as Stats, FeedbackItem, ReportItem, UserRow } from '../../api/adminService';
+import type { BanEntry } from '../../api/leaderboardService';
 import { boardLabel } from '../../utils/ranking';
 import { formatNumber } from '../../utils/format';
 import { Modal } from '../ui/Modal';
@@ -10,8 +10,8 @@ import { AdminUsers } from './AdminUsers';
 import { AdminStats } from './AdminStats';
 import { isOnline } from '../../utils/presence';
 
-const adminApi = () => import('../../utils/adminService');
-const rankApi = () => import('../../utils/leaderboardService');
+const adminApi = () => import('../../api/adminService');
+const rankApi = () => import('../../api/leaderboardService');
 
 interface Props {
   isOpen: boolean;

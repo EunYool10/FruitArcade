@@ -5,7 +5,7 @@ import { GAMES, RANKED_GAMES } from '../../constants';
 import { formatNumber } from '../../utils/format';
 import { PERIOD_LABEL, RANK_PERIODS, RankEntry, RankPeriod, boardId, kstWeek, rankErrorKind, weekRangeLabel } from '../../utils/ranking';
 import { titleDef } from '../../utils/titles';
-import type { ReportReason } from '../../utils/communityService';
+import type { ReportReason } from '../../api/communityService';
 import { Modal } from '../ui/Modal';
 import { ConfirmButton } from '../ui/ConfirmButton';
 import { AvatarFace, Framed } from '../ui/Avatar';
@@ -13,8 +13,8 @@ import { TitleTag } from '../ui/TitleTag';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
 import { Emoji } from '../ui/Emoji';
 
-const rankApi = () => import('../../utils/leaderboardService');
-const communityApi = () => import('../../utils/communityService');
+const rankApi = () => import('../../api/leaderboardService');
+const communityApi = () => import('../../api/communityService');
 
 interface Props {
   isOpen: boolean;

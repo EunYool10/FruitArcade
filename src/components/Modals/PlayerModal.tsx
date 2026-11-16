@@ -7,12 +7,12 @@ import { VerifiedBadge } from '../ui/VerifiedBadge';
 import { GAMES, RANKED_GAMES, TONE } from '../../constants';
 import { titleDef } from '../../utils/titles';
 import { formatNumber } from '../../utils/format';
-import type { PublicPlayer } from '../../utils/friendsService';
+import type { PublicPlayer } from '../../api/friendsService';
 import { Emoji } from '../ui/Emoji';
 import { PresenceTag } from '../ui/Presence';
 import { levelLabel } from '../../utils/progress';
 
-const friendsApi = () => import('../../utils/friendsService');
+const friendsApi = () => import('../../api/friendsService');
 
 type Status = 'none' | 'sent' | 'received' | 'friends';
 

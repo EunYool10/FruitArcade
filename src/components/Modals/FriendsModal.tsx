@@ -13,9 +13,9 @@ import { GAMES, GAME_ORDER } from '../../constants';
 import { isOnline } from '../../utils/presence';
 import { isAdminLevel, levelLabel } from '../../utils/progress';
 import { COIN_MAX, GIFT_LIMITS } from '../../utils/coins';
-import type { FriendLink, Gift as GiftDoc, PublicPlayer } from '../../utils/friendsService';
+import type { FriendLink, Gift as GiftDoc, PublicPlayer } from '../../api/friendsService';
 
-const friendsApi = () => import('../../utils/friendsService');
+const friendsApi = () => import('../../api/friendsService');
 
 export type SendResult = 'ok' | 'limit' | 'coins' | 'error';
 

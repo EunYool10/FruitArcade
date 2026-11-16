@@ -24,9 +24,9 @@ import {
 import { db } from '../firestore';
 import { GAME_ORDER } from '../constants';
 import type { FeedbackKind, ReportReason } from './communityService';
-import { RANK_PERIODS, boardId, cleanPhoto, dayLabel, kstDay, publicName } from './ranking';
-import { PRISM_FRAME } from './shop';
-import { maskBadWords } from './badWords';
+import { RANK_PERIODS, boardId, cleanPhoto, dayLabel, kstDay, publicName } from '../utils/ranking';
+import { PRISM_FRAME } from '../utils/shop';
+import { maskBadWords } from '../utils/badWords';
 import type { GameType } from '../types';
 
 // Admin screen data. firestore.rules only lets accounts on config/admins read or change any of it.

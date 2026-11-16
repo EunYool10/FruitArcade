@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import type { AdminStats as Stats, DayStat } from '../../utils/adminService';
+import type { AdminStats as Stats, DayStat } from '../../api/adminService';
 import { GAMES, GAME_ORDER } from '../../constants';
 import { formatNumber } from '../../utils/format';
 import { Emoji } from '../ui/Emoji';

@@ -1,7 +1,7 @@
 import { doc, increment, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firestore';
 import { APP_VERSION } from '../constants';
-import { RankEntry, dayId } from './ranking';
+import { RankEntry, dayId } from '../utils/ranking';
 
 // Things signed-in players send to the admins: reports, feedback, and daily play counts
 

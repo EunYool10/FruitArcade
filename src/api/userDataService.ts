@@ -2,9 +2,9 @@ import { User } from 'firebase/auth';
 import { DocumentData, doc, getDoc, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firestore';
 import { GameResult, GameSettings, UnlockedAchievements, UserStatistics } from '../types';
-import { EMPTY_STATS, applyResult, mergeStats, sameStats } from './progress';
-import { PlayerProfile } from './profile';
-import { googlePhotoOf } from './ranking';
+import { EMPTY_STATS, applyResult, mergeStats, sameStats } from '../utils/progress';
+import { PlayerProfile } from '../utils/profile';
+import { googlePhotoOf } from '../utils/ranking';
 
 /** Raw cloud values; the app merges them with what this device already has. */
 export interface CloudData {

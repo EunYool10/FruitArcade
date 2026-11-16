@@ -4,9 +4,9 @@
 // with the sender's public key (RSA-OAEP + AES-GCM) so the stored copy is useless to anyone else.
 import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firestore';
-import { StreakState } from './progress';
-import { todayKey } from './missions';
-import { loadReminderState, saveReminderState } from './reminderState';
+import { StreakState } from '../utils/progress';
+import { todayKey } from '../utils/missions';
+import { loadReminderState, saveReminderState } from '../utils/reminderState';
 
 /** The sender's VAPID public key (web push only delivers messages signed with its private half) */
 const VAPID_PUBLIC = 'BOF1xmUpA0itz4_LEMe64XKNaufoKi6-3HLdcy5iwZ6GAG4RuXYKwND-Zl201P2_tf7ZWvxd3dWtlzvTd5ifATU';

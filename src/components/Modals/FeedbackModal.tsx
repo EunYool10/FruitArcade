@@ -1,10 +1,10 @@
 import React, { useEffect, useId, useState } from 'react';
 import { Loader2, LogIn, Send } from 'lucide-react';
-import type { FeedbackKind } from '../../utils/communityService';
+import type { FeedbackKind } from '../../api/communityService';
 import { Modal } from '../ui/Modal';
 import { Segmented } from '../ui/Segmented';
 
-const communityApi = () => import('../../utils/communityService');
+const communityApi = () => import('../../api/communityService');
 
 const MAX = 1000;
 

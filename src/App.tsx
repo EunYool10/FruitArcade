@@ -48,7 +48,6 @@ import { maskBadWords } from './utils/badWords';
 import { earnedTitles, wornTitle } from './utils/titles';
 import { josa } from './utils/format';
 import { PRESENCE_EVERY_MS } from './utils/presence';
-import { setUpdateIdle } from './utils/pwa';
 import { StageProgress, clearStageProgress, loadStageProgress, mergeStageProgress, saveStageProgress } from './components/PuzzleGame/stages';
 import { DayStats, clearDays, loadDays, recordDay } from './utils/dailyStats';
 import { Challenge, challengeLink, takeChallengeFromUrl } from './utils/challenge';
@@ -88,7 +87,7 @@ import { AVATARS, PlayerProfile, loadProfile, loadProfileMod, saveProfile, saveP
 import { DailyState, applyDaily, loadDaily, saveDaily, todayKey } from './utils/missions';
 import { playSound } from './utils/audio';
 import { TrackName, music } from './utils/music';
-import { askProof, dropClaim, endScoredRound, pendingClaims, proveRound, queueClaim, startScoredRound, wakeScoreServer } from './utils/scoreServer';
+import { askProof, dropClaim, endScoredRound, pendingClaims, proveRound, queueClaim, startScoredRound, wakeScoreServer } from './api/scoreServer';
 import { loadReminderState } from './utils/reminderState';
 
 // Windows load their code the first time they open, not with the app
@@ -127,12 +126,12 @@ const FruitSliceGame = lazy(() =>
 // Firebase loads after the first paint; Firestore only once someone signs in
 const loadAuthApi = () => import('./authApi');
 type AuthApi = Awaited<ReturnType<typeof loadAuthApi>>;
-const cloudApi = () => import('./utils/userDataService');
+const cloudApi = () => import('./api/userDataService');
 type CloudApi = Awaited<ReturnType<typeof cloudApi>>;
-const rankApi = () => import('./utils/leaderboardService');
-const communityApi = () => import('./utils/communityService');
-const remindersApi = () => import('./utils/reminders');
-const friendsApi = () => import('./utils/friendsService');
+const rankApi = () => import('./api/leaderboardService');
+const communityApi = () => import('./api/communityService');
+const remindersApi = () => import('./api/reminders');
+const friendsApi = () => import('./api/friendsService');
 
 const SETTINGS_KEY = 'fruit_arcade_settings';
 const MEMORY_CFG_KEY = 'fruit_arcade_memory';
@@ -1175,7 +1174,6 @@ export default function App() {
   };
 
   // A downloaded update reloads the page only in an idle lobby (no window open, no round)
-  useEffect(() => setUpdateIdle(screen === 'lobby' && modal === null && !isPlaying), [screen, modal, isPlaying]);
 
   const rankCtx = {
     result: rank,

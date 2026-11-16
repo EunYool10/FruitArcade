@@ -19,8 +19,8 @@ import {
 import { db } from '../firestore';
 import { GameType } from '../types';
 import { GAME_ORDER } from '../constants';
-import { RANK_PERIODS, RankEntry, RankPeriod, boardId, cleanPhoto } from './ranking';
-import { maskBadWords } from './badWords';
+import { RANK_PERIODS, RankEntry, RankPeriod, boardId, cleanPhoto } from '../utils/ranking';
+import { maskBadWords } from '../utils/badWords';
 
 // Public boards: leaderboards/{game}_{period}/scores/{uid}, one best score per player
 

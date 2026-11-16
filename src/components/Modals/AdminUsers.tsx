@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Ban, ChevronDown, Copy, Pencil, Search, ShieldCheck, Trash2, X } from 'lucide-react';
-import type { LookChange, UserRow } from '../../utils/adminService';
+import type { LookChange, UserRow } from '../../api/adminService';
 import { AdminLookEditor } from './AdminLookEditor';
 import { AvatarFace, Framed } from '../ui/Avatar';
 import { TitleTag } from '../ui/TitleTag';

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Loader2, UserPlus, X } from 'lucide-react';
 import { ConfirmButton } from '../ui/ConfirmButton';
 
-const adminApi = () => import('../../utils/adminService');
+const adminApi = () => import('../../api/adminService');
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 

@@ -9,6 +9,13 @@ interface Props {
 
 const PATCH_NOTES: { version: string; title: string; items: [string, string][] }[] = [
   {
+    version: '3.40.3',
+    title: '다른 앱 목록 정리',
+    items: [
+      ['🍳 계란이의 모험', '은율이의 다른 앱에서 계란이의 모험을 누르면 서비스 종료 안내가 열려요.'],
+    ],
+  },
+  {
     version: '3.40.2',
     title: '작은 버그 수정',
     items: [

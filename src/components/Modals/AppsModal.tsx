@@ -22,10 +22,9 @@ const APPS = [
   {
     icon: 'apps/egggame.png',
     color: '#f0a830',
-    slow: true,
     name: '계란이의 모험',
     about: '현대 · 고대 · 미래, 세 시대의 계란이가 엄마 품을 찾아 떠나는 선택형 텍스트 어드벤처',
-    url: 'https://egggame.onrender.com/',
+    url: 'https://eunyool10.github.io/Egggame/',
   },
   {
     icon: 'apps/logicmaze.svg',
